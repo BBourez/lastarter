@@ -13,70 +13,76 @@
 <body>
   <div class="msg">
     <div class="spinner"></div>
-    <p>Connexion&hellip;</p>
+    <p id="status">Connexion&hellip;</p>
   </div>
   <script>
-    // LaStarter Meet — wrapper SSO
-    // Vérifie si l'utilisateur a un token Matrix valide, sinon redirige vers Keycloak.
     (function() {
-      var BASE = window.location.origin;
-      var SSO_URL = BASE + "/_matrix/client/v3/login/sso/redirect?redirectUrl=" + encodeURIComponent(BASE + "/authed");
+      var MEET = window.location.origin;
+      var MATRIX = MEET.replace("meet.", "matrix.");
+      var params = new URLSearchParams(window.location.search);
+      var loginToken = params.get("loginToken");
 
-      // Récupère le token depuis localStorage (clé utilisée par matrix-js-sdk)
-      function getToken() {
-        try {
-          for (var i = 0; i < localStorage.length; i++) {
-            var key = localStorage.key(i);
-            if (key && key.indexOf("mxc") === -1 && key.indexOf("matrix") !== -1) {
-              var val = localStorage.getItem(key);
-              try {
-                var obj = JSON.parse(val);
-                if (obj && obj.access_token) return obj.access_token;
-              } catch(e) {}
-            }
+      // PHASE 1: /authed?loginToken=xxx — échanger le token
+      if (window.location.pathname === "/authed" && loginToken) {
+        document.getElementById("status").textContent = "Authentification…";
+        fetch(MEET + "/_matrix/client/v3/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "m.login.token", token: loginToken })
+        }).then(function(r) { return r.json(); }).then(function(data) {
+          if (data.access_token) {
+            localStorage.setItem("ls_access_token", data.access_token);
+            localStorage.setItem("ls_user_id", data.user_id || "");
+            window.location.href = MEET + "/app";
+          } else {
+            document.getElementById("status").textContent = "Erreur: " + (data.error || "token invalide");
           }
-          // Format simple : "access_token"
-          var at = localStorage.getItem("access_token");
-          if (at) return at;
-        } catch(e) {}
-        return null;
-      }
-
-      var token = getToken();
-      if (!token) {
-        // Pas de token → SSO
-        window.location.href = SSO_URL;
+        }).catch(function(e) {
+          document.getElementById("status").textContent = "Erreur réseau";
+        });
         return;
       }
 
-      // Vérifie le token
-      fetch(BASE + "/_matrix/client/v3/account/whoami", {
-        headers: { "Authorization": "Bearer " + token }
-      }).then(function(r) {
-        if (r.ok) {
-          // Token valide → charger element-call
-          loadElementCall();
-        } else {
-          // Token invalide → SSO
-          localStorage.removeItem("access_token");
-          window.location.href = SSO_URL;
-        }
-      }).catch(function() {
-        // Erreur réseau → SSO
-        window.location.href = SSO_URL;
-      });
+      // PHASE 2: /app — vérifier le token puis charger element-call
+      if (window.location.pathname === "/app") {
+        var token = localStorage.getItem("ls_access_token");
+        if (!token) { window.location.href = MEET; return; }
+        fetch(MEET + "/_matrix/client/v3/account/whoami", {
+          headers: { "Authorization": "Bearer " + token }
+        }).then(function(r) {
+          if (r.ok) { loadElementCall(); }
+          else { localStorage.removeItem("ls_access_token"); window.location.href = MEET; }
+        }).catch(function() { window.location.href = MEET; });
+        return;
+      }
+
+      // PHASE 0: / — pas connecté → SSO direct vers matrix (cookie sur le bon domaine)
+      var existing = localStorage.getItem("ls_access_token");
+      if (existing) {
+        fetch(MEET + "/_matrix/client/v3/account/whoami", {
+          headers: { "Authorization": "Bearer " + existing }
+        }).then(function(r) {
+          if (r.ok) { window.location.href = MEET + "/app"; }
+          else { goToSSO(); }
+        }).catch(goToSSO);
+      } else {
+        goToSSO();
+      }
+
+      function goToSSO() {
+        // IMPORTANT : le SSO doit démarrer sur matrix.<domaine> pour que le cookie
+        // de session soit posé sur le MÊME domaine que le callback OIDC.
+        var redirect = encodeURIComponent(MEET + "/authed");
+        window.location.href = MATRIX + "/_matrix/client/v3/login/sso/redirect?redirectUrl=" + redirect;
+      }
 
       function loadElementCall() {
-        // Remplace le contenu par l'index d'element-call
-        fetch(BASE + "/element-call-index.html")
+        fetch(MEET + "/element-call-index.html")
           .then(function(r) { return r.text(); })
           .then(function(html) {
             document.open();
             document.write(html);
             document.close();
-          })
-          .catch(function() {
-            window.location.href = SSO_URL;
           });
       }
     })();
