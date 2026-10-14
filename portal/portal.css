@@ -1,0 +1,111 @@
+/* LaStarter — portail (statique, zéro dépendance). Palette signature indigo. */
+
+:root {
+  --indigo-950: #1e1b4b;
+  --indigo-900: #312e81;
+  --indigo-600: #4f46e5;
+  --indigo-400: #818cf8;
+  --paper: #f5f5ff;
+  --ink: #1e1b4b;
+  --muted: #61708b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  color: var(--ink);
+  background: linear-gradient(135deg, var(--indigo-950) 0%, var(--indigo-900) 45%, var(--indigo-600) 100%) fixed;
+  min-height: 100vh;
+}
+
+.shell {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 2rem;
+}
+
+.hero { color: #fff; margin-bottom: 2.5rem; }
+
+.brand {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.tagline {
+  margin: 0.5rem 0 1.25rem;
+  color: var(--indigo-400);
+  font-size: 1.05rem;
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.6rem 1.3rem;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.btn.ghost {
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+.btn.ghost:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(30, 27, 75, 0.45);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1.4rem 1.5rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: 0 10px 32px rgba(30, 27, 75, 0.35);
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.tile:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 44px rgba(30, 27, 75, 0.5);
+}
+
+.tile-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.tile-name { font-weight: 700; font-size: 1.05rem; }
+
+.tile-desc {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.empty {
+  color: var(--indigo-400);
+  font-size: 1rem;
+}
+
+.foot {
+  margin-top: 3rem;
+  color: var(--indigo-400);
+  font-size: 0.85rem;
+}
+
+.foot a { color: var(--indigo-400); }

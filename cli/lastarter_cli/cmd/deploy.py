@@ -215,17 +215,54 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
     bare = domain.split(":")[0]  # server_name nginx : jamais de port
     lines: list[str] = [
         "# LaStarter — passerelle générée par lastarter-cli (ne pas éditer à la main).",
-        "# id.<domaine> → Keycloak (toute l'authentification). Une app = un sous-domaine.",
+        "# Apex → portail ; id.<domaine> → Keycloak (auth) ; apps = sous-domaines.",
         "server {",
         "    listen 8443 ssl default_server;",
         "    http2 on;",
         "    ssl_certificate /etc/nginx/certs/server.crt;",
         "    ssl_certificate_key /etc/nginx/certs/server.key;",
-        f"    server_name {bare} id.{bare} _;",
+        f"    server_name {bare} _;",
         "    server_tokens off;",
         "    client_max_body_size 150m;",
         "",
-        "    # Toute l'interface d'authentification vit sur id.<domaine>.",
+        "    # Endpoints SSO accessibles aussi sur l'apex (outillage/CLI, compat).",
+    ]
+    for path in ("/realms/", "/resources/", "/js/", "/admin/"):
+        lines += [
+            f"    location {path} {{",
+            "        resolver 127.0.0.11 valid=10s ipv6=off;",
+            "        set $backend_keycloak keycloak:8080;",
+            "        proxy_pass http://$backend_keycloak;",
+            "        proxy_set_header Host $http_host;",
+            "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
+            "        proxy_set_header X-Forwarded-Proto https;",
+            "    }",
+        ]
+    lines += [
+        "",
+        "    # Le portail vit à la racine de l'apex.",
+        "    location / {",
+        "        resolver 127.0.0.11 valid=10s ipv6=off;",
+        "        set $backend_portal portal:80;",
+        "        proxy_pass http://$backend_portal;",
+        "        proxy_set_header Host $http_host;",
+        "        proxy_set_header X-Forwarded-Proto https;",
+        "    }",
+        "}",
+        "",
+    ]
+    # Serveur d'identité dédié : id.<domaine> → Keycloak (toute l'auth).
+    lines += [
+        "# Identité — id.<domaine> → Keycloak",
+        "server {",
+        "    listen 8443 ssl;",
+        "    http2 on;",
+        "    ssl_certificate /etc/nginx/certs/server.crt;",
+        "    ssl_certificate_key /etc/nginx/certs/server.key;",
+        f"    server_name id.{bare};",
+        "    server_tokens off;",
+        "    client_max_body_size 150m;",
+        "",
         "    location / {",
         "        resolver 127.0.0.11 valid=10s ipv6=off;",
         "        set $backend_keycloak keycloak:8080;",
@@ -386,6 +423,43 @@ def render_element_config(template: str, answers: dict, brick: Brick) -> str:
     rendered = rendered.replace("{{SERVER_NAME}}", bare)
     rendered = rendered.replace("{{CUSTOM_THEME}}", json.dumps(theme))
     return rendered
+
+
+APP_EMOJI = {
+    "drive": "📁",
+    "meet": "🎥",
+    "element-web": "💬",
+    "transfers": "📨",
+    "messages": "✉️",
+}
+
+
+def render_portal_config(bricks: list[Brick], answers: dict) -> str:
+    """Génère portal-config.json : tuiles des briques actives + compte SSO."""
+    domain = answers["domain"]
+    apps = []
+    for brick in bricks:
+        if brick.core or not brick.compose.get("frontend_target"):
+            continue
+        if brick.compose.get("portal_visible", "true") == "false":
+            continue  # backends (ex. synapse) : pas de tuile
+        label = brick.compose.get("route_label", brick.name)
+        short = brick.title.split("—")[0].strip()
+        apps.append(
+            {
+                "name": short,
+                "description": brick.description,
+                "url": app_origin(domain, label),
+                "emoji": APP_EMOJI.get(brick.name, "◆"),
+            }
+        )
+    config = {
+        "brand": answers.get("brand_name", "LaStarter"),
+        "tagline": "La suite collaborative de votre organisation.",
+        "account_url": f"{_id_origin(domain)}/realms/lastarter/account",
+        "apps": apps,
+    }
+    return json.dumps(config, ensure_ascii=False, indent=2)
 
 
 # ---------------------------------------------------------------------------
@@ -668,6 +742,16 @@ def run_deploy(opts) -> int:
         )
         compose_env["ELEMENT_CONFIG_PATH"] = _portable(element_path)
 
+    # Portail : copie des pages + config générée dans .runtime/portal/ (montage unique).
+    portal_dir = repo_root / "portal"
+    if portal_dir.is_dir():
+        runtime_portal = runtime_dir / "portal"
+        shutil.copytree(portal_dir, runtime_portal, dirs_exist_ok=True)
+        (runtime_portal / "portal-config.json").write_text(
+            render_portal_config(selected_bricks, answers), encoding="utf-8"
+        )
+        compose_env["PORTAL_DIR"] = _portable(runtime_portal)
+
     # Certificats TLS POC (CA locale + wildcard *.localhost) — générés une fois.
     ca_path, crt_path, key_path = ensure_dev_certs(runtime_dir)
     compose_env["CERTS_DIR"] = _portable(ca_path.parent)
@@ -804,6 +888,7 @@ def run_deploy(opts) -> int:
 
     print(f"\nDéploiement « {slug} » opérationnel (TLS, port 8443).")
     id_url = _id_origin(answers["domain"])
+    print(f"  Portail       : {compute_origin(answers['domain'])} — entrée unique de la suite")
     print(f"  Identité (SSO) : {id_url} — inscription activée, console {id_url}/admin")
     for brick in selected_bricks:
         if brick.core:

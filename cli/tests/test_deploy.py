@@ -16,6 +16,7 @@ from lastarter_cli.cmd.deploy import (
     compute_origin,
     render_edge,
     render_element_config,
+    render_portal_config,
     render_realm,
     render_runtime_env,
     render_synapse_homeserver,
@@ -107,7 +108,8 @@ class RuntimeRenderTests(unittest.TestCase):
         names, _ = resolve_selection(["drive", "meet"], self.bricks)
         selected = [self.bricks[n] for n in names]
         edge = render_edge(selected, ANSWERS)
-        self.assertIn("server_name localhost id.localhost _;", edge)  # apex + id → SSO
+        self.assertIn("server_name localhost _;", edge)          # apex → portail
+        self.assertIn("server_name id.localhost;", edge)          # id → keycloak
         self.assertIn("server_name drive.localhost;", edge)       # app drive
         self.assertIn("set $backend_front drive_frontend:3000;", edge)
         self.assertIn("server_name meet.localhost;", edge)        # app meet
@@ -174,6 +176,35 @@ class RuntimeRenderTests(unittest.TestCase):
         self.assertIn("set $backend_front element_web:80;", edge)
         block = edge.split("server_name chat.localhost;")[1].split("}")[0]
         self.assertNotIn("location /api/", block)  # app statique : pas de /api/
+
+
+    def test_portail_genere_depuis_les_briques(self):
+        names, _ = resolve_selection(["drive", "meet", "element-web"], self.bricks)
+        selected = [self.bricks[n] for n in names]
+        config = json.loads(render_portal_config(selected, ANSWERS))
+        self.assertEqual(config["brand"], "LaStarter")
+        self.assertIn("account_url", config)
+        self.assertIn("id.localhost:8443", config["account_url"])
+        by_name = {a["name"]: a for a in config["apps"]}
+        self.assertIn("Drive", by_name)  # titre avant le tiret
+        self.assertIn("Meet", by_name)
+        self.assertIn("Chat", by_name)
+        self.assertNotIn("Synapse", " ".join(by_name))  # backend : pas de tuile
+        self.assertEqual(by_name["Drive"]["emoji"], "📁")
+        self.assertEqual(
+            by_name["Drive"]["url"], "https://drive.localhost:8443"
+        )
+
+    def test_edge_apex_portail_et_id_keycloak(self):
+        names, _ = resolve_selection(["drive"], self.bricks)
+        selected = [self.bricks[n] for n in names]
+        edge = render_edge(selected, ANSWERS)
+        self.assertIn("set $backend_portal portal:80;", edge)   # apex → portail
+        self.assertIn("server_name localhost _;", edge)
+        self.assertIn("server_name id.localhost;", edge)        # id → keycloak
+        self.assertIn("set $backend_keycloak keycloak:8080;", edge)
+        # Les endpoints SSO restent joignables sur l'apex (outillage CLI).
+        self.assertIn("location /realms/ {", edge)
 
 
 class ComposeCommandTests(unittest.TestCase):

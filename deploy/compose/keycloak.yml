@@ -36,6 +36,19 @@ services:
       retries: 100
     networks: [lastarter]
 
+  # Portail d'entrée (statique, zéro dépendance) : launchpad des briques actives.
+  # Dossier complet matérialisé par le CLI dans .runtime/portal/ (pages + config).
+  portal:
+    image: nginx:1.25-alpine
+    volumes:
+      - ${PORTAL_DIR}:/usr/share/nginx/html:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+    networks: [lastarter]
+
   # Passerelle d'entrée unique (TLS) : apex → Keycloak, <app>.<domaine> → app.
   # Conf générée par le CLI (.runtime/edge.conf) ; certificats POC (CA locale)
   # générés par le CLI dans .runtime/certs/ — en prod : certificats du client.

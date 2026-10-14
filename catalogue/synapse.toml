@@ -54,6 +54,7 @@ prepare_user = "0:0"
 route_label = "matrix"          # matrix.<domaine> : API client + SSO callback
 frontend_target = "synapse_synapse:8008"
 api_target = "synapse_synapse:8008"
+portal_visible = "false"        # backend du chat : pas de tuile portail
 s3_public_port = "9000"
 extra_servers = []
 services = [
