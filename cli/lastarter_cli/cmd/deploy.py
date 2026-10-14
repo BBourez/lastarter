@@ -347,7 +347,7 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             f"        set $backend_front {brick.compose['frontend_target']};",
             "        proxy_pass http://$backend_front;",
             "        proxy_set_header Host $http_host;",
-            '        add_header Service-Worker-allowed "/";',
+            '        add_header Service-Worker-Allowed "/";',
             '        add_header Cache-Control "no-cache";',
             "    }",
             "",
