@@ -15,6 +15,9 @@ import shutil
 import subprocess
 import sys
 import tomllib
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 from ..catalogue import Brick, find_catalogue, load_catalogue
@@ -31,28 +34,46 @@ class DeployError(Exception):
 # Contextes et rendus
 
 
-def compute_origin(domain: str) -> str:
-    """Schéma+domaine : http en local (POC), https sinon."""
+def _scheme(domain: str) -> str:
     host = domain.split(":")[0]
     local = host in {"localhost", "127.0.0.1", "::1", "[::1]", "host.docker.internal"}
-    return f"http://{domain}" if local else f"https://{domain}"
+    return "http" if local else "https"
 
 
-def _context(answers: dict) -> dict[str, str]:
+def compute_origin(domain: str) -> str:
+    """Origine du domaine apex (SSO)."""
+    return f"{_scheme(domain)}://{domain}"
+
+
+def app_origin(domain: str, label: str) -> str:
+    """Origine d'une app : <label>.<domaine> (routage passerelle)."""
+    return f"{_scheme(domain)}://{label}.{domain}"
+
+
+def _context(answers: dict, label: str | None, s3_port: str = "9000") -> dict[str, str]:
     domain = answers["domain"]
-    host = domain.split(":")[0]
-    return {
+    scheme = _scheme(domain)
+    context = {
         "{domain}": domain,
-        "{origin}": compute_origin(domain),
+        "{sso_origin}": f"{scheme}://{domain}",
+        "{ws}": "ws" if scheme == "http" else "wss",
         "{brand_name}": answers.get("brand_name", "LaStarter"),
-        # POC : média servi directement par rustfs sur le port hôte 9000 (phase 3 : media-auth)
-        "{domain_s3}": f"{host}:9000",
+        "{domain_s3}": f"{domain.split(':')[0]}:{s3_port}",  # POC : S3 média direct
     }
+    if label:
+        context["{origin}"] = f"{scheme}://{label}.{domain}"
+        context["{app_host}"] = f"{label}.{domain}"
+    else:
+        context["{origin}"] = context["{sso_origin}"]
+        context["{app_host}"] = domain
+    return context
 
 
-def render_runtime_env(draft: str, answers: dict, vault: dict[str, str]) -> str:
+def render_runtime_env(
+    draft: str, answers: dict, vault: dict[str, str], label: str | None = None, s3_port: str = "9000"
+) -> str:
     """Substitue les jetons d'un draft committable en env d'exécution (avec secrets)."""
-    context = _context(answers)
+    context = _context(answers, label, s3_port)
 
     def substitute(value: str) -> str:
         def secret(match: re.Match) -> str:
@@ -69,10 +90,59 @@ def render_runtime_env(draft: str, answers: dict, vault: dict[str, str]) -> str:
     return "\n".join(substitute(line) for line in draft.splitlines()) + "\n"
 
 
-def render_realm(template: str, answers: dict, vault: dict[str, str]) -> str:
-    """Rend le realm Keycloak ({{ORIGIN}}, {{DOMAIN}}, {{SECRET:x}})."""
-    rendered = template.replace("{{ORIGIN}}", compute_origin(answers["domain"]))
-    rendered = rendered.replace("{{DOMAIN}}", answers["domain"])
+def _client_secret_from_env(rendered_env: str) -> str:
+    """Extrait OIDC_RP_CLIENT_SECRET d'un env rendu (source unique : la brique)."""
+    for line in rendered_env.splitlines():
+        if line.startswith("OIDC_RP_CLIENT_SECRET="):
+            return line.partition("=")[2].strip()
+    raise DeployError("OIDC_RP_CLIENT_SECRET absent de l'env rendu")
+
+
+def build_realm_clients(bricks: list[Brick], rendered_envs: dict[str, str], answers: dict) -> str:
+    """Construit le tableau JSON des clients OIDC depuis le catalogue + env rendus.
+
+    Le secret de chaque client est celui de sa brique (OIDC_RP_CLIENT_SECRET) :
+    source unique, toujours synchronisée.
+    """
+    domain = answers["domain"]
+    clients = []
+    for brick in bricks:
+        if brick.core or not brick.oidc.get("client_id"):
+            continue
+        origin = app_origin(domain, brick.compose.get("route_label", brick.name))
+        clients.append(
+            {
+                "clientId": brick.oidc["client_id"],
+                "description": f"LaStarter {brick.title} (OIDC)",
+                "enabled": True,
+                "clientAuthenticatorType": "client-secret",
+                "secret": _client_secret_from_env(rendered_envs[brick.name]),
+                "redirectUris": [f"{origin}/*"],
+                "webOrigins": [origin],
+                "standardFlowEnabled": True,
+                "implicitFlowEnabled": False,
+                "directAccessGrantsEnabled": False,
+                "serviceAccountsEnabled": False,
+                "publicClient": False,
+                "frontchannelLogout": True,
+                "protocol": "openid-connect",
+                "fullScopeAllowed": True,
+                "attributes": {
+                    "user.info.response.signature.alg": "RS256",
+                    "post.logout.redirect.uris": f"{origin}/*",
+                    "backchannel.logout.session.required": "true",
+                },
+                "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "email"],
+                "optionalClientScopes": ["address", "phone", "offline_access"],
+            }
+        )
+    return json.dumps(clients, indent=2, ensure_ascii=False)
+
+
+def render_realm(template: str, answers: dict, vault: dict[str, str], clients_json: str) -> str:
+    """Rend le realm Keycloak ({{CLIENTS_JSON}}, {{ORIGIN}}, {{SECRET:x}})."""
+    rendered = template.replace("{{CLIENTS_JSON}}", clients_json)
+    rendered = rendered.replace("{{ORIGIN}}", compute_origin(answers["domain"]))
 
     def secret(match: re.Match) -> str:
         name = match.group(1)
@@ -81,6 +151,88 @@ def render_realm(template: str, answers: dict, vault: dict[str, str]) -> str:
         return vault[name]
 
     return REALM_SECRET_TOKEN.sub(secret, rendered)
+
+
+def render_edge(bricks: list[Brick], answers: dict) -> str:
+    """Génère la conf nginx de la passerelle : apex → SSO, <label>.<domain> → app."""
+    domain = answers["domain"]
+    bare = domain.split(":")[0]  # server_name nginx : jamais de port
+    lines: list[str] = [
+        "# LaStarter — passerelle générée par lastarter-cli (ne pas éditer à la main).",
+        "# Apex → Keycloak (SSO). Une app = un sous-domaine.",
+        "server {",
+        "    listen 8083 default_server;",
+        f"    server_name {bare} _;",
+        "    server_tokens off;",
+        "    client_max_body_size 150m;",
+    ]
+    for path in ("/realms/", "/resources/", "/js/", "/admin/"):
+        lines += [
+            f"    location {path} {{",
+            "        proxy_pass http://keycloak:8080;",
+            "        proxy_set_header Host $host;",
+            "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
+            "        proxy_set_header X-Forwarded-Proto $scheme;",
+            "    }",
+        ]
+    apps = [b for b in bricks if not b.core and b.compose.get("frontend_target")]
+    if apps:
+        first = apps[0]
+        origin = app_origin(domain, first.compose.get("route_label", first.name))
+        lines += [f"    location = / {{ return 302 {origin}/; }}"]
+    else:
+        lines += ["    location = / { return 204; }"]
+    lines += ["}", ""]
+
+    for brick in apps:
+        label = brick.compose.get("route_label", brick.name)
+        lines += [
+            f"# {brick.title}",
+            "server {",
+            "    listen 8083;",
+            f"    server_name {label}.{bare};",
+            "    server_tokens off;",
+            "    client_max_body_size 150m;",
+            "",
+            "    location /api/ {",
+            f"        proxy_pass http://{brick.compose['api_target']};",
+            "        proxy_set_header Host $host;",
+            "        proxy_set_header X-Real-IP $remote_addr;",
+            "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
+            "        proxy_set_header X-Forwarded-Proto $scheme;",
+            "        proxy_http_version 1.1;",
+            "        proxy_set_header Upgrade $http_upgrade;",
+            '        proxy_set_header Connection "upgrade";',
+            "    }",
+            "",
+            "    location / {",
+            f"        proxy_pass http://{brick.compose['frontend_target']};",
+            "        proxy_set_header Host $host;",
+            "    }",
+            "}",
+            "",
+        ]
+
+    # Serveurs additionnels (ex. SFU livekit pour meet) : websocket natif.
+    for brick in bricks:
+        for extra in brick.compose.get("extra_servers", []):
+            lines += [
+                f"# {brick.title} — {extra.get('label', '')}",
+                "server {",
+                "    listen 8083;",
+                f"    server_name {extra['label']}.{bare};",
+                "    location / {",
+                f"        proxy_pass http://{extra['target']};",
+                "        proxy_set_header Host $host;",
+                "        proxy_http_version 1.1;",
+                "        proxy_set_header Upgrade $http_upgrade;",
+                '        proxy_set_header Connection "upgrade";',
+                "        proxy_read_timeout 3600s;",
+                "    }",
+                "}",
+                "",
+            ]
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -125,6 +277,72 @@ def validate_compose_targets(selected: list[str], bricks: dict[str, Brick], comp
 
 
 # ---------------------------------------------------------------------------
+# Provisionnement Keycloak (API admin, stdlib urllib)
+
+
+def _http_json(url: str, method: str, token: str | None = None, body: dict | None = None, form: dict | None = None) -> tuple[int, str]:
+    """Requête HTTP JSON ou form-encoded, retourne (status, texte)."""
+    data = None
+    headers = {"Accept": "application/json"}
+    if form is not None:
+        data = urllib.parse.urlencode(form).encode()
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+    elif body is not None:
+        data = json.dumps(body).encode()
+        headers["Content-Type"] = "application/json"
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    request = urllib.request.Request(url, data=data, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return response.status, response.read().decode()
+    except urllib.error.HTTPError as exc:
+        return exc.code, exc.read().decode()
+
+
+def provision_realm_clients(base_url: str, admin_user: str, admin_password: str, clients_json: str) -> list[str]:
+    """Crée ou met à jour chaque client OIDC du realm `lastarter` via l'API admin.
+
+    Idempotent : GET par clientId, POST si absent, PUT sinon (secret + redirects).
+    Retourne la liste des clientIds synchronisés.
+    """
+    status, text = _http_json(
+        f"{base_url}/realms/master/protocol/openid-connect/token",
+        method="POST",
+        form={
+            "grant_type": "password",
+            "client_id": "admin-cli",
+            "username": admin_user,
+            "password": admin_password,
+        },
+    )
+    if status != 200:
+        raise DeployError(f"authentification admin Keycloak impossible (HTTP {status}) : {text[:200]}")
+    token = json.loads(text)["access_token"]
+
+    admin = f"{base_url}/admin/realms/lastarter"
+    done: list[str] = []
+    for client in json.loads(clients_json):
+        client_id = client["clientId"]
+        status, text = _http_json(
+            f"{admin}/clients?clientId={urllib.parse.quote(client_id)}", method="GET", token=token
+        )
+        if status != 200:
+            raise DeployError(f"lecture clients Keycloak impossible (HTTP {status})")
+        existing = json.loads(text)
+        if existing:
+            status, _ = _http_json(
+                f"{admin}/clients/{existing[0]['id']}", method="PUT", token=token, body=client
+            )
+        else:
+            status, _ = _http_json(f"{admin}/clients", method="POST", token=token, body=client)
+        if status not in (200, 201, 204):
+            raise DeployError(f"synchronisation du client {client_id} impossible (HTTP {status})")
+        done.append(client_id)
+    return done
+
+
+# ---------------------------------------------------------------------------
 # Exécution docker compose
 
 
@@ -160,26 +378,55 @@ def run_deploy(opts) -> int:
 
     # Rendu runtime : env par brique + compose.env (substitution ${} du compose).
     compose_env: dict[str, str] = {}
+    rendered_envs: dict[str, str] = {}
+    selected_bricks = [bricks[name] for name in selected]
     for name in selected:
         draft_path = deployment_dir / "env" / f"{name}.env"
         if not draft_path.is_file():
             raise DeployError(f"env draft manquant : {draft_path} (rejouer `lastarter init`)")
-        rendered = render_runtime_env(draft_path.read_text(encoding="utf-8"), answers, vault)
+        label = bricks[name].compose.get("route_label", name)
+        s3_port = str(bricks[name].compose.get("s3_public_port", "9000"))
+        rendered = render_runtime_env(
+            draft_path.read_text(encoding="utf-8"), answers, vault, label, s3_port
+        )
+        rendered_envs[name] = rendered
         (runtime_dir / f"{name}.env").write_text(rendered, encoding="utf-8")
         for line in rendered.splitlines():
             if "=" in line and not line.lstrip().startswith("#"):
                 key, _, value = line.partition("=")
                 compose_env[key.strip()] = value.strip()
 
-    # Realm Keycloak (si la brique est déployée).
+    # Realm Keycloak : clients OIDC générés depuis le catalogue (secret = celui
+    # de chaque brique, extrait de l'env rendu).
     realm_template = repo_root / "identity" / "realm-lastarter.json"
     if "keycloak" in selected and realm_template.is_file():
-        realm_rendered = render_realm(realm_template.read_text(encoding="utf-8"), answers, vault)
+        clients_json = build_realm_clients(selected_bricks, rendered_envs, answers)
+        realm_rendered = render_realm(
+            realm_template.read_text(encoding="utf-8"), answers, vault, clients_json
+        )
         realm_path = runtime_dir / "realm-lastarter.json"
         realm_path.write_text(realm_rendered, encoding="utf-8")
         compose_env["REALM_JSON_PATH"] = _portable(realm_path)
 
+    # Passerelle : conf nginx générée depuis les briques sélectionnées.
+    # Un bind mount ne déclenche ni recreation ni reload : on suit le hash et
+    # on force la recreation du gateway quand la conf change.
+    edge_path = runtime_dir / "edge.conf"
+    edge_conf = render_edge(selected_bricks, answers)
+    edge_hash_path = runtime_dir / ".edge.sha256"
+    previous_edge_hash = (
+        edge_hash_path.read_text(encoding="utf-8").strip() if edge_hash_path.is_file() else ""
+    )
+    import hashlib
+
+    edge_hash = hashlib.sha256(edge_conf.encode()).hexdigest()
+    edge_path.write_text(edge_conf, encoding="utf-8")
+    edge_hash_path.write_text(edge_hash + "\n", encoding="utf-8")
+    compose_env["EDGE_CONF_PATH"] = _portable(edge_path)
+
     compose_env["LASTARTER_CLIENT"] = slug
+    compose_env["LASTARTER_DOMAIN"] = answers["domain"]
+    compose_env["LASTARTER_HOST"] = answers["domain"].split(":")[0]  # sans port (extra_hosts)
     compose_env["RUNTIME_DIR"] = _portable(runtime_dir)
     runtime_env_file = runtime_dir / "compose.env"
     runtime_env_file.write_text(
@@ -223,15 +470,44 @@ def run_deploy(opts) -> int:
         if result.returncode != 0:
             raise DeployError(f"migration échouée pour {name}")
 
-    # 3. Ensemble de la pile.
-    result = run(base + ["up", "-d", "--wait"])
+    # 3. Ensemble de la pile (les services retirés du manifeste sont nettoyés).
+    result = run(base + ["up", "-d", "--wait", "--remove-orphans"])
     if result.returncode != 0:
         raise DeployError("échec du démarrage (voir logs ci-dessus)")
 
+    # 3bis. Passerelle : recréer si la conf générée a changé (bind mount ≠ recreation).
+    if edge_hash != previous_edge_hash:
+        result = run(base + ["up", "-d", "--force-recreate", "--no-deps", "--wait", "gateway"])
+        if result.returncode != 0:
+            raise DeployError("échec de la recreation de la passerelle")
+
+    # 4. Clients OIDC : l'API admin fait autorité après le premier import du realm
+    #    (--import-realm ne re-importe pas un realm existant).
+    clients = [
+        brick for brick in selected_bricks
+        if not brick.core and brick.oidc.get("client_id")
+    ]
+    if clients:
+        admin_user = "admin"
+        for line in rendered_envs.get("keycloak", "").splitlines():
+            if line.startswith("KEYCLOAK_ADMIN="):
+                admin_user = line.partition("=")[2].strip()
+        provisioned = provision_realm_clients(
+            base_url=compute_origin(answers["domain"]),
+            admin_user=admin_user,
+            admin_password=vault["kc_admin_password"],
+            clients_json=build_realm_clients(selected_bricks, rendered_envs, answers),
+        )
+        print(f"Clients OIDC synchronisés via l'API admin : {', '.join(provisioned)}")
+
     print(f"\nDéploiement « {slug} » opérationnel.")
-    origin = compute_origin(answers["domain"])
-    print(f"  Entrée         : {origin}")
-    print(f"  Console SSO    : {origin}/admin (admin / mot de passe : secrets.env:kc_admin_password)")
+    sso = compute_origin(answers["domain"])
+    print(f"  SSO (apex)    : {sso}/realms/lastarter — console {sso}/admin")
+    for brick in selected_bricks:
+        if brick.core:
+            continue
+        label = brick.compose.get("route_label", brick.name)
+        print(f"  {brick.name:<12} : {app_origin(answers['domain'], label)}")
     print(f"  Utilisateur démo : demo / secrets.env:demo_user_password")
     run(base + ["ps"])
     return 0

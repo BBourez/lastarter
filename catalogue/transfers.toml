@@ -1,0 +1,91 @@
+# Brique : Transfers — transfert de fichiers souverain (La Suite territoriale, ANCT).
+# Brouillon : modèle identique à drive (Django+Vite, rustfs) — E2E en attente (maturity=planned).
+# Env de référence : env.d/development/backend.defaults amont.
+
+[brick]
+name = "transfers"
+title = "Transfers — transfert de fichiers"
+category = "collaboration"
+description = "Envoi de fichiers volumineux avec expiration, liens à usage unique et reçus (type WeTransfer souverain)."
+license = "MIT"
+upstream_repo = "https://github.com/suitenumerique/transfers"
+upstream_pin = "à épingler (images amont à vérifier : build local ou registry ANCT)"
+requires = ["keycloak"]
+maturity = "planned"
+
+[oidc]
+client_id = "transfers"
+scopes = "openid email profile"
+
+[branding.env]
+DJANGO_EMAIL_BRAND_NAME = "{brand_name}"
+
+[env]
+DJANGO_CONFIGURATION = "Production"
+DJANGO_ALLOWED_HOSTS = "{app_host}"
+DJANGO_SECRET_KEY = "{secret:transfers_django_secret_key}"
+DJANGO_SETTINGS_MODULE = "transfers.settings"
+DJANGO_SUPERUSER_PASSWORD = "{secret:transfers_superuser_password}"
+DJANGO_CSRF_TRUSTED_ORIGINS = "{origin}"
+
+DB_HOST = "transfers_postgresql"
+DB_NAME = "transfers"
+DB_USER = "transfers"
+DB_PASSWORD = "{secret:transfers_db_password}"
+DB_PORT = "5432"
+POSTGRES_DB = "transfers"
+POSTGRES_USER = "transfers"
+POSTGRES_PASSWORD = "{secret:transfers_db_password}"
+
+REDIS_URL = "redis://transfers_redis:6379/0"
+DJANGO_CELERY_BROKER_URL = "redis://transfers_redis:6379/0"
+
+AWS_S3_ENDPOINT_URL = "http://transfers_rustfs:9000"
+AWS_S3_ACCESS_KEY_ID = "transfers"
+AWS_S3_SECRET_ACCESS_KEY = "{secret:transfers_s3_secret_key}"
+AWS_S3_SIGNATURE_VERSION = "s3v4"
+AWS_S3_DOMAIN_REPLACE = "http://{domain_s3}"
+AWS_STORAGE_BUCKET_NAME = "transfers"
+RUSTFS_ACCESS_KEY = "transfers"
+RUSTFS_SECRET_KEY = "{secret:transfers_s3_secret_key}"
+RUSTFS_CORS_ALLOWED_ORIGINS = "{origin}"
+
+TRANSFER_MAX_FILE_SIZE = "21474836480"
+TRANSFER_MAX_TOTAL_SIZE = "21474836480"
+
+# SSO Keycloak
+OIDC_CREATE_USER = "True"
+OIDC_OP_JWKS_ENDPOINT = "http://keycloak:8080/realms/lastarter/protocol/openid-connect/certs"
+OIDC_OP_AUTHORIZATION_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/auth"
+OIDC_OP_TOKEN_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/token"
+OIDC_OP_USER_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/userinfo"
+OIDC_OP_LOGOUT_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/logout"
+OIDC_RP_CLIENT_ID = "transfers"
+OIDC_RP_CLIENT_SECRET = "{secret:transfers_oidc_client_secret}"
+OIDC_RP_SIGN_ALGO = "RS256"
+OIDC_RP_SCOPES = "openid email profile"
+LOGIN_REDIRECT_URL = "{origin}"
+LOGOUT_REDIRECT_URL = "{origin}"
+
+[compose]
+profile = "transfers"
+infra_services = ["transfers_postgresql", "transfers_redis", "transfers_rustfs"]
+migrate_service = "transfers_app"
+migrate_command = "python manage.py migrate --no-input"
+route_label = "transfers"
+frontend_target = "transfers_frontend:8080"
+api_target = "transfers_app:8000"
+s3_public_port = "9020"
+extra_servers = []
+services = [
+  "transfers_app",
+  "transfers_frontend",
+  "transfers_celery",
+  "transfers_postgresql",
+  "transfers_redis",
+  "transfers_rustfs",
+]
+extras = []
+
+[notes]
+warnings = "Brouillon : images amont à confirmer (le dépôt construit localement en dev) + SMTP sortant requis pour les notifications (maildev en POC). E2E pas encore validée."

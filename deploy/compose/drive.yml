@@ -1,35 +1,30 @@
 # Brique drive — fichiers collaboratifs (lasuite/drive-{backend,frontend} v0.24.0).
-# Mono-domaine : edge nginx / → frontend, /api → backend, /realms|/resources|/js → keycloak.
-# Env complet injecté via env_file rendu par le CLI (deployments/<client>/env/drive.env).
+# Services préfixés drive_* : un seul projet compose fusionné, zéro collision entre briques.
+# Infra via env_file de la brique (POSTGRES_*, RUSTFS_*, AWS_* dans catalogue/drive.toml) :
+# aucune variable ${} partagée avec les autres briques.
 
 services:
-  postgresql:
+  drive_postgresql:
     image: postgres:16
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    env_file: ["${RUNTIME_DIR}/drive.env"]
     volumes:
       - drive_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 2s
       timeout: 3s
       retries: 150
     networks: [lastarter]
 
-  redis:
+  drive_redis:
     image: redis:5
     networks: [lastarter]
 
-  rustfs:
+  drive_rustfs:
     image: rustfs/rustfs:1.0.0
-    environment:
-      RUSTFS_ACCESS_KEY: ${AWS_S3_ACCESS_KEY_ID}
-      RUSTFS_SECRET_KEY: ${AWS_S3_SECRET_ACCESS_KEY}
-      RUSTFS_CORS_ALLOWED_ORIGINS: ${MEDIA_BASE_URL}
+    env_file: ["${RUNTIME_DIR}/drive.env"]
     ports:
-      - "${RUSTFS_PORT:-9000}:9000"   # POC : média servi directement (durcissement phase 3)
+      - "${RUSTFS_PORT:-9000}:9000"   # POC : média servi directement (durcissement phase 6)
     volumes:
       - drive_mediadata:/data
     healthcheck:
@@ -39,66 +34,44 @@ services:
       retries: 100
     networks: [lastarter]
 
-  createbuckets:
+  drive_createbuckets:
     image: amazon/aws-cli
+    env_file: ["${RUNTIME_DIR}/drive.env"]
     environment:
-      AWS_ACCESS_KEY_ID: ${AWS_S3_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_S3_SECRET_ACCESS_KEY}
-      AWS_DEFAULT_REGION: ${AWS_S3_REGION_NAME}
-      AWS_ENDPOINT_URL: http://rustfs:9000
+      AWS_ENDPOINT_URL: http://drive_rustfs:9000
     entrypoint: >
       sh -c "
-      aws s3api create-bucket --bucket ${AWS_STORAGE_BUCKET_NAME} && \
-      aws s3api put-bucket-versioning --bucket ${AWS_STORAGE_BUCKET_NAME} --versioning-configuration Status=Enabled; \
+      aws s3api create-bucket --bucket $$AWS_STORAGE_BUCKET_NAME && \
+      aws s3api put-bucket-versioning --bucket $$AWS_STORAGE_BUCKET_NAME --versioning-configuration Status=Enabled; \
       exit 0"
     depends_on:
-      rustfs:
+      drive_rustfs:
         condition: service_healthy
     networks: [lastarter]
 
-  app:
+  drive_app:
     image: lasuite/drive-backend:v0.24.0
     env_file: ["${RUNTIME_DIR}/drive.env"]
     depends_on:
-      postgresql:
+      drive_postgresql:
         condition: service_healthy
-      redis:
+      drive_redis:
         condition: service_started
-      createbuckets:
+      drive_createbuckets:
         condition: service_completed_successfully
     networks: [lastarter]
 
-  celery:
+  drive_celery:
     image: lasuite/drive-backend:v0.24.0
     command: ["celery", "-A", "drive.celery_app", "worker", "-l", "INFO"]
     env_file: ["${RUNTIME_DIR}/drive.env"]
     depends_on:
-      app:
+      drive_app:
         condition: service_started
     networks: [lastarter]
 
-  frontend:
+  drive_frontend:
     image: lasuite/drive-frontend:v0.24.0
-    networks: [lastarter]
-
-  nginx:
-    image: nginx:1.25-alpine
-    ports:
-      - "${EDGE_PORT:-8083}:8083"
-    volumes:
-      - ./files/edge-drive.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      app:
-        condition: service_started
-      frontend:
-        condition: service_started
-      keycloak:
-        condition: service_started   # nginx résout keycloak au boot : redémarrer si keycloak change
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8083/ >/dev/null || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 60
     networks: [lastarter]
 
 volumes:

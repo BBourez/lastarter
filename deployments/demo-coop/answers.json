@@ -4,7 +4,8 @@
   "domain": "localhost:8083",
   "brand_name": "LaStarter",
   "bricks": [
-    "drive"
+    "drive",
+    "meet"
   ],
-  "generated_at": "2026-10-14T01:21:24+00:00"
+  "generated_at": "2026-10-14T01:36:17+00:00"
 }

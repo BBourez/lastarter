@@ -6,7 +6,7 @@ name = "Demo Coop"
 slug = "demo-coop"
 domain = "localhost:8083"
 brand_name = "LaStarter"
-created = "2026-10-14T01:21:24+00:00"
+created = "2026-10-14T01:36:17+00:00"
 cli_version = "0.1.0"
 
 [bricks.keycloak]
@@ -20,3 +20,9 @@ title = "Drive — fichiers collaboratifs"
 pin = "v0.24.0"
 license = "MIT"
 upstream = "https://github.com/suitenumerique/drive"
+
+[bricks.meet]
+title = "Meet — visioconférence"
+pin = "v1.35.0"
+license = "MIT"
+upstream = "https://github.com/suitenumerique/meet"

@@ -1,6 +1,7 @@
 # Brique : Drive — stockage et édition collaborative de fichiers.
 # Env production canonique : vérifié sur docs/examples/helm/drive.values.yaml amont.
 # Images publiées : lasuite/drive-backend / drive-frontend (Docker Hub, multi-arch).
+# Exposition : drive.<domaine> via la passerelle (compose.route_*).
 
 [brick]
 name = "drive"
@@ -27,7 +28,7 @@ FRONTEND_FEEDBACK_BUTTON_SHOW = "False"
 
 [env]
 DJANGO_CONFIGURATION = "Feature"
-DJANGO_ALLOWED_HOSTS = "{domain}"
+DJANGO_ALLOWED_HOSTS = "{app_host}"
 DJANGO_CSRF_TRUSTED_ORIGINS = "{origin}"
 DJANGO_SECRET_KEY = "{secret:django_secret_key}"
 DJANGO_SETTINGS_MODULE = "drive.settings"
@@ -37,18 +38,22 @@ LOGGING_LEVEL_LOGGERS_ROOT = "INFO"
 LOGGING_LEVEL_LOGGERS_APP = "INFO"
 
 # Base de données applicative (postgres:16 interne à la brique)
-DB_HOST = "postgresql"
+DB_HOST = "drive_postgresql"
 DB_NAME = "drive"
 DB_USER = "drive"
 DB_PASSWORD = "{secret:drive_db_password}"
 DB_PORT = "5432"
+# Noms attendus par l'image postgres (conteneur drive_postgresql, via env_file)
+POSTGRES_DB = "drive"
+POSTGRES_USER = "drive"
+POSTGRES_PASSWORD = "{secret:drive_db_password}"
 
 # Cache / files de tâches (redis:5 interne)
-REDIS_URL = "redis://redis:6379/0"
-DJANGO_CELERY_BROKER_URL = "redis://redis:6379/0"
+REDIS_URL = "redis://drive_redis:6379/0"
+DJANGO_CELERY_BROKER_URL = "redis://drive_redis:6379/0"
 
 # Stockage objet (rustfs S3 interne ; POC : média servi directement par rustfs)
-AWS_S3_ENDPOINT_URL = "http://rustfs:9000"
+AWS_S3_ENDPOINT_URL = "http://drive_rustfs:9000"
 AWS_S3_ACCESS_KEY_ID = "drive"
 AWS_S3_SECRET_ACCESS_KEY = "{secret:s3_secret_key}"
 AWS_S3_REGION_NAME = "eu-east-1"
@@ -56,13 +61,17 @@ AWS_S3_SIGNATURE_VERSION = "s3v4"
 AWS_S3_DOMAIN_REPLACE = "http://{domain_s3}"
 AWS_STORAGE_BUCKET_NAME = "drive-media-storage"
 MEDIA_BASE_URL = "{origin}"
+# Noms attendus par l'image rustfs (conteneur drive_rustfs, via env_file)
+RUSTFS_ACCESS_KEY = "drive"
+RUSTFS_SECRET_KEY = "{secret:s3_secret_key}"
+RUSTFS_CORS_ALLOWED_ORIGINS = "{origin}"
 
-# SSO Keycloak — realm unique `lastarter`
+# SSO Keycloak — realm unique `lastarter` sur l'apex
 OIDC_OP_JWKS_ENDPOINT = "http://keycloak:8080/realms/lastarter/protocol/openid-connect/certs"
-OIDC_OP_AUTHORIZATION_ENDPOINT = "{origin}/realms/lastarter/protocol/openid-connect/auth"
-OIDC_OP_TOKEN_ENDPOINT = "{origin}/realms/lastarter/protocol/openid-connect/token"
-OIDC_OP_USER_ENDPOINT = "{origin}/realms/lastarter/protocol/openid-connect/userinfo"
-OIDC_OP_LOGOUT_ENDPOINT = "{origin}/realms/lastarter/protocol/openid-connect/logout"
+OIDC_OP_AUTHORIZATION_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/auth"
+OIDC_OP_TOKEN_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/token"
+OIDC_OP_USER_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/userinfo"
+OIDC_OP_LOGOUT_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/logout"
 OIDC_RP_CLIENT_ID = "drive"
 OIDC_RP_CLIENT_SECRET = "{secret:oidc_client_secret}"
 OIDC_RP_SIGN_ALGO = "RS256"
@@ -73,24 +82,28 @@ LOGIN_REDIRECT_URL = "{origin}"
 LOGIN_REDIRECT_URL_FAILURE = "{origin}"
 LOGOUT_REDIRECT_URL = "{origin}"
 
-# Éditeurs WOPI : aucun par défaut (activer collabora OU onlyoffice en phase 3)
+# Éditeurs WOPI : aucun par défaut (activer collabora OU onlyoffice en phase 6)
 WOPI_CLIENTS = ""
 
 [compose]
 profile = "drive"
 # Orchestration pilotée par le CLI (cf. SCHEMA.md) :
-infra_services = ["postgresql", "redis", "rustfs", "createbuckets"]
-migrate_service = "app"
+# jobs one-shot exclus (démarrés via depends_on de l'app, service_completed_successfully)
+infra_services = ["drive_postgresql", "drive_redis", "drive_rustfs"]
+migrate_service = "drive_app"
 migrate_command = "python manage.py migrate --no-input"
+# Exposition passerelle :
+route_label = "drive"
+frontend_target = "drive_frontend:3000"
+api_target = "drive_app:8000"
 services = [
-  "app",             # lasuite/drive-backend — gunicorn
-  "frontend",        # lasuite/drive-frontend — export statique nginx (mono-domaine)
-  "celery",          # worker (même image que app)
-  "postgresql",      # postgres:16, DB applicative
-  "redis",           # redis:5
-  "rustfs",          # rustfs/rustfs:1.0.0 — S3 compatible (média)
-  "createbuckets",   # job aws-cli : crée le bucket média versionné
-  "nginx",           # edge mono-domaine : / → front, /api → app, /realms → keycloak
+  "drive_app",          # lasuite/drive-backend — gunicorn
+  "drive_frontend",     # lasuite/drive-frontend — export statique nginx
+  "drive_celery",       # worker (même image que app)
+  "drive_postgresql",   # postgres:16, DB applicative
+  "drive_redis",        # redis:5
+  "drive_rustfs",       # rustfs/rustfs:1.0.0 — S3 compatible (média)
+  "drive_createbuckets",# job aws-cli : crée le bucket média versioné
 ]
 extras = [
   "collabora",       # éditeur WOPI (collabora/code:26.04.2.2.1)
@@ -99,4 +112,4 @@ extras = [
 ]
 
 [notes]
-warnings = "POC : le média est servi directement par rustfs (AWS_S3_DOMAIN_REPLACE) — durcissement media-auth prévu phase 3. Editeur WOPI : activer collabora OU onlyoffice, jamais les deux."
+warnings = "POC : le média est servi directement par rustfs (AWS_S3_DOMAIN_REPLACE) — durcissement media-auth prévu phase 6. Editeur WOPI : activer collabora OU onlyoffice, jamais les deux."

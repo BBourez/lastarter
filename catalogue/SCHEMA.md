@@ -28,18 +28,33 @@ BRAND_NAME = "…"                      # par branding/<client>.toml)
 [env]                                 # variables d'environnement principales (brouillon
 KEY = "valeur | {domain} | {secret}"  # .env généré à l'init ; {domain} substitué)
 
-[compose]                             # orchestration + informationnel
-profile = "drive"                     # profil docker-compose de la brique
-infra_services = ["postgresql", …]    # services à démarrer AVANT la migration
-migrate_service = "app"               # service exécutant la migration (optionnel)
+[compose]                             # orchestration + exposition passerelle
+profile = "drive"                     # profil logique de la brique
+infra_services = ["drive_postgresql", …]   # services (préfixés <brique>_) AVANT migration
+migrate_service = "drive_app"         # service exécutant la migration (optionnel)
 migrate_command = "python manage.py…" # commande de migration (optionnel)
-services = ["app", "frontend", "…"]   # services internes (postgres, redis… inclus)
+route_label = "drive"                 # sous-domaine : <label>.<domaine>
+frontend_target = "drive_frontend:3000"  # cible de la passerelle pour /
+api_target = "drive_app:8000"            # cible de la passerelle pour /api/
+s3_public_port = "9000"               # port hôte du S3 média (POC ; durcissement phase 6)
+extra_servers = [                     # serveurs additionnels (ex. SFU websocket)
+  { label = "livekit", target = "meet_livekit:7880" }
+]
+services = ["drive_app", "drive_frontend", "…"]  # inventaire (informationnel)
 extras = ["collabora", "onlyoffice"]  # services optionnels activables
 
+# RÈGLE ANTI-COLLISION : tous les services compose sont préfixés (<brique>_)
+# et chaque conteneur d'infra lit son env_file de brique (POSTGRES_*, RUSTFS_*,
+# GARAGE_* déclarés dans [env]) — JAMAIS de ${} partagé entre briques (l'union
+# compose.env écraserait DB_NAME/AWS_S3_* d'une autre brique).
+
 # Jetons disponibles dans [env] / [branding.env] :
-#   {domain}     — domaine client (sans schéma)
-#   {origin}     — schéma + domaine (http en local, https sinon)
-#   {domain_s3}  — domaine où le S3 média est exposé (POC : host:port rustfs)
+#   {domain}     — domaine apex client (SSO), sans schéma
+#   {sso_origin} — schéma + apex (ex. https://acme.example.com)
+#   {origin}     — schéma + <label>.<domaine> (origine de CETTE app)
+#   {app_host}   — <label>.<domaine> (sans schéma, pour ALLOWED_HOSTS)
+#   {ws}         — "ws" en local, "wss" en production
+#   {domain_s3}  — host:port du S3 média public (POC)
 #   {brand_name} — marque affichée
 #   {secret:KEY} — secret du coffre (jeton conservé dans les drafts committables,
 #                  substitué uniquement dans .runtime/ au déploiement)

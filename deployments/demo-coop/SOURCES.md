@@ -9,6 +9,7 @@ référencée ici (cf. docs/licences.md du dépôt LaStarter).
 |---|---|---|---|
 | Keycloak — identité et SSO | Apache-2.0 | 26.3.2 | https://github.com/keycloak/keycloak |
 | Drive — fichiers collaboratifs | MIT | v0.24.0 | https://github.com/suitenumerique/drive |
+| Meet — visioconférence | MIT | v1.35.0 | https://github.com/suitenumerique/meet |
 
 Marques : « La Suite », « Element », « Tchap » et logos associés appartiennent à
 leurs titulaires et n'apparaissent pas dans les interfaces livrées (branding

@@ -34,30 +34,5 @@
       "realmRoles": ["user"]
     }
   ],
-  "clients": [
-    {
-      "clientId": "drive",
-      "description": "LaStarter Drive (OIDC)",
-      "enabled": true,
-      "clientAuthenticatorType": "client-secret",
-      "secret": "{{SECRET:oidc_client_secret}}",
-      "redirectUris": ["{{ORIGIN}}/*"],
-      "webOrigins": ["{{ORIGIN}}"],
-      "standardFlowEnabled": true,
-      "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
-      "serviceAccountsEnabled": false,
-      "publicClient": false,
-      "frontchannelLogout": true,
-      "protocol": "openid-connect",
-      "fullScopeAllowed": true,
-      "attributes": {
-        "user.info.response.signature.alg": "RS256",
-        "post.logout.redirect.uris": "{{ORIGIN}}/*",
-        "backchannel.logout.session.required": "true"
-      },
-      "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "email"],
-      "optionalClientScopes": ["address", "phone", "offline_access"]
-    }
-  ]
+  "clients": {{CLIENTS_JSON}}
 }

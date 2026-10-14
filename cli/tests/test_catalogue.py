@@ -32,7 +32,8 @@ class CatalogueTests(unittest.TestCase):
     def test_catalogue_loads_without_errors(self):
         self.assertEqual(self.errors, [])
         self.assertEqual(
-            set(self.bricks), {"keycloak", "drive", "synapse", "element-web"}
+            set(self.bricks),
+            {"keycloak", "drive", "meet", "synapse", "element-web", "transfers"},
         )
 
     def test_keycloak_is_core_foundation(self):
@@ -109,9 +110,9 @@ class WriterTests(unittest.TestCase):
         ordered = [self.bricks[n] for n in names]
         generate_secrets(ordered, None)  # le coffre existe, mais n'est pas injecté
         rendered = render_env(self.bricks["drive"], self.answers)
-        self.assertIn("DJANGO_ALLOWED_HOSTS=demo.coop.example.com", rendered)
+        self.assertIn("DJANGO_ALLOWED_HOSTS={app_host}", rendered)
         self.assertIn("OIDC_RP_CLIENT_SECRET={secret:oidc_client_secret}", rendered)
-        self.assertNotIn("{domain}", rendered)
+        self.assertNotIn("{origin}=", rendered)  # jetons déploy (pas subst. à l'init)
         self.assertIn("DJANGO_EMAIL_BRAND_NAME=LaStarter", rendered)
 
     def test_render_template_substitutes_placeholders_except_secrets(self):
