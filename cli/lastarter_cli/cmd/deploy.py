@@ -1145,14 +1145,20 @@ def run_deploy(opts) -> int:
                     if call_origin not in client.get("redirectUris", []):
                         client["redirectUris"].append(f"{call_origin}/*")
                         client["webOrigins"].append(call_origin)
-                        s2, _ = _http_json(
-                            f"{api_base}/admin/realms/lastarter/clients/{client['id']}",
-                            method="PUT", token=json.loads(_http_json(
-                                f"{api_base}/realms/master/protocol/openid-connect/token", "POST",
-                                form={"grant_type": "password", "client_id": "admin-cli",
-                                      "username": admin_user, "password": vault["kc_admin_password"]},
-                                ca_file=ca_path,
-                            )[1])["access_token"], body=client, ca_file=ca_path)
+                        # Re-authentifier pour le PUT
+                        s3, t3 = _http_json(
+                            f"{api_base}/realms/master/protocol/openid-connect/token",
+                            "POST",
+                            form={"grant_type": "password", "client_id": "admin-cli",
+                                  "username": admin_user, "password": vault["kc_admin_password"]},
+                            ca_file=ca_path,
+                        )
+                        if s3 == 200:
+                            s2, _ = _http_json(
+                                f"{api_base}/admin/realms/lastarter/clients/{client['id']}",
+                                method="PUT", token=json.loads(t3)["access_token"],
+                                body=client, ca_file=ca_path,
+                            )
                             if s2 in (200, 204):
                                 print(f"Redirect URI ajouté : {call_origin}/*")
 
