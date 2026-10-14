@@ -43,12 +43,9 @@ max_upload_size: 100M
 app_service_config_files:
   - /data/appservices/lk-jwt-service.yaml
 
-# Element Call standalone : enregistrement requis pour les appels anonymes.
-# Les utilisateurs SSO existants se connectent normalement.
+# Enregistrement requis pour element-call standalone (SSO via Keycloak).
 enable_registration: true
 enable_registration_without_verification: true
-# Guests : element-call standalone crée des sessions temporaires pour les appels.
-allow_guest_access: true
 trusted_key_servers: []
 suppress_key_server_warning: true
 

@@ -377,6 +377,14 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             "    }",
             "",
         ]
+        # Aucune page /login ni /register : le SSO (id.<domaine>) fait l'auth.
+        # Blocage passerelle pour TOUTES les apps → redirect vers /.
+        lines += [
+            "    location = /login { return 302 https://$host/; }",
+            "    location = /register { return 302 https://$host/; }",
+            "    location = /signup { return 302 https://$host/; }",
+            "",
+        ]
         # Element Call standalone : proxy Matrix API sur le MEME domaine (same-origin,
         # évite les problèmes CORS/certificat cross-domain).
         if brick.name == "element-call":

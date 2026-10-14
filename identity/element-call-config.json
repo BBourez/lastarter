@@ -15,8 +15,10 @@
     "network_error_retry_ms": 100
   },
   "disable_custom_urls": true,
-  "disable_login_language_selector": false,
+  "disable_guests": true,
+  "disable_3pid_login": true,
   "setting_defaults": {
-    "UIFeature.registration": false
+    "UIFeature.registration": false,
+    "UIFeature.passwordReset": false
   }
 }
