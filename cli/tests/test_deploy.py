@@ -64,7 +64,7 @@ class RuntimeRenderTests(unittest.TestCase):
         draft = "URL={origin}\nSSO={sso_origin}\nWS={ws}://livekit.{domain}\nHOST={app_host}\nCONF={django_configuration}\n"
         rendered = render_runtime_env(draft, ANSWERS, self.vault, label="meet")
         self.assertIn("URL=https://meet.localhost:8443", rendered)
-        self.assertIn("SSO=https://localhost:8443", rendered)
+        self.assertIn("SSO=https://id.localhost:8443", rendered)  # identité sur id.<domaine>
         self.assertIn("WS=wss://livekit.localhost:8443", rendered)
         self.assertIn("HOST=meet.localhost:8443", rendered)
         self.assertIn("CONF=Feature", rendered)
@@ -107,13 +107,15 @@ class RuntimeRenderTests(unittest.TestCase):
         names, _ = resolve_selection(["drive", "meet"], self.bricks)
         selected = [self.bricks[n] for n in names]
         edge = render_edge(selected, ANSWERS)
-        self.assertIn("server_name localhost _;", edge)          # apex SSO (sans port)
+        self.assertIn("server_name localhost id.localhost _;", edge)  # apex + id → SSO
         self.assertIn("server_name drive.localhost;", edge)       # app drive
         self.assertIn("set $backend_front drive_frontend:3000;", edge)
         self.assertIn("server_name meet.localhost;", edge)        # app meet
         self.assertIn("server_name livekit.localhost;", edge)     # SFU ws
         self.assertIn('proxy_set_header Connection "upgrade";', edge)
-        self.assertIn("return 302 https://drive.localhost:8443/;", edge)  # apex → 1re app
+        # L'apex ET id.<domaine> routent vers l'identité (toute l'auth vit sur id).
+        self.assertIn("proxy_pass http://$backend_keycloak;", edge)
+        self.assertNotIn("server_name drive.localhost:8083;", edge)      # port interdit
         self.assertNotIn("server_name drive.localhost:8083;", edge)      # port interdit
 
 

@@ -343,5 +343,16 @@ def run_init(opts) -> int:
 
     print(f"\nDéploiement généré : {target}")
     print(f"Briques : {', '.join(ordered_names)}")
-    print("Prochaine étape : ajuster env/*.env puis (phase 2) `lastarter deploy`.")
+    # Plan d'installation complet — le client sait exactement ce qui sera exposé.
+    from .deploy import _id_origin, app_origin
+
+    print("\nPlan d'installation (après `lastarter deploy`) :")
+    print(f"  Identité (SSO) : {_id_origin(answers['domain'])} — inscription activée")
+    for brick in ordered:
+        if brick.core:
+            continue
+        label = brick.compose.get("route_label", brick.name)
+        print(f"  {brick.name:<12} : {app_origin(answers['domain'], label)}")
+    print("  Passerelle TLS : port 8443 (CA locale en POC, certificats client en prod)")
+    print("Prochaine étape : `lastarter detect --domain <domaine>` puis `lastarter deploy`.")
     return 0

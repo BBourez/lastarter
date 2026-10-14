@@ -8,6 +8,7 @@ from pathlib import Path
 
 from . import __version__
 from .cmd import deploy as cmd_deploy
+from .cmd import detect as cmd_detect
 from .cmd import init as cmd_init
 from .cmd.deploy import DeployError
 
@@ -39,6 +40,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     ps = sub.add_parser("ps", help="État des conteneurs d'un déploiement")
     ps.add_argument("--client", required=True, help="Slug du déploiement")
+
+    detect = sub.add_parser("detect", help="Audit d'environnement : IP, Docker, k8s, DNS, ports")
+    detect.add_argument("--domain", help="Domaine cible (résolution DNS des sous-domaines)")
+    detect.add_argument("--public-ip", action="store_true", help="Détecter aussi l'IP publique (api.ipify.org)")
     return parser
 
 
@@ -87,6 +92,8 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_deploy.run_deploy(opts)
         if opts.command == "ps":
             return cmd_deploy.run_ps(opts)
+        if opts.command == "detect":
+            return cmd_detect.run_detect(opts)
         if opts.command == "list":
             return run_list()
     except (DeployError, KeyError) as exc:

@@ -1,0 +1,68 @@
+/* LaStarter — habillage du thème de login Keycloak (parent: keycloak).
+   Branding sans toucher aux templates : survit aux montées de version.
+   Cible les classes KC26 (login-pf-page, card-pf, pf-c-*) ET les variables
+   PatternFly pour rester résilient aux évolutions. */
+
+:root {
+  --pf-v5-global--primary-color--100: #4f46e5;
+  --pf-v5-global--primary-color--200: #4338ca;
+  --pf-global--primary-color--100: #4f46e5;
+  --pf-global--link--Color: #4f46e5;
+  --pf-v5-global--FontFamily-sans-serif: "Inter", "Segoe UI", system-ui, sans-serif;
+  --pf-global--FontFamily-sans-serif: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+
+/* Fond : dégradé indigo signature LaStarter */
+body.login-pf,
+body {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 45%, #4f46e5 100%) fixed;
+  min-height: 100vh;
+}
+
+/* Carte de connexion : arrondie, flottante */
+.card-pf,
+.pf-c-login__main,
+.pf-v5-c-login__main {
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(30, 27, 75, 0.45);
+  backdrop-filter: blur(6px);
+}
+
+/* En-tête du realm : le nom du client, sans crier */
+#kc-header-wrapper,
+h1#kc-page-title,
+.pf-c-title {
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+
+/* Bouton principal */
+button.pf-m-primary,
+.btn-primary,
+.pf-c-button.pf-m-primary,
+.pf-v5-c-button.pf-m-primary {
+  background-color: #4f46e5;
+  border-color: #4f46e5;
+  border-radius: 10px;
+}
+
+button.pf-m-primary:hover,
+.btn-primary:hover {
+  background-color: #4338ca;
+  border-color: #4338ca;
+}
+
+/* Champs */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+.pf-c-form-control,
+.pf-v5-c-form-control {
+  border-radius: 10px;
+}
+
+/* Lien « Inscription » / « Mot de passe oublié » */
+a,
+.pf-c-login__main-footer-links-item-link {
+  color: #c7d2fe;
+}

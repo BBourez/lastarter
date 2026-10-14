@@ -21,6 +21,8 @@ services:
     volumes:
       # Rendu par le CLI (secrets substitués) — jamais commité.
       - ${REALM_JSON_PATH}:/opt/keycloak/data/import/realm.json:ro
+      # Thème de login LaStarter (drop-in, committé dans identity/).
+      - ${THEME_DIR}/lastarter:/opt/keycloak/themes/lastarter:ro
     depends_on:
       kc_postgresql:
         condition: service_healthy

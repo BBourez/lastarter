@@ -52,12 +52,19 @@ def app_origin(domain: str, label: str) -> str:
     return f"{_scheme(domain)}://{label}.{domain}"
 
 
+def _id_origin(domain: str) -> str:
+    """Origine du service d'identité : id.<domaine>."""
+    return f"{_scheme(domain)}://id.{domain}"
+
+
 def _context(answers: dict, label: str | None, s3_port: str = "9000") -> dict[str, str]:
     domain = answers["domain"]
     scheme = _scheme(domain)
     context = {
         "{domain}": domain,
-        "{sso_origin}": f"{scheme}://{domain}",
+        # SSO sur son propre hôte dédié : id.<domaine> (l'identité a sa marque).
+        "{sso_origin}": f"{scheme}://id.{domain}",
+        "{id_origin}": f"{scheme}://id.{domain}",
         "{ws}": "wss",
         "{brand_name}": answers.get("brand_name", "LaStarter"),
     }
@@ -208,35 +215,29 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
     bare = domain.split(":")[0]  # server_name nginx : jamais de port
     lines: list[str] = [
         "# LaStarter — passerelle générée par lastarter-cli (ne pas éditer à la main).",
-        "# Apex → Keycloak (SSO). Une app = un sous-domaine. TLS partout (POC : CA locale).",
+        "# id.<domaine> → Keycloak (toute l'authentification). Une app = un sous-domaine.",
         "server {",
         "    listen 8443 ssl default_server;",
         "    http2 on;",
         "    ssl_certificate /etc/nginx/certs/server.crt;",
         "    ssl_certificate_key /etc/nginx/certs/server.key;",
-        f"    server_name {bare} _;",
+        f"    server_name {bare} id.{bare} _;",
         "    server_tokens off;",
         "    client_max_body_size 150m;",
+        "",
+        "    # Toute l'interface d'authentification vit sur id.<domaine>.",
+        "    location / {",
+        "        resolver 127.0.0.11 valid=10s ipv6=off;",
+        "        set $backend_keycloak keycloak:8080;",
+        "        proxy_pass http://$backend_keycloak;",
+        "        proxy_set_header Host $http_host;",
+        "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
+        "        proxy_set_header X-Forwarded-Proto https;",
+        "    }",
+        "}",
+        "",
     ]
-    for path in ("/realms/", "/resources/", "/js/", "/admin/"):
-        lines += [
-            f"    location {path} {{",
-            "        resolver 127.0.0.11 valid=10s ipv6=off;",
-            "        set $backend_keycloak keycloak:8080;",
-            "        proxy_pass http://$backend_keycloak;",
-            "        proxy_set_header Host $http_host;",
-            "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
-            "        proxy_set_header X-Forwarded-Proto https;",
-            "    }",
-        ]
     apps = [b for b in bricks if not b.core and b.compose.get("frontend_target")]
-    if apps:
-        first = apps[0]
-        origin = app_origin(domain, first.compose.get("route_label", first.name))
-        lines += [f"    location = / {{ return 302 {origin}/; }}"]
-    else:
-        lines += ["    location = / { return 204; }"]
-    lines += ["}", ""]
 
     for brick in apps:
         label = brick.compose.get("route_label", brick.name)
@@ -417,6 +418,87 @@ def _http_json(url: str, method: str, token: str | None = None, body: dict | Non
         return exc.code, exc.read().decode()
 
 
+def provision_realm(base_url: str, admin_user: str, admin_password: str, demo_password: str, ca_file: Path | None = None) -> None:
+    """Applique les réglages realm (inscription, thème, sécurité) + l'utilisateur démo.
+
+    Idempotent via l'API admin — fait autorité après le premier import du realm.
+    """
+    auth = _http_json(
+        f"{base_url}/realms/master/protocol/openid-connect/token",
+        method="POST",
+        form={
+            "grant_type": "password",
+            "client_id": "admin-cli",
+            "username": admin_user,
+            "password": admin_password,
+        },
+        ca_file=ca_file,
+    )
+    if auth[0] != 200:
+        raise DeployError(f"authentification admin Keycloak impossible (HTTP {auth[0]}) : {auth[1][:200]}")
+    token = json.loads(auth[1])["access_token"]
+    admin = f"{base_url}/admin/realms/lastarter"
+
+    # Réglages du realm : inscription libre, thème custom, sécurité brute-force.
+    status, text = _http_json(f"{admin}", method="GET", token=token, ca_file=ca_file)
+    if status != 200:
+        raise DeployError(f"lecture realm impossible (HTTP {status})")
+    realm = json.loads(text)
+    realm.update(
+        {
+            "registrationAllowed": True,
+            "resetPasswordAllowed": True,
+            "bruteForceProtected": True,
+            "rememberMe": True,
+            "loginWithEmailAllowed": True,
+            "loginTheme": "lastarter",
+        }
+    )
+    status, _ = _http_json(f"{admin}", method="PUT", token=token, body=realm, ca_file=ca_file)
+    if status not in (200, 204):
+        raise DeployError(f"mise à jour du realm impossible (HTTP {status})")
+
+    # Utilisateur démo : créé si absent, mot de passe (re)mis à jour depuis le coffre.
+    status, text = _http_json(
+        f"{admin}/users?username=demo&exact=true", method="GET", token=token, ca_file=ca_file
+    )
+    if status != 200:
+        raise DeployError(f"recherche utilisateur démo impossible (HTTP {status})")
+    found = json.loads(text)
+    if found:
+        user_id = found[0]["id"]
+    else:
+        status, _ = _http_json(
+            f"{admin}/users",
+            method="POST",
+            token=token,
+            body={
+                "username": "demo",
+                "email": "demo@lastarter.local",
+                "firstName": "Demo",
+                "lastName": "LaStarter",
+                "enabled": True,
+                "emailVerified": True,
+            },
+            ca_file=ca_file,
+        )
+        if status not in (200, 201):
+            raise DeployError(f"création utilisateur démo impossible (HTTP {status})")
+        status, text = _http_json(
+            f"{admin}/users?username=demo&exact=true", method="GET", token=token, ca_file=ca_file
+        )
+        user_id = json.loads(text)[0]["id"]
+    status, _ = _http_json(
+        f"{admin}/users/{user_id}/reset-password",
+        method="PUT",
+        token=token,
+        body={"type": "password", "value": demo_password, "temporary": False},
+        ca_file=ca_file,
+    )
+    if status not in (200, 204):
+        raise DeployError(f"mot de passe démo impossible (HTTP {status})")
+
+
 def provision_realm_clients(base_url: str, admin_user: str, admin_password: str, clients_json: str, ca_file: Path | None = None) -> list[str]:
     """Crée ou met à jour chaque client OIDC du realm `lastarter` via l'API admin.
 
@@ -503,7 +585,9 @@ def run_deploy(opts) -> int:
         draft_path = deployment_dir / "env" / f"{name}.env"
         if not draft_path.is_file():
             raise DeployError(f"env draft manquant : {draft_path} (rejouer `lastarter init`)")
-        label = bricks[name].compose.get("route_label", name)
+        # Les briques core (keycloak) se rendent sans label : leur identité
+        # est id.<domaine>, pas <name>.<domaine>.
+        label = None if bricks[name].core else bricks[name].compose.get("route_label", name)
         s3_port = str(bricks[name].compose.get("s3_public_port", "9000"))
         rendered = render_runtime_env(
             draft_path.read_text(encoding="utf-8"), answers, vault, label, s3_port
@@ -571,6 +655,10 @@ def run_deploy(opts) -> int:
     # Certificats TLS POC (CA locale + wildcard *.localhost) — générés une fois.
     ca_path, crt_path, key_path = ensure_dev_certs(runtime_dir)
     compose_env["CERTS_DIR"] = _portable(ca_path.parent)
+    # Thème de login LaStarter (drop-in Keycloak).
+    theme_dir = repo_root / "identity" / "keycloak-theme"
+    if theme_dir.is_dir():
+        compose_env["THEME_DIR"] = _portable(theme_dir)
 
     # Passerelle : conf nginx générée depuis les briques sélectionnées.
     # Un bind mount ne déclenche ni recreation ni reload : on suit le hash et
@@ -688,24 +776,36 @@ def run_deploy(opts) -> int:
         for line in rendered_envs.get("keycloak", "").splitlines():
             if line.startswith("KEYCLOAK_ADMIN="):
                 admin_user = line.partition("=")[2].strip()
+        # Provisionnement via l'apex (host résolvable par l'OS : *.localhost ne
+        # résout que côté navigateurs) — la passerelle route vers keycloak de
+        # toute façon ; l'issuer OIDC reste https://id.<domaine> (KC_HOSTNAME).
+        api_base = compute_origin(answers["domain"])
+        provision_realm(
+            base_url=api_base,
+            admin_user=admin_user,
+            admin_password=vault["kc_admin_password"],
+            demo_password=vault.get("demo_user_password", ""),
+            ca_file=ca_path,
+        )
         provisioned = provision_realm_clients(
-            base_url=compute_origin(answers["domain"]),
+            base_url=api_base,
             admin_user=admin_user,
             admin_password=vault["kc_admin_password"],
             clients_json=build_realm_clients(selected_bricks, rendered_envs, answers),
-            ca_file=ca_path if compute_origin(answers["domain"]).startswith("https") else None,
+            ca_file=ca_path,
         )
         print(f"Clients OIDC synchronisés via l'API admin : {', '.join(provisioned)}")
 
     print(f"\nDéploiement « {slug} » opérationnel (TLS, port 8443).")
-    sso = compute_origin(answers["domain"])
-    print(f"  SSO (apex)    : {sso}/realms/lastarter — console {sso}/admin")
+    id_url = _id_origin(answers["domain"])
+    print(f"  Identité (SSO) : {id_url} — inscription activée, console {id_url}/admin")
     for brick in selected_bricks:
         if brick.core:
             continue
         label = brick.compose.get("route_label", brick.name)
         print(f"  {brick.name:<12} : {app_origin(answers['domain'], label)}")
-    print(f"  Utilisateur démo : demo / secrets.env:demo_user_password")
+    print(f"  Connexion démo : demo / secrets.env:demo_user_password")
+    print(f"  Console admin  : admin / secrets.env:kc_admin_password")
     if (runtime_dir / "certs" / "ca.crt").is_file():
         print()
         print("  ⚠ POC TLS : faire confiance à la CA locale UNE fois (navigateurs) :")
