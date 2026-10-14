@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>LaStarter Meet</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: linear-gradient(135deg, #1e1b4b, #4f46e5); min-height: 100vh; display: flex; align-items: center; justify-content: center; color: #fff; }
+    .msg { text-align: center; }
+    .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #fff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="msg">
+    <div class="spinner"></div>
+    <p>Connexion&hellip;</p>
+  </div>
+  <script>
+    // LaStarter Meet — wrapper SSO
+    // Vérifie si l'utilisateur a un token Matrix valide, sinon redirige vers Keycloak.
+    (function() {
+      var BASE = window.location.origin;
+      var SSO_URL = BASE + "/_matrix/client/v3/login/sso/redirect?redirectUrl=" + encodeURIComponent(BASE + "/authed");
+
+      // Récupère le token depuis localStorage (clé utilisée par matrix-js-sdk)
+      function getToken() {
+        try {
+          for (var i = 0; i < localStorage.length; i++) {
+            var key = localStorage.key(i);
+            if (key && key.indexOf("mxc") === -1 && key.indexOf("matrix") !== -1) {
+              var val = localStorage.getItem(key);
+              try {
+                var obj = JSON.parse(val);
+                if (obj && obj.access_token) return obj.access_token;
+              } catch(e) {}
+            }
+          }
+          // Format simple : "access_token"
+          var at = localStorage.getItem("access_token");
+          if (at) return at;
+        } catch(e) {}
+        return null;
+      }
+
+      var token = getToken();
+      if (!token) {
+        // Pas de token → SSO
+        window.location.href = SSO_URL;
+        return;
+      }
+
+      // Vérifie le token
+      fetch(BASE + "/_matrix/client/v3/account/whoami", {
+        headers: { "Authorization": "Bearer " + token }
+      }).then(function(r) {
+        if (r.ok) {
+          // Token valide → charger element-call
+          loadElementCall();
+        } else {
+          // Token invalide → SSO
+          localStorage.removeItem("access_token");
+          window.location.href = SSO_URL;
+        }
+      }).catch(function() {
+        // Erreur réseau → SSO
+        window.location.href = SSO_URL;
+      });
+
+      function loadElementCall() {
+        // Remplace le contenu par l'index d'element-call
+        fetch(BASE + "/element-call-index.html")
+          .then(function(r) { return r.text(); })
+          .then(function(html) {
+            document.open();
+            document.write(html);
+            document.close();
+          })
+          .catch(function() {
+            window.location.href = SSO_URL;
+          });
+      }
+    })();
+  </script>
+</body>
+</html>

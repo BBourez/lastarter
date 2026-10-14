@@ -377,6 +377,26 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             # de matrix.<domaine> pour éviter la canonicalisation Synapse.
             matrix_host = f"matrix.{bare}" + (f":{domain.split(':')[1]}" if ":" in domain else "")
             lines += [
+                # Wrapper SSO : redirection automatique vers Keycloak si non connecté.
+                "    location = / {",
+                "        root /var/www/meet-wrapper;",
+                "        try_files /index.html =404;",
+                "    }",
+                "",
+                "    # Element Call index (chargé par le wrapper après auth)",
+                "    location = /element-call-index.html {",
+                "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                "        set $backend_ec element_call:8080;",
+                "        proxy_pass http://$backend_ec/index.html;",
+                "        proxy_set_header Host $http_host;",
+                "    }",
+                "",
+                "    # Page d'auth réussie (rechargée depuis le SSO callback)",
+                "    location = /authed {",
+                "        root /var/www/meet-wrapper;",
+                "        try_files /index.html =404;",
+                "    }",
+                "",
                 "    # Matrix API proxy (same-origin, Host: matrix pour Synapse)",
                 "    location /_matrix/ {",
                 "        resolver 127.0.0.11 valid=10s ipv6=off;",

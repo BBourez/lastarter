@@ -59,6 +59,7 @@ services:
     volumes:
       - ${EDGE_CONF_PATH}:/etc/nginx/conf.d/default.conf:ro
       - ${CERTS_DIR}:/etc/nginx/certs:ro
+      - ./files/meet-wrapper.html:/var/www/meet-wrapper/index.html:ro
     depends_on:
       keycloak:
         condition: service_healthy
