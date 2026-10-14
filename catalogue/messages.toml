@@ -12,6 +12,7 @@ upstream_repo = "https://github.com/suitenumerique/messages"
 upstream_image = "ghcr.io/suitenumerique/messages-backend"
 upstream_pin = "latest@sha256:5d40c3cb71ae6cd9da158a32b88450be5b64b86615f99f48b82da9aafb5d70e0"
 requires = ["keycloak"]
+extra_secrets = ["messages_dkim_fernet:b64", "messages_salt_key"]
 
 [oidc]
 client_id = "messages"
@@ -64,6 +65,11 @@ RUSTFS_CORS_ALLOWED_ORIGINS = "{origin}"
 DJANGO_EMAIL_HOST = "messages_maildev"
 DJANGO_EMAIL_PORT = "1025"
 MTA_OUT_RELAY_HOST = "messages_maildev:1025"
+
+# DKIM : clé de chiffrement des clés privées (Fernet, base64 32 octets).
+DKIM_SECRET_KEY = "{secret:messages_django_secret_key}"
+# encrypted_fields : sel PBKDF2 pour la dérivation des clés Fernet (DKIM).
+SALT_KEY = "{secret:messages_salt_key}"
 
 # SSO Keycloak — endpoints scindés browser / in-network.
 OIDC_OP_JWKS_ENDPOINT = "http://keycloak:8080/realms/lastarter/protocol/openid-connect/certs"
