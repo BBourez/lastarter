@@ -76,6 +76,7 @@ OIDC_RP_CLIENT_SECRET = "{secret:messages_oidc_client_secret}"
 OIDC_RP_SIGN_ALGO = "RS256"
 OIDC_RP_SCOPES = "openid email"
 LOGIN_REDIRECT_URL = "{origin}"
+LOGIN_REDIRECT_URL_FAILURE = "{origin}"
 LOGOUT_REDIRECT_URL = "{origin}"
 
 [compose]

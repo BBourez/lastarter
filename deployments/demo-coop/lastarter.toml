@@ -6,7 +6,7 @@ name = "Demo Coop"
 slug = "demo-coop"
 domain = "localhost:8443"
 brand_name = "LaStarter"
-created = "2026-10-14T04:58:33+00:00"
+created = "2026-10-14T05:12:40+00:00"
 cli_version = "0.1.0"
 
 [bricks.keycloak]
