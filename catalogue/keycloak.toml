@@ -1,0 +1,48 @@
+# Brique fondation : Keycloak — identité unique (SSO OIDC) de toute la suite.
+# Ancré sur le compose amont de drive (examples-inspiration/drive/compose.yaml).
+
+[brick]
+name = "keycloak"
+title = "Keycloak — identité et SSO"
+category = "fondation"
+description = "Serveur d'identité : realm unique `lastarter`, clients OIDC de toutes les briques, page de login brandée."
+license = "Apache-2.0"
+upstream_repo = "https://github.com/keycloak/keycloak"
+upstream_image = "quay.io/keycloak/keycloak:26.3.2"
+upstream_pin = "26.3.2"
+core = true
+requires = []
+
+[oidc]
+# Le realm `lastarter` est provisionné par identity/ (phase 2) ; les clients
+# OIDC de chaque brique sont déclarés dans leurs manifestes respectifs.
+realm = "lastarter"
+
+[branding.env]
+# Branding de la page de login Keycloak (thème phase 2).
+KC_THEME = "lastarter"
+
+[env]
+KEYCLOAK_ADMIN = "admin"
+KEYCLOAK_ADMIN_PASSWORD = "{secret:kc_admin_password}"
+KC_DB = "postgres"
+KC_DB_URL_HOST = "kc_postgresql"
+KC_DB_URL_DATABASE = "keycloak"
+KC_DB_USERNAME = "keycloak"
+KC_DB_PASSWORD = "{secret:kc_db_password}"
+KC_DB_SCHEMA = "public"
+KC_HOSTNAME = "{domain}"
+KC_PROXY = "edge"
+KC_HEALTH_ENABLED = "true"
+KC_METRICS_ENABLED = "true"
+
+[compose]
+profile = "keycloak"
+services = [
+  "keycloak",          # quay.io/keycloak/keycloak:26.3.2, --import-realm
+  "kc_postgresql",     # postgres:14 (DB dédiée au realm)
+]
+extras = []
+
+[notes]
+warnings = "Le realm (identity/realm-lastarter.json) est importé au premier démarrage via --import-realm ; ensuite, l'API admin fait autorité (pas de ré-import écrasant)."

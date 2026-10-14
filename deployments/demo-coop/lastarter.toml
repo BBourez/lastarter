@@ -1,0 +1,22 @@
+# Généré par lastarter-cli — ne pas éditer à la main.
+# Pour modifier : rejouer `lastarter init` (réponses pré-remplies).
+
+[client]
+name = "Demo Coop"
+slug = "demo-coop"
+domain = "demo.coop.example.com"
+brand_name = "LaStarter"
+created = "2026-10-14T01:10:22+00:00"
+cli_version = "0.1.0"
+
+[bricks.keycloak]
+title = "Keycloak — identité et SSO"
+pin = "26.3.2"
+license = "Apache-2.0"
+upstream = "https://github.com/keycloak/keycloak"
+
+[bricks.drive]
+title = "Drive — fichiers collaboratifs"
+pin = "checkout examples-inspiration/drive (à épingler par tag en phase 2)"
+license = "MIT"
+upstream = "https://github.com/suitenumerique/drive"

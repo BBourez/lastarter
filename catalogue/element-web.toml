@@ -1,0 +1,49 @@
+# Brique : Chat — client element-web (choix par défaut, UX Element native)
+# Recoloré intégralement par config (custom_themes + branding), zéro fork.
+# maturité "planned" : sélectionnable en phase 4 (chat), pas avant.
+
+[brick]
+name = "element-web"
+title = "Chat — messagerie chiffrée (element-web)"
+category = "communication"
+description = "Messagerie Matrix chiffrée de bout en bout, salons/espaces, fédération, appels via widget element-call. UI Element native recolorée LaStarter."
+license = "AGPL-3.0 OR GPL-3.0 OR Element-Commercial"   # multilicence : LaStarter choisit AGPL-3.0
+upstream_repo = "https://github.com/element-hq/element-web"
+upstream_pin = "checkout examples-inspiration/element-web (à épingler par tag en phase 4)"
+requires = ["synapse"]
+maturity = "planned"          # planned | stable — le CLI n'offre pas "planned" par défaut
+
+[oidc]
+# Auth via SSO Synapse (OIDC délégué vers Keycloak côté serveur), SSO masqué côté client.
+client_id = "synapse"
+
+[branding.env]
+# docs/theming.md + docs/config.md du checkout amont — tout par config.json, zéro fork :
+BRAND = "LaStarter"
+DEFAULT_THEME = "custom-LaStarter Light"
+WELCOME_PAGE_URL = "https://{domain}/welcome.html"
+BRANDING_AUTH_HEADER_LOGO_URL = "https://{domain}/assets/logo.png"
+BRANDING_WELCOME_BACKGROUND_URL = "https://{domain}/assets/welcome-bg.png"
+
+[branding.custom_theme]
+# Injecté dans setting_defaults.custom_themes[0] — palette LaStarter (phase 4 : valeurs finales).
+name = "LaStarter Light"
+is_dark = false
+accent-color = "#4F46E5"
+primary-color = "#4F46E5"
+warning-color = "#E11D48"
+sidebar-color = "#1E1B4B"
+roomlist-background-color = "#F5F5FF"
+timeline-background-color = "#FFFFFF"
+
+[env]
+# element-web est une app statique : la « config » est un config.json monté, pas des env vars.
+CONFIG_MOUNT = "lastarter/config.json"
+
+[compose]
+profile = "chat"
+services = ["element-web"]     # app statique nginx + config.json généré par le CLI
+extras = ["element-call"]      # widget visio intra-chat (AGPL, non modifié)
+
+[notes]
+warnings = "Ne pas forker pour le branding — custom_themes + branding.* couvrent tout (docs/theming.md). Si un patch devient inévitable : publier la fourche (AGPL)."

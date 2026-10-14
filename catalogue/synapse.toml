@@ -1,0 +1,42 @@
+# Brique : Synapse — homeserver Matrix (le serveur du chat).
+# Remplace ess-helm (exclu : positionnement « non-commercial ≤100 users » d'Element).
+# maturité "planned" : phase 4.
+
+[brick]
+name = "synapse"
+title = "Synapse — serveur Matrix"
+category = "communication"
+description = "Homeserver Matrix : salons chiffrés, fédération, OIDC délégué vers Keycloak."
+license = "AGPL-3.0-only"
+upstream_repo = "https://github.com/element-hq/synapse"
+upstream_image = "matrixdotorg/synapse:latest"   # à épingler précisément en phase 4
+upstream_pin = "à épingler en phase 4"
+requires = ["keycloak"]
+maturity = "planned"
+
+[oidc]
+# Synapse délègue l'auth au realm Keycloak (oidc_providers) — login unifié SSO.
+client_id = "synapse"
+scopes = "openid email profile"
+
+[branding.env]
+# Le branding visible vit côté client (element-web) ; Synapse sert l'API.
+
+[env]
+SYNAPSE_SERVER_NAME = "{domain}"
+SYNAPSE_OIDC_ISSUER = "https://{domain}/realms/lastarter"
+SYNAPSE_OIDC_CLIENT_SECRET = "{secret:synapse_oidc_secret}"
+SYNAPSE_REGISTRATION_SHARED_SECRET = "{secret:synapse_registration_secret}"
+SYNAPSE_MACAROON_SECRET_KEY = "{secret:synapse_macaroon_key}"
+
+[compose]
+profile = "chat"
+services = [
+  "synapse",         # homeserver
+  "synapse_postgresql",  # DB dédiée
+  "lk-jwt-service",  # app-service MatrixRTC (appels chiffrés) — ghcr.io/element-hq/lk-jwt-service
+]
+extras = []
+
+[notes]
+warnings = "Le CLI doit générer le câblage .well-known/matrix/client + delegation (rôle qu'ess-helm jouait). LiveKit mutualisable avec meet (SFU partagé, keys séparées) — POC phase 4."

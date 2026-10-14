@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+
+# Secrets générés par le CLI — à chiffrer (SOPS / ansible-vault) avant tout commit
+deployments/*/secrets.env
+deployments/*/secrets/
+
+# Données locales de dev (POC compose)
+deploy/compose/**/data/
+*.local
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db
