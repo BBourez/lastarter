@@ -6,6 +6,9 @@ pid_file: /data/homeserver.pid
 signing_key_path: /data/keys/signing.key
 server_name: {{SERVER_NAME}}
 public_baseurl: {{MATRIX_ORIGIN}}/
+# Room version 10 : le createur est explicitement dans power_levels.users —
+# Element Web v1.11.x verifie users[userId] cote client (v12 l'omet → UI cassee).
+default_room_version: "10"
 report_stats: false
 
 listeners:
