@@ -43,9 +43,10 @@ max_upload_size: 100M
 app_service_config_files:
   - /data/appservices/lk-jwt-service.yaml
 
-# B2B privé : pas d'enregistrement libre, pas de fédération par défaut (phase 6).
-enable_registration: false
-enable_registration_without_verification: false
+# Element Call standalone : enregistrement requis pour les appels anonymes.
+# Les utilisateurs SSO existants se connectent normalement.
+enable_registration: true
+enable_registration_without_verification: true
 trusted_key_servers: []
 suppress_key_server_warning: true
 
