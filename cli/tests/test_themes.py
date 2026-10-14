@@ -40,8 +40,9 @@ class ThemeRenderTests(unittest.TestCase):
         self.assertIn("--c--globals--colors--logo-1-light: #0bc491;", css)
         # Typographie Inter.
         self.assertIn("Inter", css)
-        # Composants.
-        self.assertIn("border-radius: 8px;", css)
+        # Composants : boutons pilule Compound.
+        self.assertIn("--cpd-radius-pill-effect: 9999px;", css)
+        self.assertIn("border-radius: var(--cpd-radius-pill-effect) !important", css)
         # Marque blanche.
         self.assertIn('--lastarter-brand-name: "Acme Corp";', css)
 

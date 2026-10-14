@@ -1,190 +1,253 @@
-/* LaStarter — portail (statique, zéro dépendance).
- * Design tokens : palette Compound (Element) chargée via /__lastarter/theme.css.
- * Ce CSS s'appuie sur les variables --lastarter-* et une palette locale
- * dérivée de Compound ; le thème injecté fournit la palette complète.
+/* LaStarter — portail au design Element (Compound).
+ * Layout : sidebar gauche + contenu, boutons pilule, Inter.
+ * Palette : via /__lastarter/theme.css (tokens --cpd-* et --lastarter-*).
  */
-
-:root {
-  /* Palette Compound (défauts ; surchargés par le thème injecté). */
-  --cpd-bg-canvas: var(--lastarter-canvas, #ffffff);
-  --cpd-bg-subtle-primary: #f0f2f5;
-  --cpd-bg-subtle-secondary: #e1e6ec;
-  --cpd-text-primary: #1b1d22;
-  --cpd-text-secondary: #656d77;
-  --cpd-accent-rest: var(--lastarter-brand-color, #0bc491);
-  --cpd-accent-hovered: #009b78;
-  --cpd-accent-subtle: #e3f7ed;
-  --cpd-border-interactive: #cdd3da;
-  --cpd-radius: 8px;
-}
 
 * { box-sizing: border-box; }
 
+:root {
+    --portal-radius: 8px;
+    --portal-pill: 9999px;
+    --portal-sidebar-w: 260px;
+}
+
 body {
-  margin: 0;
-  font-family: var(--lastarter-font, "Inter", "Segoe UI", system-ui, sans-serif);
-  color: var(--cpd-text-primary);
-  background: var(--cpd-bg-canvas);
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
+    margin: 0;
+    font-family: var(--cpd-font-family-sans, "Inter", system-ui, sans-serif);
+    color: var(--cpd-color-text-primary, #1b1d22);
+    background: var(--cpd-color-bg-canvas-default, #fff);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
 }
 
-.shell {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 3rem 1.5rem 2rem;
+/* ================================================================
+ * LAYOUT : sidebar + contenu
+ * ================================================================ */
+.layout {
+    display: flex;
+    min-height: 100vh;
 }
 
-/* ---------- Hero ---------- */
-
-.hero {
-  margin-bottom: 2.5rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid var(--cpd-bg-subtle-secondary);
+/* ================================================================
+ * SIDEBAR — style Element Web (fond gris subtil)
+ * ================================================================ */
+.sidebar {
+    width: var(--portal-sidebar-w);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--cpd-color-bg-subtle-secondary, #f0f2f5);
+    border-right: 1px solid var(--cpd-color-border-interactive-secondary, #e1e6ec);
+    padding: 20px 12px;
 }
 
-.brand-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 12px 20px;
 }
 
 .brand-logo {
-  display: none; /* activé si le logo existe (via JS) */
-  width: 40px;
-  height: 40px;
-  border-radius: var(--cpd-radius);
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--portal-radius);
+    background: var(--cpd-color-bg-accent-subtle, #e3f7ed)
+        center / contain no-repeat;
+    display: none;
 }
 
-.brand {
-  font-size: 2rem;
-  font-weight: 600; /* Compound : semibold, pas extrabold */
-  letter-spacing: -0.02em;
-  color: var(--cpd-text-primary);
+.brand-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--cpd-color-text-primary);
+    letter-spacing: -0.01em;
 }
 
-.tagline {
-  margin: 0.5rem 0 1.5rem;
-  color: var(--cpd-text-secondary);
-  font-size: 1.05rem;
-  line-height: 1.5;
+.sidebar-nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
-/* ---------- Boutons (style Compound) ---------- */
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 1.25rem;
-  height: 40px; /* --cpd-components--button--medium-height */
-  border-radius: var(--cpd-radius);
-  font-size: 0.9375rem; /* --cpd-font-size-body-md */
-  font-weight: 500; /* --cpd-font-weight-medium */
-  text-decoration: none;
-  border: none;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
+/* Item de navigation : hover subtil, actif accent */
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: var(--portal-radius);
+    color: var(--cpd-color-text-primary);
+    text-decoration: none;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    transition: background-color 0.1s;
 }
 
-.btn.primary {
-  background: var(--cpd-accent-rest);
-  color: #ffffff;
+.nav-item:hover {
+    background: var(--cpd-color-bg-subtle-primary, #e1e6ec);
 }
 
-.btn.primary:hover {
-  background: var(--cpd-accent-hovered);
+.nav-item.active {
+    background: var(--cpd-color-bg-accent-subtle, #e3f7ed);
+    color: var(--cpd-color-text-action-accent);
 }
 
-.btn.primary:active {
-  background: #007a61;
+.nav-icon {
+    font-size: 1.125rem;
+    line-height: 1;
+    width: 24px;
+    text-align: center;
 }
 
-/* ---------- Grille des tuiles ---------- */
+.nav-label { flex: 1; }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1rem;
+.sidebar-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--cpd-color-border-interactive-secondary);
 }
 
-.tile {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 1.25rem 1.5rem;
-  border-radius: var(--cpd-radius);
-  background: var(--cpd-bg-canvas);
-  border: 1px solid var(--cpd-border-interactive);
-  color: var(--cpd-text-primary);
-  text-decoration: none;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+/* Bouton pilule Element : gris foncé plein */
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 6px 20px;
+    border-radius: var(--portal-pill);
+    background: var(--cpd-color-bg-action-primary-rest, #1b1d22);
+    color: var(--cpd-color-text-on-solid-primary, #fff);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.1s;
 }
 
-.tile:hover {
-  background: var(--cpd-bg-subtle-primary);
-  border-color: var(--cpd-accent-rest);
+.btn-primary:hover {
+    background: var(--cpd-color-bg-action-primary-hovered, #3c4045);
 }
 
-.tile:active {
-  background: var(--cpd-bg-subtle-secondary);
+.btn-primary:active {
+    background: var(--cpd-color-bg-action-primary-pressed, #4c5158);
 }
 
-.tile-icon {
-  font-size: 1.5rem;
-  line-height: 1;
-  /* Badge circulaire subtil derrière l'icône (style Element). */
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--cpd-accent-subtle);
+.sidebar-link {
+    text-align: center;
+    font-size: 0.8125rem;
+    color: var(--cpd-color-text-secondary);
+    text-decoration: none;
+    padding: 4px;
 }
 
-.tile-name {
-  font-weight: 500; /* Compound medium */
-  font-size: 1rem;
-  color: var(--cpd-text-primary);
+.sidebar-link:hover {
+    color: var(--cpd-color-text-action-accent);
+    text-decoration: underline;
 }
 
-.tile-desc {
-  color: var(--cpd-text-secondary);
-  font-size: 0.875rem;
-  line-height: 1.4;
+/* ================================================================
+ * CONTENU — cartes d'applications
+ * ================================================================ */
+.content {
+    flex: 1;
+    padding: 48px 48px 32px;
+    max-width: 960px;
+}
+
+.content-header {
+    margin-bottom: 32px;
+}
+
+.content-title {
+    margin: 0 0 8px;
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--cpd-color-text-primary);
+    letter-spacing: -0.02em;
+}
+
+.content-subtitle {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--cpd-color-text-secondary);
+    line-height: 1.5;
+}
+
+/* Grille de cartes */
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.app-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px;
+    border-radius: var(--portal-radius);
+    border: 1px solid var(--cpd-color-border-interactive-secondary);
+    background: var(--cpd-color-bg-canvas-default);
+    text-decoration: none;
+    transition: border-color 0.1s, background-color 0.1s;
+}
+
+.app-card:hover {
+    border-color: var(--cpd-color-green-700);
+    background: var(--cpd-color-bg-subtle-secondary);
+}
+
+.card-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    font-size: 1.375rem;
+    border-radius: 50%;
+    background: var(--cpd-color-bg-accent-subtle, #e3f7ed);
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.card-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--cpd-color-text-primary);
+}
+
+.card-desc {
+    font-size: 0.875rem;
+    color: var(--cpd-color-text-secondary);
+    line-height: 1.4;
 }
 
 .empty {
-  color: var(--cpd-text-secondary);
-  font-size: 1rem;
+    color: var(--cpd-color-text-secondary);
+    font-size: 1rem;
 }
 
-/* ---------- Footer ---------- */
-
-.foot {
-  margin-top: 3rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--cpd-bg-subtle-secondary);
-  color: var(--cpd-text-secondary);
-  font-size: 0.85rem;
-}
-
-.foot a {
-  color: var(--cpd-accent-rest);
-  text-decoration: none;
-}
-
-.foot a:hover { text-decoration: underline; }
-
-/* ---------- Mode sombre (si le thème le définit) ---------- */
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Ces valeurs sont des définitions locales de repli ; le thème injecté
-       les surcharge avec sa propre palette sombre si applicable. */
-  }
+/* ================================================================
+ * RESPONSIVE : sidebar cachée en mobile
+ * ================================================================ */
+@media (max-width: 768px) {
+    .layout { flex-direction: column; }
+    .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--cpd-color-border-interactive-secondary);
+        padding: 16px;
+    }
+    .sidebar-nav { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+    .content { padding: 24px 16px; }
 }
