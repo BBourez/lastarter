@@ -53,7 +53,7 @@ POSTGRES_PASSWORD = "{secret:drive_db_password}"
 
 # Cache / files de tâches (redis:5 interne)
 REDIS_URL = "redis://drive_redis:6379/0"
-DJANGO_CELERY_BROKER_URL = "redis://drive_redis:6379/0"
+CELERY_BROKER_URL = "redis://drive_redis:6379/0"
 
 # Stockage objet (rustfs S3 interne ; POC : média servi directement par rustfs)
 AWS_S3_ENDPOINT_URL = "http://drive_rustfs:9000"

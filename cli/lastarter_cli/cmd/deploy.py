@@ -351,6 +351,17 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             '        add_header Cache-Control "no-cache";',
             "    }",
             "",
+        ]
+        # Element Call : l'accès direct à la racine redirige vers le chat
+        # (c'est une app widget, utilisable uniquement depuis un salon).
+        if brick.name == "element-call":
+            edge_port = domain.split(":")[1] if ":" in domain else ""
+            chat_origin = f"https://chat.{bare}" + (f":{edge_port}" if edge_port else "")
+            lines += [
+                f"    location = / {{ return 302 {chat_origin}/; }}",
+                "",
+            ]
+        lines += [
             "    location / {",
             "        resolver 127.0.0.11 valid=10s ipv6=off;",
             f"        set $backend_front {brick.compose['frontend_target']};",

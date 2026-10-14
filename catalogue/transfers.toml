@@ -41,7 +41,7 @@ POSTGRES_USER = "transfers"
 POSTGRES_PASSWORD = "{secret:transfers_db_password}"
 
 REDIS_URL = "redis://transfers_redis:6379/0"
-DJANGO_CELERY_BROKER_URL = "redis://transfers_redis:6379/0"
+CELERY_BROKER_URL = "redis://transfers_redis:6379/0"
 
 # S3 média (rustfs interne, exposé via transfers-media.<domaine>)
 AWS_S3_ENDPOINT_URL = "http://transfers_rustfs:9000"

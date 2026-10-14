@@ -45,7 +45,7 @@ POSTGRES_PASSWORD = "{secret:meet_db_password}"
 
 # Cache / files (redis interne)
 REDIS_URL = "redis://meet_redis:6379/0"
-DJANGO_CELERY_BROKER_URL = "redis://meet_redis:6379/0"
+CELERY_BROKER_URL = "redis://meet_redis:6379/0"
 
 # Stockage objet Garage (média des salons)
 AWS_S3_ENDPOINT_URL = "http://meet_garage:9000"

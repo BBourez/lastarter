@@ -40,7 +40,7 @@ POSTGRES_USER = "messages"
 POSTGRES_PASSWORD = "{secret:messages_db_password}"
 
 REDIS_URL = "redis://messages_redis:6379/0"
-DJANGO_CELERY_BROKER_URL = "redis://messages_redis:6379/0"
+CELERY_BROKER_URL = "redis://messages_redis:6379/0"
 
 # Recherche plein texte (opensearch interne)
 OPENSEARCH_URL = "http://messages_opensearch:9200"
