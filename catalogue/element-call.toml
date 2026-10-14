@@ -4,9 +4,9 @@
 
 [brick]
 name = "element-call"
-title = "Appels — Element Call"
-category = "communication"
-description = "Appels audio/vidéo chiffrés dans les salons du chat, y compris en solo (SFU LiveKit dédié)."
+title = "Meet — visioconférence"
+category = "collaboration"
+description = "Réunions en ligne depuis les salons du chat, appels chiffrés même en solo."
 license = "AGPL-3.0-only"
 upstream_repo = "https://github.com/element-hq/element-call"
 upstream_image = "ghcr.io/element-hq/element-call"

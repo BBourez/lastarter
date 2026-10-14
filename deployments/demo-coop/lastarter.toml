@@ -6,7 +6,7 @@ name = "Demo Coop"
 slug = "demo-coop"
 domain = "localhost:8443"
 brand_name = "LaStarter"
-created = "2026-10-14T11:14:42+00:00"
+created = "2026-10-14T11:29:39+00:00"
 cli_version = "0.1.0"
 
 [bricks.keycloak]
@@ -40,7 +40,7 @@ license = "MIT"
 upstream = "https://github.com/suitenumerique/transfers"
 
 [bricks.element-call]
-title = "Appels — Element Call"
+title = "Meet — visioconférence"
 pin = "latest"
 license = "AGPL-3.0-only"
 upstream = "https://github.com/element-hq/element-call"

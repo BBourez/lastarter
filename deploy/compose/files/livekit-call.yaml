@@ -9,7 +9,7 @@ keys:
 webhook:
   api_key: devkey
   urls:
-    - http://lk_jwt_service:6080/livekit/webhook
+    - http://lk-jwt-service:6080/livekit/webhook
 
 rtc:
   udp_port: 7882

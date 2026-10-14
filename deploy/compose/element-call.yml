@@ -22,10 +22,10 @@ services:
     networks: [lastarter]
 
   # Service de jetons LiveKit : appservice Synapse (registration rendu par le CLI).
-  lk_jwt_service:
+  # NB : nom avec TIRETS (pas d'underscore — Synapse rejette les hostnames IDNA invalides).
+  lk-jwt-service:
     image: ghcr.io/element-hq/lk-jwt-service:0.8.0
     env_file: ["${RUNTIME_DIR}/element-call.env"]
-    # Distroless (sans shell) : pas de healthcheck.
     healthcheck:
       disable: true
     networks: [lastarter]

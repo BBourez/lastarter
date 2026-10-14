@@ -356,6 +356,7 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
         # (c'est une app widget, utilisable uniquement depuis un salon).
         if brick.name == "element-call":
             edge_port = domain.split(":")[1] if ":" in domain else ""
+            # Renommé Meet : redirige vers le chat (les appels se lancent depuis les salons).
             chat_origin = f"https://chat.{bare}" + (f":{edge_port}" if edge_port else "")
             lines += [
                 f"    location = / {{ return 302 {chat_origin}/; }}",
@@ -457,11 +458,11 @@ def render_lk_registration(answers: dict, vault: dict[str, str]) -> str:
         "    - exclusive: false\n"
         f"      regex: \"@.*:{re.escape(bare)}\"  # tous les utilisateurs locaux\n"
         "# Synapse pousse les évènements et proxifie rtc/livekit (MSC4512) ici :\n"
-        'url: "http://lk_jwt_service:6080"\n'
+        'url: "http://lk-jwt-service:6080"\n'
         "io.element.msc4502.scopes:\n"
         '  ["urn:matrix:client:io.element.msc4502:rooms:is_joined"]\n'
         "io.element.msc4512.proxy_prefix: \"rtc/livekit\"\n"
-        "io.element.msc4512.proxy_url: \"http://lk_jwt_service:6080\"\n"
+        "io.element.msc4512.proxy_url: \"http://lk-jwt-service:6080\"\n"
     )
 
 

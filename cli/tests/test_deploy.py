@@ -143,7 +143,7 @@ class RuntimeRenderTests(unittest.TestCase):
         self.assertIn('as_token: "as-123"', rendered)
         self.assertIn('hs_token: "hs-456"', rendered)
         self.assertIn("regex: \"@.*:localhost\"", rendered)
-        self.assertIn('url: "http://lk_jwt_service:6080"', rendered)
+        self.assertIn('url: "http://lk-jwt-service:6080"', rendered)
         self.assertIn("msc4512.proxy_prefix: \"rtc/livekit\"", rendered)
 
     def test_element_config_rendu_theme_et_homeserver(self):
