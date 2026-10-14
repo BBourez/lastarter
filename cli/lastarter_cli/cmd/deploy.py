@@ -331,6 +331,23 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 '        proxy_set_header Connection "upgrade";',
                 "    }",
                 "",
+                # Django admin : route directe (Caddy distroless ne resout pas le DNS).
+                "    location /admin/ {",
+                "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                f"        set $backend_admin {api_target};",
+                "        proxy_pass http://$backend_admin;",
+                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
+                "        proxy_set_header X-Forwarded-Proto https;",
+                "    }",
+                "",
+                "    location /static/ {",
+                "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                f"        set $backend_static {api_target};",
+                "        proxy_pass http://$backend_static;",
+                "        proxy_set_header Host $http_host;",
+                "    }",
+                "",
             ]
         if brick.compose.get("access") == "vpn":
             lines += [
