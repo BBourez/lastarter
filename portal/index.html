@@ -4,15 +4,19 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>LaStarter</title>
+  <link rel="stylesheet" href="/__lastarter/theme.css" />
   <link rel="stylesheet" href="/portal.css" />
 </head>
 <body>
   <main class="shell">
     <header class="hero">
-      <div class="brand" id="brand">LaStarter</div>
+      <div class="brand-row">
+        <span class="brand-logo" id="brand-logo" aria-hidden="true"></span>
+        <div class="brand" id="brand">LaStarter</div>
+      </div>
       <p class="tagline" id="tagline">La suite collaborative de votre organisation.</p>
       <div class="session">
-        <a class="btn ghost" id="login" href="#">Se connecter</a>
+        <a class="btn primary" id="login" href="#">Se connecter</a>
       </div>
     </header>
 
@@ -36,6 +40,14 @@
         document.getElementById("footer-brand").textContent = cfg.brand;
         if (cfg.tagline) document.getElementById("tagline").textContent = cfg.tagline;
         document.getElementById("login").href = cfg.account_url;
+
+        // Logo : via la variable CSS --lastarter-logo-url (injectée par le thème).
+        const logo = getComputedStyle(document.documentElement)
+          .getPropertyValue("--lastarter-logo-url").trim();
+        if (logo && logo !== 'url("")' && logo !== "none") {
+          document.getElementById("brand-logo").style.backgroundImage = logo;
+          document.getElementById("brand-logo").style.display = "inline-block";
+        }
 
         const grid = document.getElementById("apps");
         for (const app of cfg.apps) {

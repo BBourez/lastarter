@@ -52,6 +52,10 @@ def gather_answers(
     wanted: list[str] | None,
     non_interactive: bool,
     include_planned: bool,
+    theme: str | None = None,
+    brand_color: str | None = None,
+    logo_url: str | None = None,
+    repo_root: Path | None = None,
 ) -> dict:
     """Constitue les réponses, interactives ou non, avec pré-remplissage sur rejeu."""
     slug = slugify(client or "")
@@ -68,6 +72,9 @@ def gather_answers(
             "client_slug": slug,
             "domain": domain,
             "brand_name": brand or "LaStarter",
+            "theme": theme or "element-light",
+            "brand_color": brand_color or "#0bc491",
+            "logo_url": logo_url or "",
             "bricks": wanted,
         }
 
@@ -80,6 +87,26 @@ def gather_answers(
     slug = slugify(client_name)
     domain = prompts.ask("Domaine principal", (existing or {}).get("domain", domain or ""))
     brand_name = prompts.ask("Nom de marque affiché", (existing or {}).get("brand_name", brand or "LaStarter"))
+
+    # Thème : liste les palettes disponibles (themes/*.toml).
+    from .theme import list_themes
+    themes = list_themes(repo_root)
+    theme_labels = [t["label"] for t in themes]
+    default_theme_idx = next(
+        (i for i, t in enumerate(themes) if t["name"] == (existing or {}).get("theme", theme or "element-light")),
+        0,
+    )
+    theme_idx = prompts.ask_select("Thème visuel (palette Element par défaut)", theme_labels, default_theme_idx)
+    chosen_theme = themes[theme_idx]["name"] if themes else "element-light"
+
+    brand_color = prompts.ask(
+        "Couleur de marque (hex, ex #0bc491)",
+        (existing or {}).get("brand_color", brand_color or "#0bc491"),
+    )
+    logo_url = prompts.ask(
+        "URL du logo (optionnel, affiché dans le portail)",
+        (existing or {}).get("logo_url", logo_url or ""),
+    )
 
     selectable = [
         b for b in bricks.values()
@@ -99,6 +126,9 @@ def gather_answers(
         "client_slug": slug,
         "domain": domain,
         "brand_name": brand_name,
+        "theme": chosen_theme,
+        "brand_color": brand_color,
+        "logo_url": logo_url,
         "bricks": [selectable[i].name for i in chosen],
     }
 
@@ -187,6 +217,9 @@ def render_manifest(ordered: list[Brick], answers: dict, created: str) -> str:
         f"slug = {toml_value(answers['client_slug'])}",
         f"domain = {toml_value(answers['domain'])}",
         f"brand_name = {toml_value(answers['brand_name'])}",
+        f"theme = {toml_value(answers.get('theme', 'element-light'))}",
+        f"brand_color = {toml_value(answers.get('brand_color', '#0bc491'))}",
+        f"logo_url = {toml_value(answers.get('logo_url', ''))}",
         f"created = {toml_value(created)}",
         f"cli_version = {toml_value(__version__)}",
         "",
@@ -285,6 +318,10 @@ def run_init(opts) -> int:
         [b.strip() for b in opts.bricks.split(",")] if opts.bricks else None,
         opts.non_interactive,
         opts.all,
+        getattr(opts, "theme", None),
+        getattr(opts, "brand_color", None),
+        getattr(opts, "logo_url", None),
+        catalogue_dir.parent,
     )
 
     existing = load_answers(deployments_root / answers["client_slug"])

@@ -32,6 +32,9 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--non-interactive", action="store_true", help="Mode scripté (sans questionnaire)")
     init.add_argument("--all", action="store_true", help="Inclure les briques 'planned' (phases futures)")
     init.add_argument("--output", help="Dossier racine des déploiements (défaut : <repo>/deployments)")
+    init.add_argument("--theme", help="Thème visuel (ex. element-light, element-dark — cf. themes/)")
+    init.add_argument("--brand-color", dest="brand_color", help="Couleur de marque en hex (ex. #0bc491)")
+    init.add_argument("--logo-url", dest="logo_url", help="URL du logo client (affiché dans le portail)")
 
     sub.add_parser("list", help="Lister les briques du catalogue")
 

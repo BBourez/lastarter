@@ -235,6 +235,25 @@ def ensure_dev_certs(runtime_dir: Path, san_names: list[str]) -> tuple[Path, Pat
 VPN_ALLOW = "10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 127.0.0.1"
 
 
+def _theme_nginx_block() -> list[str]:
+    """Bloc nginx commun : sert le thème CSS et l'injecte dans le HTML.
+
+    sub_filter remplace </head> par un <link> vers le thème — nécessite que
+    les réponses proxifiées arrivent non compressées (Accept-Encoding vide).
+    """
+    return [
+        "    # Thème LaStarter : CSS (palette + marque blanche) injecté dans le HTML.",
+        "    location = /__lastarter/theme.css {",
+        "        alias /var/www/lastarter-theme/theme.css;",
+        "        default_type text/css;",
+        '        add_header Cache-Control "no-cache";',
+        "    }",
+        '    sub_filter \'</head>\' \'<link rel="stylesheet" href="/__lastarter/theme.css"></head>\';',
+        "    sub_filter_once on;",
+        "",
+    ]
+
+
 def render_edge(bricks: list[Brick], answers: dict) -> str:
     """Génère la conf nginx de la passerelle : apex → SSO, <label>.<domain> → app.
 
@@ -257,6 +276,9 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
         "    server_tokens off;",
         "    client_max_body_size 150m;",
         "",
+    ]
+    lines += _theme_nginx_block()
+    lines += [
         "    # Endpoints SSO accessibles aussi sur l'apex (outillage/CLI, compat).",
     ]
     for path in ("/realms/", "/resources/", "/js/", "/admin/"):
@@ -265,7 +287,8 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             "        resolver 127.0.0.11 valid=10s ipv6=off;",
             "        set $backend_keycloak keycloak:8080;",
             "        proxy_pass http://$backend_keycloak;",
-            "        proxy_set_header Host $http_host;",
+            "        proxy_set_header Accept-Encoding \"\";",  # sub_filter : HTML non gzip
+        "        proxy_set_header Host $http_host;",
             "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
             "        proxy_set_header X-Forwarded-Proto https;",
             "    }",
@@ -277,6 +300,7 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
         "        resolver 127.0.0.11 valid=10s ipv6=off;",
         "        set $backend_portal portal:80;",
         "        proxy_pass http://$backend_portal;",
+        "        proxy_set_header Accept-Encoding \"\";",  # sub_filter : HTML non gzip
         "        proxy_set_header Host $http_host;",
         "        proxy_set_header X-Forwarded-Proto https;",
         "    }",
@@ -295,10 +319,14 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
         "    server_tokens off;",
         "    client_max_body_size 150m;",
         "",
+    ]
+    lines += _theme_nginx_block()
+    lines += [
         "    location / {",
         "        resolver 127.0.0.11 valid=10s ipv6=off;",
         "        set $backend_keycloak keycloak:8080;",
         "        proxy_pass http://$backend_keycloak;",
+        "        proxy_set_header Accept-Encoding \"\";",  # sub_filter : HTML non gzip
         "        proxy_set_header Host $http_host;",
         "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
         "        proxy_set_header X-Forwarded-Proto https;",
@@ -323,13 +351,15 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             "    client_max_body_size 150m;",
             "",
         ]
+        lines += _theme_nginx_block()
         if api_target:
             lines += [
                 "    location /api/ {",
                 "        resolver 127.0.0.11 valid=10s ipv6=off;",
                 f"        set $backend_api {api_target};",
                 "        proxy_pass http://$backend_api;",
-                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header Accept-Encoding \"\";",  # sub_filter : HTML non gzip
+        "        proxy_set_header Host $http_host;",
                 "        proxy_set_header X-Real-IP $remote_addr;",
                 "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
                 "        proxy_set_header X-Forwarded-Proto https;",
@@ -343,7 +373,8 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 "        resolver 127.0.0.11 valid=10s ipv6=off;",
                 f"        set $backend_admin {api_target};",
                 "        proxy_pass http://$backend_admin;",
-                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header Accept-Encoding \"\";",  # sub_filter : HTML non gzip
+        "        proxy_set_header Host $http_host;",
                 "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
                 "        proxy_set_header X-Forwarded-Proto https;",
                 "    }",
@@ -352,7 +383,8 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 "        resolver 127.0.0.11 valid=10s ipv6=off;",
                 f"        set $backend_static {api_target};",
                 "        proxy_pass http://$backend_static;",
-                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header Accept-Encoding \"\";",  # sub_filter : HTML non gzip
+        "        proxy_set_header Host $http_host;",
                 "        proxy_set_header X-Forwarded-Proto https;",  # évite la boucle 301 SECURE_SSL_REDIRECT
                 "    }",
                 "",
@@ -371,7 +403,8 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             "        resolver 127.0.0.11 valid=10s ipv6=off;",
             f"        set $backend_front {brick.compose['frontend_target']};",
             "        proxy_pass http://$backend_front;",
-            "        proxy_set_header Host $http_host;",
+            "        proxy_set_header Accept-Encoding \"\";",  # sub_filter : HTML non gzip
+        "        proxy_set_header Host $http_host;",
             '        add_header Service-Worker-Allowed "/";',
             '        add_header Cache-Control "no-cache";',
             "    }",
@@ -417,7 +450,8 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 "        resolver 127.0.0.11 valid=10s ipv6=off;",
                 "        set $backend_jwt lk-jwt-service:6080;",
                 "        proxy_pass http://$backend_jwt;",
-                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header Accept-Encoding \"\";",  # sub_filter : HTML non gzip
+        "        proxy_set_header Host $http_host;",
                 "        proxy_set_header X-Forwarded-Proto https;",
                 "        proxy_http_version 1.1;",
                 "        proxy_set_header Upgrade $http_upgrade;",
@@ -429,7 +463,8 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 "        resolver 127.0.0.11 valid=10s ipv6=off;",
                 "        set $backend_sfu call_livekit:7880;",
                 "        proxy_pass http://$backend_sfu;",
-                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header Accept-Encoding \"\";",  # sub_filter : HTML non gzip
+        "        proxy_set_header Host $http_host;",
                 "        proxy_set_header X-Forwarded-Proto https;",
                 "        proxy_send_timeout 120;",
                 "        proxy_read_timeout 120;",
@@ -448,7 +483,8 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 "        resolver 127.0.0.11 valid=10s ipv6=off;",
                 "        set $backend_jwt lk-jwt-service:6080;",
                 "        proxy_pass http://$backend_jwt;",
-                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header Accept-Encoding \"\";",  # sub_filter : HTML non gzip
+        "        proxy_set_header Host $http_host;",
                 "        proxy_set_header X-Forwarded-Proto https;",
                 "        proxy_http_version 1.1;",
                 "        proxy_set_header Upgrade $http_upgrade;",
@@ -459,7 +495,8 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 "        resolver 127.0.0.11 valid=10s ipv6=off;",
                 "        set $backend_sfu call_livekit:7880;",
                 "        proxy_pass http://$backend_sfu;",
-                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header Accept-Encoding \"\";",  # sub_filter : HTML non gzip
+        "        proxy_set_header Host $http_host;",
                 "        proxy_set_header X-Forwarded-Proto https;",
                 "        proxy_send_timeout 120;",
                 "        proxy_read_timeout 120;",
@@ -476,14 +513,16 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             "        resolver 127.0.0.11 valid=10s ipv6=off;",
             "        set $backend_ec element_call:8080;",
             "        proxy_pass http://$backend_ec/index.html;",
-            "        proxy_set_header Host $http_host;",
+            "        proxy_set_header Accept-Encoding \"\";",  # sub_filter : HTML non gzip
+        "        proxy_set_header Host $http_host;",
             "    }",
             "",
             "    location / {",
             "        resolver 127.0.0.11 valid=10s ipv6=off;",
             f"        set $backend_front {brick.compose['frontend_target']};",
             "        proxy_pass http://$backend_front;",
-            "        proxy_set_header Host $http_host;",
+            "        proxy_set_header Accept-Encoding \"\";",  # sub_filter : HTML non gzip
+        "        proxy_set_header Host $http_host;",
             "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
             "        proxy_set_header X-Forwarded-Proto https;",
             "        proxy_http_version 1.1;",
@@ -509,7 +548,8 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 "        resolver 127.0.0.11 valid=10s ipv6=off;",
                 f"        set $backend_extra {extra['target']};",
                 "        proxy_pass http://$backend_extra;",
-                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header Accept-Encoding \"\";",  # sub_filter : HTML non gzip
+        "        proxy_set_header Host $http_host;",
                 "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
                 "        proxy_set_header X-Forwarded-Proto https;",
                 "        proxy_http_version 1.1;",
@@ -1006,6 +1046,28 @@ def run_deploy(opts) -> int:
             render_portal_config(selected_bricks, answers), encoding="utf-8"
         )
         compose_env["PORTAL_DIR"] = _portable(runtime_portal)
+
+    # Thème LaStarter : rendu CSS (palette Compound + marque blanche) servi par
+    # la passerelle sur /__lastarter/theme.css et injecté via sub_filter.
+    theme_name = answers.get("theme", "element-light")
+    from .theme import render_theme_css
+
+    theme_css = render_theme_css(
+        repo_root,
+        theme_name,
+        {
+            "name": answers.get("brand_name", "LaStarter"),
+            "color": answers.get("brand_color", "#0bc491"),
+            "logo_url": answers.get("logo_url", ""),
+        },
+    )
+    theme_css_path = runtime_dir / "theme.css"
+    old_theme = theme_css_path.read_text(encoding="utf-8") if theme_css_path.is_file() else None
+    theme_css_path.write_text(theme_css, encoding="utf-8")
+    compose_env["THEME_CSS_PATH"] = _portable(theme_css_path)
+    if old_theme != theme_css:
+        to_recreate.setdefault("gateway", "thème changé")
+    print(f"Thème « {theme_name} » rendu ({len(theme_css)} octets)")
 
     # Certificats TLS POC — SANs explicites pour chaque hôte déployé (id + apps
     # + serveurs additionnels type media/livekit) ; CPython exige du non-wildcard.

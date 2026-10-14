@@ -1,0 +1,102 @@
+# Thème LaStarter « element-dark » — palette Compound dark (Element Web / Element Call).
+# Source : @vector-im/compound-design-tokens, thème dark.
+
+[theme]
+name = "element-dark"
+label = "Element (sombre)"
+dark = true
+canvas = "#101317"
+font_family = "Inter, 'Segoe UI', system-ui, -apple-system, sans-serif"
+font_mono = "Inconsolata, ui-monospace, monospace"
+
+[palette.primary]
+50 = "#001c0b"
+100 = "#001c0b"
+150 = "#001f0e"
+200 = "#001f0e"
+250 = "#002513"
+300 = "#002513"
+350 = "#002e1b"
+400 = "#002e1b"
+450 = "#003d29"
+500 = "#003d29"
+550 = "#004832"
+600 = "#004832"
+650 = "#005a43"
+700 = "#005a43"
+750 = "#007a62"
+800 = "#007a62"
+850 = "#129a78"
+900 = "#129a78"
+950 = "#17ac84"
+1000 = "#17ac84"
+1100 = "#1fc090"
+1200 = "#72d5ae"
+
+[palette.neutral]
+0 = "#101317"
+25 = "#14171b"
+50 = "#181a1f"
+100 = "#1d1f24"
+150 = "#26282d"
+200 = "#26282d"
+250 = "#323539"
+300 = "#323539"
+350 = "#3c3f44"
+400 = "#3c3f44"
+450 = "#4a4f55"
+500 = "#4a4f55"
+550 = "#656c76"
+600 = "#656c76"
+650 = "#808994"
+700 = "#808994"
+750 = "#9199a4"
+800 = "#9199a4"
+850 = "#a3aab4"
+900 = "#a3aab4"
+950 = "#bdc3cc"
+1000 = "#d9dee4"
+1050 = "#ebeef2"
+1100 = "#ebeef2"
+
+[palette.info]
+100 = "#00055a"
+300 = "#001264"
+500 = "#062d80"
+700 = "#0b49ab"
+900 = "#4187eb"
+1100 = "#7aacf4"
+1400 = "#cbdffc"
+
+[palette.success]
+100 = "#001c0b"
+300 = "#002513"
+500 = "#003d29"
+700 = "#005a43"
+900 = "#129a78"
+1100 = "#1fc090"
+1400 = "#d9f4e7"
+
+[palette.warning]
+100 = "#380000"
+300 = "#470000"
+500 = "#710000"
+700 = "#972206"
+900 = "#da670d"
+1100 = "#f6913d"
+1400 = "#ffeadb"
+
+[palette.danger]
+100 = "#370000"
+300 = "#470000"
+500 = "#710000"
+700 = "#9f0d1e"
+900 = "#fd3e3c"
+1100 = "#ff877c"
+1400 = "#ffe9e6"
+
+[components]
+button_radius = "8px"
+button_height = "40px"
+input_radius = "8px"
+badge_radius = "12px"

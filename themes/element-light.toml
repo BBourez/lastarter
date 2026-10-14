@@ -1,0 +1,106 @@
+# Thème LaStarter « element-light » — palette Compound (Element Web / Element Call).
+# Source : @vector-im/compound-design-tokens, thème light.
+# Ce fichier est le format d'entrée du CLI (rendu vers theme.css à l'installation).
+
+[theme]
+name = "element-light"
+label = "Element (clair)"
+dark = false
+# Fond de page (canvas) et police par défaut.
+canvas = "#ffffff"
+font_family = "Inter, 'Segoe UI', system-ui, -apple-system, sans-serif"
+font_mono = "Inconsolata, ui-monospace, monospace"
+
+# Échelle PRIMAIRE (vert Element) — remplace « brand » Cunningham (violet).
+# Boutons, liens, accents, logo des apps La Suite.
+[palette.primary]
+50 = "#f8fdfb"
+100 = "#f8fdfb"
+150 = "#f1fbf6"
+200 = "#f1fbf6"
+250 = "#e3f7ed"
+300 = "#e3f7ed"
+350 = "#c6eedb"
+400 = "#c6eedb"
+450 = "#98e1c1"
+500 = "#98e1c1"
+550 = "#71d7ae"
+600 = "#71d7ae"
+650 = "#0bc491"
+700 = "#0bc491"
+750 = "#009b78"
+800 = "#009b78"
+850 = "#007a61"
+900 = "#007a61"
+950 = "#006b52"
+
+# Échelle NEUTRE (gris Compound) — remplace « gray » Cunningham.
+[palette.neutral]
+0 = "#ffffff"
+25 = "#fbfcfd"
+50 = "#f7f9fa"
+100 = "#f0f2f5"
+150 = "#e1e6ec"
+200 = "#e1e6ec"
+250 = "#cdd3da"
+300 = "#cdd3da"
+350 = "#bdc4cc"
+400 = "#bdc4cc"
+450 = "#a6adb7"
+500 = "#a6adb7"
+550 = "#818a95"
+600 = "#818a95"
+650 = "#656d77"
+700 = "#656d77"
+750 = "#595e67"
+800 = "#595e67"
+850 = "#4c5158"
+900 = "#4c5158"
+950 = "#3c4045"
+1000 = "#2b2d32"
+1050 = "#1b1d22"
+1100 = "#1b1d22"
+
+# Statuts (sémantique Compound light).
+[palette.info]
+100 = "#f9fcff"
+300 = "#e9f2ff"
+500 = "#bad5fc"
+700 = "#7eaff6"
+900 = "#0467dd"
+1100 = "#064ab1"
+1400 = "#000e65"
+
+[palette.success]
+100 = "#f8fdfb"
+300 = "#e3f7ed"
+500 = "#98e1c1"
+700 = "#0bc491"
+900 = "#007a61"
+1100 = "#005c45"
+1400 = "#002311"
+
+[palette.warning]
+100 = "#fffaf7"
+300 = "#ffefe4"
+500 = "#ffc8a1"
+700 = "#f89440"
+900 = "#bc4500"
+1100 = "#9b2200"
+1400 = "#450000"
+
+[palette.danger]
+100 = "#fffaf9"
+300 = "#ffefec"
+500 = "#ffc5bc"
+700 = "#ff8c81"
+900 = "#d51928"
+1100 = "#a4041d"
+1400 = "#450000"
+
+# Composants — correspondance avec les tokens Cunningham composants.
+[components]
+button_radius = "8px"
+button_height = "40px"
+input_radius = "8px"
+badge_radius = "12px"

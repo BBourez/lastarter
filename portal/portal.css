@@ -1,23 +1,32 @@
-/* LaStarter — portail (statique, zéro dépendance). Palette signature indigo. */
+/* LaStarter — portail (statique, zéro dépendance).
+ * Design tokens : palette Compound (Element) chargée via /__lastarter/theme.css.
+ * Ce CSS s'appuie sur les variables --lastarter-* et une palette locale
+ * dérivée de Compound ; le thème injecté fournit la palette complète.
+ */
 
 :root {
-  --indigo-950: #1e1b4b;
-  --indigo-900: #312e81;
-  --indigo-600: #4f46e5;
-  --indigo-400: #818cf8;
-  --paper: #f5f5ff;
-  --ink: #1e1b4b;
-  --muted: #61708b;
+  /* Palette Compound (défauts ; surchargés par le thème injecté). */
+  --cpd-bg-canvas: var(--lastarter-canvas, #ffffff);
+  --cpd-bg-subtle-primary: #f0f2f5;
+  --cpd-bg-subtle-secondary: #e1e6ec;
+  --cpd-text-primary: #1b1d22;
+  --cpd-text-secondary: #656d77;
+  --cpd-accent-rest: var(--lastarter-brand-color, #0bc491);
+  --cpd-accent-hovered: #009b78;
+  --cpd-accent-subtle: #e3f7ed;
+  --cpd-border-interactive: #cdd3da;
+  --cpd-radius: 8px;
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
-  color: var(--ink);
-  background: linear-gradient(135deg, var(--indigo-950) 0%, var(--indigo-900) 45%, var(--indigo-600) 100%) fixed;
+  font-family: var(--lastarter-font, "Inter", "Segoe UI", system-ui, sans-serif);
+  color: var(--cpd-text-primary);
+  background: var(--cpd-bg-canvas);
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
 .shell {
@@ -26,39 +35,75 @@ body {
   padding: 3rem 1.5rem 2rem;
 }
 
-.hero { color: #fff; margin-bottom: 2.5rem; }
+/* ---------- Hero ---------- */
+
+.hero {
+  margin-bottom: 2.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--cpd-bg-subtle-secondary);
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.brand-logo {
+  display: none; /* activé si le logo existe (via JS) */
+  width: 40px;
+  height: 40px;
+  border-radius: var(--cpd-radius);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
 
 .brand {
-  font-size: 2.2rem;
-  font-weight: 800;
+  font-size: 2rem;
+  font-weight: 600; /* Compound : semibold, pas extrabold */
   letter-spacing: -0.02em;
+  color: var(--cpd-text-primary);
 }
 
 .tagline {
-  margin: 0.5rem 0 1.25rem;
-  color: var(--indigo-400);
+  margin: 0.5rem 0 1.5rem;
+  color: var(--cpd-text-secondary);
   font-size: 1.05rem;
+  line-height: 1.5;
 }
+
+/* ---------- Boutons (style Compound) ---------- */
 
 .btn {
-  display: inline-block;
-  padding: 0.6rem 1.3rem;
-  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1.25rem;
+  height: 40px; /* --cpd-components--button--medium-height */
+  border-radius: var(--cpd-radius);
+  font-size: 0.9375rem; /* --cpd-font-size-body-md */
+  font-weight: 500; /* --cpd-font-weight-medium */
   text-decoration: none;
-  font-weight: 600;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
-.btn.ghost {
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.55);
+.btn.primary {
+  background: var(--cpd-accent-rest);
+  color: #ffffff;
 }
 
-.btn.ghost:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(30, 27, 75, 0.45);
-  background: rgba(255, 255, 255, 0.08);
+.btn.primary:hover {
+  background: var(--cpd-accent-hovered);
 }
+
+.btn.primary:active {
+  background: #007a61;
+}
+
+/* ---------- Grille des tuiles ---------- */
 
 .grid {
   display: grid;
@@ -69,43 +114,77 @@ body {
 .tile {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  padding: 1.4rem 1.5rem;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.94);
-  color: var(--ink);
+  gap: 0.5rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: var(--cpd-radius);
+  background: var(--cpd-bg-canvas);
+  border: 1px solid var(--cpd-border-interactive);
+  color: var(--cpd-text-primary);
   text-decoration: none;
-  box-shadow: 0 10px 32px rgba(30, 27, 75, 0.35);
-  transition: transform 0.14s ease, box-shadow 0.14s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .tile:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 18px 44px rgba(30, 27, 75, 0.5);
+  background: var(--cpd-bg-subtle-primary);
+  border-color: var(--cpd-accent-rest);
+}
+
+.tile:active {
+  background: var(--cpd-bg-subtle-secondary);
 }
 
 .tile-icon {
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   line-height: 1;
+  /* Badge circulaire subtil derrière l'icône (style Element). */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--cpd-accent-subtle);
 }
 
-.tile-name { font-weight: 700; font-size: 1.05rem; }
+.tile-name {
+  font-weight: 500; /* Compound medium */
+  font-size: 1rem;
+  color: var(--cpd-text-primary);
+}
 
 .tile-desc {
-  color: var(--muted);
-  font-size: 0.9rem;
-  line-height: 1.35;
+  color: var(--cpd-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.4;
 }
 
 .empty {
-  color: var(--indigo-400);
+  color: var(--cpd-text-secondary);
   font-size: 1rem;
 }
 
+/* ---------- Footer ---------- */
+
 .foot {
   margin-top: 3rem;
-  color: var(--indigo-400);
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--cpd-bg-subtle-secondary);
+  color: var(--cpd-text-secondary);
   font-size: 0.85rem;
 }
 
-.foot a { color: var(--indigo-400); }
+.foot a {
+  color: var(--cpd-accent-rest);
+  text-decoration: none;
+}
+
+.foot a:hover { text-decoration: underline; }
+
+/* ---------- Mode sombre (si le thème le définit) ---------- */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Ces valeurs sont des définitions locales de repli ; le thème injecté
+       les surcharge avec sa propre palette sombre si applicable. */
+  }
+}
