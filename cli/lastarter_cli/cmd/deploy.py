@@ -340,6 +340,17 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 "",
             ]
         lines += [
+            "    # Service Worker : header requis derrière un reverse proxy",
+            "    # (l'enregistrement échoue sans lui dans les navigateurs Chromium).",
+            "    location = /sw.js {",
+            "        resolver 127.0.0.11 valid=10s ipv6=off;",
+            f"        set $backend_front {brick.compose['frontend_target']};",
+            "        proxy_pass http://$backend_front;",
+            "        proxy_set_header Host $http_host;",
+            '        add_header Service-Worker-allowed "/";',
+            '        add_header Cache-Control "no-cache";',
+            "    }",
+            "",
             "    location / {",
             "        resolver 127.0.0.11 valid=10s ipv6=off;",
             f"        set $backend_front {brick.compose['frontend_target']};",
