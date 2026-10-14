@@ -1,18 +1,36 @@
-# Brique element-call — appels chiffrés intra-chat (MatrixRTC + LiveKit mutualisé).
+# Brique element-call — appels chiffrés autonomes (SPA + appservice + LiveKit + Redis).
+# Aucune dépendance envers meet : LiveKit dédié.
 
 services:
+  # Redis pour le SFU LiveKit.
+  call_redis:
+    image: redis:5
+    networks: [lastarter]
+
+  # SFU LiveKit dédié à element-call (pas partagé avec meet).
+  call_livekit:
+    image: livekit/livekit-server:v1.13.6
+    command: ["--config", "/config.yaml"]
+    volumes:
+      - ./files/livekit-call.yaml:/config.yaml:ro
+    ports:
+      - "7881:7881"       # RTC tcp
+      - "7882:7882/udp"   # RTC udp
+    depends_on:
+      call_redis:
+        condition: service_started
+    networks: [lastarter]
+
   # Service de jetons LiveKit : appservice Synapse (registration rendu par le CLI).
   lk_jwt_service:
     image: ghcr.io/element-hq/lk-jwt-service:0.8.0
     env_file: ["${RUNTIME_DIR}/element-call.env"]
-    # Image distroless (sans shell) : pas de healthcheck exécutable — la sonde
-    # applicative passe par synapse (MSC4512 ping) et le smoke (call.<domaine>).
+    # Distroless (sans shell) : pas de healthcheck.
     healthcheck:
       disable: true
     networks: [lastarter]
 
   # SPA Element Call : statique (nginx:8080), sert aussi la route /widget.
-  # config.json standalone rendu par le CLI (mode direct, sans widget).
   element_call:
     image: ghcr.io/element-hq/element-call:latest
     volumes:

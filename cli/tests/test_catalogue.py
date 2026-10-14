@@ -45,6 +45,12 @@ class CatalogueTests(unittest.TestCase):
         self.assertTrue(drive.is_selectable)
         self.assertEqual(drive.requires, ["keycloak"])
 
+    def test_element_call_autonome(self):
+        # Element-call ne dépend plus de meet : LiveKit dédié.
+        self.assertEqual(self.bricks["element-call"].requires, ["synapse"])
+        self.assertIn("call_livekit", self.bricks["element-call"].compose.get("services", []))
+        self.assertIn("livekit", [s["label"] for s in self.bricks["element-call"].compose.get("extra_servers", [])])
+
     def test_chat_bricks_are_stable(self):
         # Phase 4 : synapse + element-web validés E2E ; phase 6 : transfers aussi.
         for name in ("synapse", "element-web", "transfers"):
