@@ -605,11 +605,8 @@ def render_element_call_config(template: str, answers: dict) -> str:
     bare = domain.split(":")[0]
     port = domain.split(":")[1] if ":" in domain else ""
     scheme = _scheme(domain)
-    # Same-origin : l'API Matrix est proxifiée sur meet.<domaine> (pas de cross-origin).
-    call_origin = f"{scheme}://meet.{bare}" + (f":{port}" if port else "")
     matrix_origin = f"{scheme}://matrix.{bare}" + (f":{port}" if port else "")
-    rendered = template.replace("{{CALL_ORIGIN}}", call_origin)
-    rendered = rendered.replace("{{MATRIX_ORIGIN}}", matrix_origin)
+    rendered = template.replace("{{MATRIX_ORIGIN}}", matrix_origin)
     rendered = rendered.replace("{{BRAND}}", answers.get("brand_name", "LaStarter"))
     rendered = rendered.replace("{{SERVER_NAME}}", bare)
     return rendered

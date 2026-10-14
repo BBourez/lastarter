@@ -1,12 +1,12 @@
 {
   "default_server_config": {
     "m.homeserver": {
-      "base_url": "{{CALL_ORIGIN}}",
+      "base_url": "{{MATRIX_ORIGIN}}",
       "server_name": "{{SERVER_NAME}}"
     }
   },
   "livekit": {
-    "livekit_service_url": "{{CALL_ORIGIN}}/livekit/jwt"
+    "livekit_service_url": "{{MATRIX_ORIGIN}}/livekit/jwt"
   },
   "brand": "{{BRAND}}",
   "matrix_rtc_mode": "compatibility",
@@ -16,15 +16,5 @@
   },
   "disable_custom_urls": true,
   "disable_guests": true,
-  "disable_3pid_login": true,
-  "disable_login_language_selector": false,
-  "sso_redirect_options": {
-    "immediate": true,
-    "on_welcome_page": true,
-    "on_login_page": true
-  },
-  "setting_defaults": {
-    "UIFeature.registration": false,
-    "UIFeature.passwordReset": false
-  }
+  "disable_3pid_login": true
 }
