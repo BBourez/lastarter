@@ -1,12 +1,12 @@
 {
   "default_server_config": {
     "m.homeserver": {
-      "base_url": "{{MATRIX_ORIGIN}}",
+      "base_url": "{{CALL_ORIGIN}}",
       "server_name": "{{SERVER_NAME}}"
     }
   },
   "livekit": {
-    "livekit_service_url": "{{MATRIX_ORIGIN}}/livekit/jwt"
+    "livekit_service_url": "{{CALL_ORIGIN}}/livekit/jwt"
   },
   "brand": "{{BRAND}}",
   "matrix_rtc_mode": "compatibility",

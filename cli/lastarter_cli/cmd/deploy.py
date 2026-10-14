@@ -373,13 +373,16 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
         # Element Call standalone : proxy Matrix API sur le MEME domaine (same-origin,
         # évite les problèmes CORS/certificat cross-domain).
         if brick.name == "element-call":
+            # Same-origin : proxy Matrix API sur meet.<domaine> avec le Host header
+            # de matrix.<domaine> pour éviter la canonicalisation Synapse.
+            matrix_host = f"matrix.{bare}" + (f":{domain.split(':')[1]}" if ":" in domain else "")
             lines += [
-                "    # Matrix Client-Server API proxy (same-origin pour element-call)",
+                "    # Matrix API proxy (same-origin, Host: matrix pour Synapse)",
                 "    location /_matrix/ {",
                 "        resolver 127.0.0.11 valid=10s ipv6=off;",
                 "        set $backend_matrix synapse_synapse:8008;",
                 "        proxy_pass http://$backend_matrix;",
-                "        proxy_set_header Host $http_host;",
+                f"        proxy_set_header Host {matrix_host};",
                 "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
                 "        proxy_set_header X-Forwarded-Proto https;",
                 "    }",
@@ -389,7 +392,7 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 "        resolver 127.0.0.11 valid=10s ipv6=off;",
                 "        set $backend_syn synapse_synapse:8008;",
                 "        proxy_pass http://$backend_syn;",
-                "        proxy_set_header Host $http_host;",
+                f"        proxy_set_header Host {matrix_host};",
                 "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
                 "        proxy_set_header X-Forwarded-Proto https;",
                 "    }",
@@ -605,8 +608,9 @@ def render_element_call_config(template: str, answers: dict) -> str:
     bare = domain.split(":")[0]
     port = domain.split(":")[1] if ":" in domain else ""
     scheme = _scheme(domain)
-    matrix_origin = f"{scheme}://matrix.{bare}" + (f":{port}" if port else "")
-    rendered = template.replace("{{MATRIX_ORIGIN}}", matrix_origin)
+    # Same-origin : meet.<domaine> proxy l'API Matrix (avec Host: matrix pour Synapse).
+    call_origin = f"{scheme}://meet.{bare}" + (f":{port}" if port else "")
+    rendered = template.replace("{{CALL_ORIGIN}}", call_origin)
     rendered = rendered.replace("{{BRAND}}", answers.get("brand_name", "LaStarter"))
     rendered = rendered.replace("{{SERVER_NAME}}", bare)
     return rendered
