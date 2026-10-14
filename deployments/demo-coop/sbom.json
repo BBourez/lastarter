@@ -100,6 +100,24 @@
     },
     {
       "type": "application",
+      "name": "transfers",
+      "version": "latest@sha256:9ec307a6b629027d10bae3f118a51f659fea13fd0f24a5826c319bde61c2db18",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/suitenumerique/transfers"
+        }
+      ]
+    },
+    {
+      "type": "application",
       "name": "element-call",
       "version": "latest",
       "licenses": [
