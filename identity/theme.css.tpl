@@ -390,3 +390,111 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
     outline: 2px solid var(--cpd-color-green-700) !important;
     outline-offset: 2px;
 }
+
+/* ================================================================
+ * CLASSES CUNNINGHAM EXACTES — extraites des CSS de production
+ * (drive, messages, transfers : c__button--brand--*, c__dropdown-menu…)
+ * Ces sélecteurs précisent les patterns génériques ci-dessus.
+ * ================================================================ */
+
+/* Boutons Cunningham : pilule Element */
+.c__button,
+button.c__button {
+    border-radius: var(--cpd-radius-pill-effect) !important;
+    font-family: var(--cpd-font-family-sans) !important;
+    font-weight: 500 !important;
+    min-height: 36px;
+}
+
+/* Primary : gris foncé plein */
+.c__button--brand--primary,
+.c__button--error--primary {
+    background-color: var(--cpd-color-bg-action-primary-rest) !important;
+    color: var(--cpd-color-text-on-solid-primary) !important;
+    border: none !important;
+}
+
+.c__button--brand--primary:hover,
+.c__button--error--primary:hover {
+    background-color: var(--cpd-color-bg-action-primary-hovered) !important;
+}
+
+/* Secondary : blanc bordé */
+.c__button--brand--secondary,
+.c__button--error--secondary {
+    background-color: var(--cpd-color-bg-canvas-default) !important;
+    color: var(--cpd-color-text-primary) !important;
+    border: 1px solid var(--cpd-color-border-interactive-secondary) !important;
+}
+
+.c__button--brand--secondary:hover {
+    border-color: var(--cpd-color-border-interactive-hovered) !important;
+    background-color: var(--cpd-color-bg-subtle-secondary) !important;
+}
+
+/* Tertiary : souligné */
+.c__button--brand--tertiary,
+.c__button--error--tertiary {
+    background-color: transparent !important;
+    color: var(--cpd-color-text-primary) !important;
+    border: none !important;
+}
+
+/* Bordered (variante outline Cunningham) */
+.c__button--brand--bordered,
+.c__button--error--bordered {
+    background-color: transparent !important;
+    border: 1px solid var(--cpd-color-border-interactive-primary) !important;
+    color: var(--cpd-color-text-primary) !important;
+}
+
+/* Dropdowns Cunningham */
+.c__dropdown-menu,
+[class*="dropdown-menu"] {
+    border-radius: var(--cpd-radius-medium) !important;
+    border: 1px solid var(--cpd-color-border-interactive-secondary) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Items de menu Cunningham */
+.c__dropdown-menu [role="menuitem"],
+.c__dropdown-menu li,
+[class*="menu--item"],
+[class*="menu__item"] {
+    border-radius: var(--cpd-radius-small) !important;
+}
+
+/* Alertes Cunningham */
+.c__alert {
+    border-radius: var(--cpd-radius-medium) !important;
+}
+
+/* Inputs Cunningham (si classes spécifiques) */
+.c__input,
+[class*="c__text-field"],
+[class*="c__input"] {
+    border-radius: var(--cpd-radius-medium) !important;
+    font-family: var(--cpd-font-family-sans) !important;
+}
+
+/* ================================================================
+ * PROJECTS (React CRA) — classes CSS modules observées
+ * ================================================================ */
+
+/* Sidebar gauche : LeftMenu_* */
+[class*="LeftMenu_boards"],
+[class*="LeftMenu_projects"] {
+    font-family: var(--cpd-font-family-sans) !important;
+}
+
+[class*="LeftMenu_addBoardButton"],
+[class*="Board_addCardButton"],
+[class*="Board_listHeaderButton"],
+[class*="CardModal_optionsButton"] {
+    border-radius: var(--cpd-radius-pill-effect) !important;
+}
+
+/* Fond des menus déroulants Projects */
+[class*="Core_menuBackdrop"] {
+    background: rgba(0, 0, 0, 0.3) !important;
+}
