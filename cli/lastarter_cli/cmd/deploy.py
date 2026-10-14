@@ -240,6 +240,8 @@ def _theme_nginx_block() -> list[str]:
 
     sub_filter remplace </head> par un <link> vers le thème — nécessite que
     les réponses proxifiées arrivent non compressées (Accept-Encoding vide).
+    Complément : remplace les couleurs Cunningham hardcodées (~170 hex violets
+    dans les bundles CSS des apps La Suite) par les équivalents Element.
     """
     return [
         "    # Thème LaStarter : CSS (palette + marque blanche) injecté dans le HTML.",
@@ -249,7 +251,23 @@ def _theme_nginx_block() -> list[str]:
         '        add_header Cache-Control "no-cache";',
         "    }",
         '    sub_filter \'</head>\' \'<link rel="stylesheet" href="/__lastarter/theme.css"></head>\';',
-        "    sub_filter_once on;",
+        # sub_filter doit aussi traiter les CSS (défaut : text/html seulement).
+        "    sub_filter_types text/css application/javascript;",
+        # Couleurs Cunningham hardcodées → palette Element (focus, borders, text).
+        "    sub_filter '#5e5cd0' '#0bc491';",
+        "    sub_filter '#4844ad' '#009b78';",
+        "    sub_filter '#4844AD' '#009b78';",
+        "    sub_filter '#3e3b98' '#007a61';",
+        "    sub_filter '#6969df' '#0bc491';",
+        "    sub_filter '#534fc2' '#009b78';",
+        "    sub_filter '#534FC2' '#009b78';",
+        "    sub_filter '#8184fc' '#71d7ae';",
+        "    sub_filter '#8184FC' '#71d7ae';",
+        "    sub_filter '#7576ee' '#71d7ae';",
+        "    sub_filter '#7576EE' '#71d7ae';",
+        "    sub_filter '#5E5CD0' '#0bc491';",
+        "    sub_filter '#69697d' '#656d77';",
+        "    sub_filter_once off;",
         "",
     ]
 
