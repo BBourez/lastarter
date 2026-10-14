@@ -1,0 +1,90 @@
+# Brique transfers — transfert de fichiers (GHCR, épinglé par digest).
+# Le frontend Caddy est l'edge de la brique : SPA + proxy /api + headers sécurité.
+
+services:
+  transfers_postgresql:
+    image: postgres:16
+    env_file: ["${RUNTIME_DIR}/transfers.env"]
+    volumes:
+      - transfers_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 2s
+      timeout: 3s
+      retries: 150
+    networks: [lastarter]
+
+  transfers_redis:
+    image: redis:5
+    networks: [lastarter]
+
+  transfers_rustfs:
+    image: rustfs/rustfs:1.0.0
+    env_file: ["${RUNTIME_DIR}/transfers.env"]
+    volumes:
+      - transfers_mediadata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9000/health"]
+      interval: 3s
+      timeout: 20s
+      retries: 100
+    networks: [lastarter]
+
+  # SMTP POC (interne, non exposé) — remplacé par le SMTP du client en prod.
+  transfers_maildev:
+    image: maildev/maildev:2.2.1
+    command: ["maildev", "--smtp", "1025", "--imap", "false"]
+    networks: [lastarter]
+
+  transfers_app:
+    image: ghcr.io/suitenumerique/transfers-backend:latest@sha256:9ec307a6b629027d10bae3f118a51f659fea13fd0f24a5826c319bde61c2db18
+    env_file: ["${RUNTIME_DIR}/transfers.env"]
+    healthcheck:
+      # Comme le CMD amont : Host explicite (ALLOWED_HOSTS) + X-Forwarded-Proto.
+      test: ["CMD", "python", "-c", "import os; from urllib.request import Request, urlopen; urlopen(Request('http://localhost:8000/__heartbeat__/', headers={'Host': os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost').split(',')[0].strip(), 'X-Forwarded-Proto': 'https'}), timeout=2)"]
+      interval: 5s
+      timeout: 4s
+      retries: 60
+      start_period: 20s
+    depends_on:
+      transfers_postgresql:
+        condition: service_healthy
+      transfers_redis:
+        condition: service_started
+      transfers_rustfs:
+        condition: service_healthy
+    networks: [lastarter]
+
+  transfers_worker:
+    image: ghcr.io/suitenumerique/transfers-backend:latest@sha256:9ec307a6b629027d10bae3f118a51f659fea13fd0f24a5826c319bde61c2db18
+    command: ["python", "worker.py", "--loglevel=INFO"]
+    env_file: ["${RUNTIME_DIR}/transfers.env"]
+    # Un worker ne sert pas HTTP : pas de healthcheck heartbeat.
+    healthcheck:
+      disable: true
+    depends_on:
+      transfers_app:
+        condition: service_healthy
+    networks: [lastarter]
+
+  transfers_frontend:
+    image: ghcr.io/suitenumerique/transfers-frontend:latest@sha256:1a572f8ef0b3ae37aad9e9f8a6c1a69b381d26dbcf3736651d3cecfa1f7ba43c
+    # L'ENTRYPOINT image est caddy ; son CMD par défaut est la sonde lprobe
+    # (destinée aux probes k8s) — on fixe explicitement la commande caddy.
+    command: ["run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    env_file: ["${RUNTIME_DIR}/transfers.env"]
+    healthcheck:
+      # Distroless : pas de shell — lprobe embarqué sert de sonde.
+      test: ["CMD", "/usr/bin/lprobe", "-mode=http", "-port=8080", "-endpoint=/__lbheartbeat__"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 10s
+    depends_on:
+      transfers_app:
+        condition: service_healthy
+    networks: [lastarter]
+
+volumes:
+  transfers_pgdata:
+  transfers_mediadata:

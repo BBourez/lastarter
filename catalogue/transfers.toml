@@ -1,6 +1,7 @@
 # Brique : Transfers — transfert de fichiers souverain (La Suite territoriale, ANCT).
-# Brouillon : modèle identique à drive (Django+Vite, rustfs) — E2E en attente (maturity=planned).
-# Env de référence : env.d/development/backend.defaults amont.
+# Images GHCR épinglées par digest (immuable — pas encore de tags de release).
+# Modèle particulier : le frontend (Caddy) EST l'edge de la brique — il sert la SPA
+# ET proxifie /api vers le backend in-network (headers sécurité inclus).
 
 [brick]
 name = "transfers"
@@ -9,9 +10,9 @@ category = "collaboration"
 description = "Envoi de fichiers volumineux avec expiration, liens à usage unique et reçus (type WeTransfer souverain)."
 license = "MIT"
 upstream_repo = "https://github.com/suitenumerique/transfers"
-upstream_pin = "à épingler (images amont à vérifier : build local ou registry ANCT)"
+upstream_image = "ghcr.io/suitenumerique/transfers-backend"
+upstream_pin = "latest@sha256:9ec307a6b629027d10bae3f118a51f659fea13fd0f24a5826c319bde61c2db18"
 requires = ["keycloak"]
-maturity = "planned"
 
 [oidc]
 client_id = "transfers"
@@ -21,12 +22,14 @@ scopes = "openid email profile"
 DJANGO_EMAIL_BRAND_NAME = "{brand_name}"
 
 [env]
-DJANGO_CONFIGURATION = "Production"
+DJANGO_CONFIGURATION = "Production"   # classes de transferts : pas de Feature (vérifié image)
 DJANGO_ALLOWED_HOSTS = "{app_bare}"
+ALLOWED_HOSTS = "{app_bare}"
 DJANGO_SECRET_KEY = "{secret:transfers_django_secret_key}"
-DJANGO_SETTINGS_MODULE = "transfers.settings"
+DJANGO_SETTINGS_MODULE = "transferts.settings"   # l'image GHCR nomme le paquet « transferts »
 DJANGO_SUPERUSER_PASSWORD = "{secret:transfers_superuser_password}"
 DJANGO_CSRF_TRUSTED_ORIGINS = "{origin}"
+DJANGO_DATA_DIR = "/data"
 
 DB_HOST = "transfers_postgresql"
 DB_NAME = "transfers"
@@ -40,6 +43,7 @@ POSTGRES_PASSWORD = "{secret:transfers_db_password}"
 REDIS_URL = "redis://transfers_redis:6379/0"
 DJANGO_CELERY_BROKER_URL = "redis://transfers_redis:6379/0"
 
+# S3 média (rustfs interne, exposé via transfers-media.<domaine>)
 AWS_S3_ENDPOINT_URL = "http://transfers_rustfs:9000"
 AWS_S3_ACCESS_KEY_ID = "transfers"
 AWS_S3_SECRET_ACCESS_KEY = "{secret:transfers_s3_secret_key}"
@@ -50,15 +54,19 @@ RUSTFS_ACCESS_KEY = "transfers"
 RUSTFS_SECRET_KEY = "{secret:transfers_s3_secret_key}"
 RUSTFS_CORS_ALLOWED_ORIGINS = "{origin}"
 
+# SMTP sortant (maildev interne en POC — SMTP réel du client en prod)
+DJANGO_EMAIL_HOST = "transfers_maildev"
+DJANGO_EMAIL_PORT = "1025"
+
 TRANSFER_MAX_FILE_SIZE = "21474836480"
 TRANSFER_MAX_TOTAL_SIZE = "21474836480"
 
-# SSO Keycloak
+# SSO Keycloak — scindé browser / in-network (pattern vérifié amont)
 OIDC_CREATE_USER = "True"
 OIDC_OP_JWKS_ENDPOINT = "http://keycloak:8080/realms/lastarter/protocol/openid-connect/certs"
 OIDC_OP_AUTHORIZATION_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/auth"
-OIDC_OP_TOKEN_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/token"
-OIDC_OP_USER_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/userinfo"
+OIDC_OP_TOKEN_ENDPOINT = "http://keycloak:8080/realms/lastarter/protocol/openid-connect/token"
+OIDC_OP_USER_ENDPOINT = "http://keycloak:8080/realms/lastarter/protocol/openid-connect/userinfo"
 OIDC_OP_LOGOUT_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/logout"
 OIDC_RP_CLIENT_ID = "transfers"
 OIDC_RP_CLIENT_SECRET = "{secret:transfers_oidc_client_secret}"
@@ -67,25 +75,33 @@ OIDC_RP_SCOPES = "openid email profile"
 LOGIN_REDIRECT_URL = "{origin}"
 LOGOUT_REDIRECT_URL = "{origin}"
 
+# Edge Caddy du frontend : il proxifie lui-même /api vers le backend.
+TRANSFERS_FRONTEND_BACKEND_SERVER = "transfers_app:8000"
+# La passerelle LaStarter est le seul proxy amont : plages privées docker.
+TRANSFERS_FRONTEND_TRUSTED_PROXIES = "172.16.0.0/12 192.168.0.0/16 10.0.0.0/8"
+
 [compose]
 profile = "transfers"
-infra_services = ["transfers_postgresql", "transfers_redis", "transfers_rustfs"]
+infra_services = ["transfers_postgresql", "transfers_redis", "transfers_rustfs", "transfers_maildev"]
 migrate_service = "transfers_app"
 migrate_command = "python manage.py migrate --no-input"
+recreate_service = "transfers_frontend"   # Caddyfile/ENV montés par env : recreation au changement
 route_label = "transfers"
 frontend_target = "transfers_frontend:8080"
-api_target = "transfers_app:8000"
-s3_public_port = "9020"
-extra_servers = []
+# pas d'api_target : le Caddy du frontend proxifie /api lui-même.
+extra_servers = [
+  { label = "transfers-media", target = "transfers_rustfs:9000" },
+]
 services = [
-  "transfers_app",
-  "transfers_frontend",
-  "transfers_celery",
+  "transfers_app",       # ghcr.io/suitenumerique/transfers-backend (digest)
+  "transfers_frontend",  # ghcr.io/suitenumerique/transfers-frontend (Caddy edge)
+  "transfers_worker",    # python worker.py (notifications, purge)
   "transfers_postgresql",
   "transfers_redis",
   "transfers_rustfs",
+  "transfers_maildev",   # SMTP POC (interne) — remplacer par le SMTP client en prod
 ]
 extras = []
 
 [notes]
-warnings = "Brouillon : images amont à confirmer (le dépôt construit localement en dev) + SMTP sortant requis pour les notifications (maildev en POC). E2E pas encore validée."
+warnings = "Images épinglées par digest (pas de releases yet) — Renovate suit les digests. SMTP POC interne (maildev) : configurer le SMTP du client en prod. Le CSP strict du Caddy interdit toute origine externe par défaut."

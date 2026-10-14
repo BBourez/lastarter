@@ -183,20 +183,25 @@ def ensure_dev_certs(runtime_dir: Path, san_names: list[str]) -> tuple[Path, Pat
     certs_dir = runtime_dir / "certs"
     certs_dir.mkdir(parents=True, exist_ok=True)
     ca, crt, key = certs_dir / "ca.crt", certs_dir / "server.crt", certs_dir / "server.key"
+    ca_key = certs_dir / "ca.key"
     wanted_sans = sorted(set(san_names) | {"localhost", "*.localhost"})
     marker = certs_dir / ".sans"
     current_sans = marker.read_text(encoding="utf-8").strip() if marker.is_file() else ""
-    if (
-        ca.is_file() and crt.is_file() and key.is_file()
-        and current_sans == "\n".join(wanted_sans)
-    ):
+    leaf_current = crt.is_file() and key.is_file() and current_sans == "\n".join(wanted_sans)
+    if ca.is_file() and leaf_current:
         return ca, crt, key, False
+
+    # CA créée UNE fois (confiance navigateur stable) ; seul le certificat
+    # feuille est re-émis quand la liste d'hôtes change.
     san_line = ",".join(f"DNS:{name}" for name in wanted_sans)
-    script = (
-        "set -e; "
+    make_ca = "" if ca.is_file() and ca_key.is_file() else (
         "openssl req -x509 -newkey rsa:2048 -nodes -days 3650 "
         "-keyout /certs/ca.key -out /certs/ca.crt -subj '/CN=LaStarter POC CA'; "
-        "openssl req -newkey rsa:2048 -nodes "
+    )
+    script = (
+        "set -e; "
+        + make_ca
+        + "openssl req -newkey rsa:2048 -nodes "
         "-keyout /certs/server.key -out /certs/server.csr -subj '/CN=localhost'; "
         f"printf 'subjectAltName={san_line}\\nbasicConstraints=CA:FALSE\\n' > /certs/san.ext; "
         "openssl x509 -req -in /certs/server.csr -CA /certs/ca.crt -CAkey /certs/ca.key "

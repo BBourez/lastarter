@@ -46,11 +46,10 @@ class CatalogueTests(unittest.TestCase):
         self.assertEqual(drive.requires, ["keycloak"])
 
     def test_chat_bricks_are_stable(self):
-        # Phase 4 : synapse + element-web validés E2E (maturité stable).
-        self.assertEqual(self.bricks["synapse"].maturity, "stable")
-        self.assertEqual(self.bricks["element-web"].maturity, "stable")
+        # Phase 4 : synapse + element-web validés E2E ; phase 6 : transfers aussi.
+        for name in ("synapse", "element-web", "transfers"):
+            self.assertEqual(self.bricks[name].maturity, "stable")
         self.assertEqual(self.bricks["element-web"].requires, ["synapse"])
-        self.assertEqual(self.bricks["transfers"].maturity, "planned")
 
     def test_resolve_selection_adds_core_and_dependencies(self):
         ordered, added = resolve_selection(["drive"], self.bricks)
