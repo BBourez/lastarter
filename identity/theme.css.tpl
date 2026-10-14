@@ -1,21 +1,15 @@
 /*
- * LaStarter — refonte UI complète au style Element (Compound).
- * Design system officiel : compound.element.io (@vector-im/compound-*).
+ * LaStarter — theme.css : design system Compound (Element) appliqué partout.
+ * SOURCE OFFICIELLE : compound-design-tokens + compound-web (npm).
+ * Chaque règle ci-dessous reprend les specs EXACTES des composants Compound,
+ * adaptées pour re-themer les apps La Suite (Cunningham) sans les modifier.
  *
- * Structure :
- *   1. TOKENS COMPOUND : la palette (light/dark) est rendue depuis themes/*.toml
- *      → les composants ci-dessous référencent var(--cpd-*) et s'adaptent.
- *   2. PONT CUNNINGHAM : les apps La Suite (Cunningham) héritent de la palette.
- *   3. COMPOSANTS : restylage boutons, formulaires, sidebars, cartes, etc.
- *      au look exact d'Element Web / Element Call.
- *
- * Jetons restants : {{brand_name}}, {{brand_color}} (seuls éléments dynamiques
- * hors palette — la palette vient de themes/*.toml via le CLI).
+ * Jetons : {{token}} rendus par le CLI depuis themes/*.toml.
  */
 
 :root {
     /* ================================================================
-     * 1. TOKENS COMPOUND — palette rendue par le CLI (light ou dark)
+     * 1. TOKENS COMPOUND — palette complète (light/dark via themes/*.toml)
      * ================================================================ */
     --cpd-color-gray-100: {{neutral_25}};
     --cpd-color-gray-200: {{neutral_50}};
@@ -42,7 +36,7 @@
 
     --cpd-color-blue-1100: {{info_1100}};
 
-    /* Sémantique — mapping officiel Compound. */
+    /* Sémantique Compound (mapping officiel). */
     --cpd-color-text-primary: var(--cpd-color-gray-1400);
     --cpd-color-text-secondary: var(--cpd-color-gray-900);
     --cpd-color-text-disabled: var(--cpd-color-gray-800);
@@ -64,6 +58,7 @@
     --cpd-color-border-interactive-primary: var(--cpd-color-gray-600);
     --cpd-color-border-interactive-secondary: var(--cpd-color-gray-400);
     --cpd-color-border-interactive-hovered: var(--cpd-color-gray-800);
+    --cpd-color-separator-primary: var(--cpd-color-gray-400);
 
     /* Géométrie Compound. */
     --cpd-radius-pill-effect: 9999px;
@@ -78,7 +73,7 @@
     --cpd-font-family-sans: {{font_family}};
 
     /* ================================================================
-     * 2. PONT CUNNINGHAM → palette Compound
+     * 2. PONT CUNNINGHAM → palette Compound (toute l'échelle)
      * ================================================================ */
     --c--globals--colors--brand-050: {{primary_50}};
     --c--globals--colors--brand-100: {{primary_100}};
@@ -156,6 +151,15 @@
     --c--components--button--border-radius--focus: var(--cpd-radius-pill-effect);
     --c--components--button--medium-height: 36px;
 
+    /* Fonds de section « brand » → NEUTRES (pas d'aplat vert). */
+    --c--contextuals--background--semantic--brand--primary: var(--c--globals--colors--gray-1000);
+    --c--contextuals--background--semantic--brand--primary-hover: var(--c--globals--colors--gray-950);
+    --c--contextuals--background--semantic--brand--secondary: var(--c--globals--colors--gray-100);
+    --c--contextuals--background--semantic--brand--secondary-hover: var(--c--globals--colors--gray-150);
+    --c--contextuals--background--semantic--brand--tertiary: var(--c--globals--colors--gray-50);
+    --c--contextuals--background--semantic--brand--tertiary-hover: var(--c--globals--colors--gray-100);
+    --c--contextuals--content--semantic--brand--on-brand: #ffffff;
+
     /* ================================================================
      * 3. MARQUE BLANCHE
      * ================================================================ */
@@ -166,128 +170,131 @@
 }
 
 /* ================================================================
- * COMPOSANTS — restylage complet au style Element
- * Les sélecteurs !important sont requis : ce CSS charge APRÈS les apps.
+ * TYPOGRAPHIE (Compound Typography — tailles exactes Element Call)
+ * body 15px, heading 20/24/28/32, weights 400/500/600, tracking négatif
  * ================================================================ */
-
-/* ---------- Base : police et couleurs ---------- */
 body, html {
     font-family: var(--cpd-font-family-sans) !important;
+    font-size: 15px;
+    line-height: 1.5;
     color: var(--cpd-color-text-primary);
     background-color: var(--cpd-color-bg-canvas-default);
 }
 
-h1, h2, h3, h4, h5, h6 {
-    font-family: var(--cpd-font-family-sans) !important;
-    color: var(--cpd-color-text-primary);
-    font-weight: 600 !important;
-    letter-spacing: -0.01em;
+h1 { font-size: 32px !important; font-weight: 600 !important; letter-spacing: -0.045em; line-height: 1.2 !important; }
+h2 { font-size: 24px !important; font-weight: 600 !important; letter-spacing: -0.039em; line-height: 1.2 !important; }
+h3 { font-size: 20px !important; font-weight: 600 !important; letter-spacing: -0.033em; line-height: 1.2 !important; }
+h4, h5, h6 { font-size: 15px !important; font-weight: 600 !important; line-height: 1.25 !important; }
+
+p { margin-top: 0; line-height: 1.5; }
+
+hr {
+    border: none;
+    border-top: 1px solid var(--cpd-color-separator-primary);
+    width: calc(100% - 24px);
+    margin: 0 12px;
 }
 
-h1 { font-size: 1.5rem !important; }
-h2 { font-size: 1.25rem !important; }
-h3 { font-size: 1.125rem !important; }
-
-/* ---------- BOUTONS : pilule, comme Element ---------- */
+/* ================================================================
+ * BUTTON (Compound Button — specs exactes)
+ * radius 9999px, md=36px, primary gris foncé, secondary blanc bordé
+ * ================================================================ */
 button,
 input[type="submit"],
 input[type="button"] {
     border-radius: var(--cpd-radius-pill-effect) !important;
     font-family: var(--cpd-font-family-sans) !important;
-    font-weight: 500 !important;
-    font-size: 0.9375rem !important;
-    min-height: 36px;
-    padding: 6px 20px;
-    transition: background-color 0.1s, border-color 0.1s, color 0.1s;
+    font-weight: 600 !important;
+    font-size: 15px !important;
+    min-height: var(--cpd-space-9x);
+    padding: 4px 20px;
     cursor: pointer;
-    letter-spacing: 0;
-    line-height: 1.25;
+    letter-spacing: -0.013em;
+    transition: background-color 0.1s, border-color 0.1s, color 0.1s;
+    box-shadow: none !important;
 }
 
-/* Primary : gris très foncé plein (Element n'utilise pas le vert ici). */
+/* Primary (Compound data-kind=primary) */
 button[type="submit"],
-[class*="--primary"]:not([class*="--primary-outline"]):not([class*="text-primary"]),
+.c__button--brand--primary,
+.c__button--error--primary,
 [class*="btn-primary"]:not([class*="outline"]):not([class*="ghost"]),
 [class*="is-primary"],
-[class*="variant-primary"],
-[class*="kind-primary"],
 [data-kind="primary"] {
-    background-color: var(--cpd-color-bg-action-primary-rest) !important;
+    background: var(--cpd-color-bg-action-primary-rest) !important;
     color: var(--cpd-color-text-on-solid-primary) !important;
     border: none !important;
 }
 
-button[type="submit"]:hover,
-[class*="--primary"]:not([class*="outline"]):hover,
-[class*="btn-primary"]:not([class*="outline"]):hover,
-[class*="is-primary"]:hover,
-[data-kind="primary"]:hover {
-    background-color: var(--cpd-color-bg-action-primary-hovered) !important;
+button[type="submit"]:hover, .c__button--brand--primary:hover, [data-kind="primary"]:hover {
+    background: var(--cpd-color-bg-action-primary-hovered) !important;
+}
+button[type="submit"]:active, [data-kind="primary"]:active {
+    background: var(--cpd-color-bg-action-primary-pressed) !important;
 }
 
-button[type="submit"]:active,
-[data-kind="primary"]:active {
-    background-color: var(--cpd-color-bg-action-primary-pressed) !important;
-}
-
-/* Secondary : blanc, bordure grise. */
-[class*="--secondary"],
+/* Secondary (Compound data-kind=secondary) */
+.c__button--brand--secondary,
+.c__button--error--secondary,
 [class*="btn-secondary"],
-[class*="variant-secondary"],
-[class*="outline"],
+[class*="--secondary"]:not([class*="text-secondary"]),
 [data-kind="secondary"] {
-    background-color: var(--cpd-color-bg-canvas-default) !important;
+    background: var(--cpd-color-bg-canvas-default) !important;
     color: var(--cpd-color-text-primary) !important;
     border: 1px solid var(--cpd-color-border-interactive-secondary) !important;
 }
-
-[class*="--secondary"]:hover,
-[data-kind="secondary"]:hover {
+.c__button--brand--secondary:hover, [data-kind="secondary"]:hover {
     border-color: var(--cpd-color-border-interactive-hovered) !important;
-    background-color: var(--cpd-color-bg-subtle-secondary) !important;
+    background: var(--cpd-color-bg-subtle-secondary) !important;
 }
 
-/* Tertiary : souligné, transparent. */
-[class*="--tertiary"],
+/* Tertiary (Compound data-kind=tertiary) */
+.c__button--brand--tertiary,
+.c__button--error--tertiary,
 [class*="ghost"],
-[class*="variant-ghost"],
 [data-kind="tertiary"] {
-    background-color: transparent !important;
+    background: transparent !important;
     color: var(--cpd-color-text-primary) !important;
     border: none !important;
     text-decoration: underline;
 }
 
-/* Danger. */
-[class*="destructive"],
-[class*="btn-danger"],
-[class*="variant-danger"] {
-    background-color: var(--cpd-color-red-900) !important;
+/* Destructive */
+[class*="destructive"], [class*="btn-danger"] {
+    background: var(--cpd-color-red-900) !important;
     color: #fff !important;
     border: none !important;
 }
 
-/* Désactivé. */
-button:disabled,
-[aria-disabled="true"] {
-    background-color: var(--cpd-color-bg-action-primary-disabled) !important;
+/* Disabled */
+button:disabled, [aria-disabled="true"] {
+    background: var(--cpd-color-bg-action-primary-disabled) !important;
     color: var(--cpd-color-text-on-solid-primary) !important;
     cursor: not-allowed !important;
 }
 
-/* ---------- FORMULAIRES : champs Element ---------- */
+/* Cunningham bordered → Compound secondary */
+.c__button--brand--bordered, .c__button--error--bordered {
+    background: transparent !important;
+    border: 1px solid var(--cpd-color-border-interactive-primary) !important;
+    color: var(--cpd-color-text-primary) !important;
+}
+
+/* ================================================================
+ * FORM/INPUT (Compound Form — specs exactes)
+ * radius 8px, border gray-600, focus green + ring, height 36px+
+ * ================================================================ */
 input[type="text"], input[type="password"], input[type="email"],
 input[type="number"], input[type="search"], input[type="url"],
-input[type="tel"], input[type="date"],
-textarea, select {
+input[type="tel"], input[type="date"], textarea, select {
     font-family: var(--cpd-font-family-sans) !important;
-    font-size: 0.9375rem !important;
+    font-size: 15px !important;
     color: var(--cpd-color-text-primary) !important;
-    background-color: var(--cpd-color-bg-canvas-default) !important;
+    background: var(--cpd-color-bg-canvas-default) !important;
     border: 1px solid var(--cpd-color-border-interactive-primary) !important;
     border-radius: var(--cpd-radius-medium) !important;
+    min-height: var(--cpd-space-9x);
     padding: 8px 12px;
-    min-height: 36px;
     transition: border-color 0.1s, box-shadow 0.1s;
 }
 
@@ -297,354 +304,141 @@ input:focus, textarea:focus, select:focus {
     box-shadow: 0 0 0 2px var(--cpd-color-bg-accent-subtle) !important;
 }
 
-input::placeholder, textarea::placeholder {
-    color: var(--cpd-color-text-secondary) !important;
-}
-
-label {
-    font-weight: 500 !important;
-    color: var(--cpd-color-text-primary);
-    font-size: 0.875rem;
-}
-
-/* ---------- LIENS : vert Element ---------- */
-a:not([class*="btn"]):not([class*="button"]):not([class*="tile"]):not([class*="tab"]) {
-    color: var(--cpd-color-text-action-accent);
-    text-decoration: none;
-}
-
-a:not([class*="btn"]):hover {
-    color: var(--cpd-color-bg-accent-hovered);
-}
-
-/* ---------- CARTES / PANNEAUX : bordure fine, SANS ombre ---------- */
-[class*="card"],
-[class*="modal-content"],
-[class*="dialog"]:not([class*="dialog-overlay"]) {
-    border-radius: var(--cpd-radius-medium) !important;
-    border: 1px solid var(--cpd-color-border-interactive-secondary);
-    box-shadow: none !important;
-}
-
-/* ---------- SIDEBAR / NAVIGATION — style Element Web ---------- */
-aside,
-nav[class*="sidebar"],
-[class*="Sidebar"]:not([class*="item"]):not([class*="content"]) {
-    background-color: var(--cpd-color-bg-subtle-secondary) !important;
-}
-
-[class*="sidebar"] a,
-[class*="sidebar"] button,
-[class*="nav-item"],
-[class*="menu-item"] {
-    border-radius: var(--cpd-radius-medium) !important;
-}
-
-[class*="sidebar"] a:hover,
-[class*="nav-item"]:hover,
-[class*="menu-item"]:hover {
-    background-color: var(--cpd-color-bg-subtle-primary) !important;
-}
-
-/* Item actif : UNIQUEMENT dans les nav/tablist (pas les conteneurs actifs). */
-nav a[class*="active"],
-[role="tablist"] [aria-selected="true"],
-[role="tab"][aria-selected="true"],
-nav [aria-current="page"] {
-    background-color: var(--cpd-color-bg-accent-subtle) !important;
-    color: var(--cpd-color-text-action-accent) !important;
-}
-
-/* ---------- TABLES ---------- */
-th {
-    font-weight: 500 !important;
-    color: var(--cpd-color-text-secondary) !important;
-    font-size: 0.8125rem !important;
-}
-
-td {
-    border-bottom: 1px solid var(--cpd-color-bg-subtle-primary);
-}
-
-/* ---------- BADGES : pilule ---------- */
-[class*="badge"], [class*="tag"], [class*="chip"] {
-    border-radius: var(--cpd-radius-pill-effect) !important;
-    font-size: 0.75rem !important;
-    font-weight: 500 !important;
-    padding: 2px 10px !important;
-}
-
-/* ---------- CHECKBOX / RADIO ---------- */
-input[type="checkbox"], input[type="radio"] {
-    accent-color: var(--cpd-color-green-700) !important;
-}
-
-/* ---------- SCROLLBARS fines ---------- */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb {
-    background-color: var(--cpd-color-gray-500);
-    border-radius: var(--cpd-radius-pill-effect);
-}
-
-/* ---------- FOCUS VISIBLE ---------- */
-button:focus-visible, a:focus-visible,
-input:focus-visible, select:focus-visible, textarea:focus-visible {
-    outline: 2px solid var(--cpd-color-green-700) !important;
-    outline-offset: 2px;
-}
+input::placeholder, textarea::placeholder { color: var(--cpd-color-text-secondary) !important; }
+label { font-weight: 500 !important; font-size: 13px !important; color: var(--cpd-color-text-primary); }
 
 /* ================================================================
- * FONDS NEUTRES — les apps La Suite utilisent « brand » comme fond
- * de section : on force les contextuals vers du NEUTRE (gris/blanc)
- * pour éviter les aplats verts. Le vert ne reste que sur les accents.
- * ================================================================ */
-:root {
-    --c--contextuals--background--semantic--brand--primary: var(--c--globals--colors--gray-1000);
-    --c--contextuals--background--semantic--brand--primary-hover: var(--c--globals--colors--gray-950);
-    --c--contextuals--background--semantic--brand--secondary: var(--c--globals--colors--gray-100);
-    --c--contextuals--background--semantic--brand--secondary-hover: var(--c--globals--colors--gray-150);
-    --c--contextuals--background--semantic--brand--tertiary: var(--c--globals--colors--gray-50);
-    --c--contextuals--background--semantic--brand--tertiary-hover: var(--c--globals--colors--gray-100);
-    --c--contextuals--content--semantic--brand--on-brand: #ffffff;
-}
-
-/* ================================================================
- * PROJECTS : tuer les shadows violets codés en dur (#5e5cd0, #69697d)
- * Ces valeurs sont hardcodées dans le bundle CSS, pas via tokens.
- * ================================================================ */
-[class*="LeftMenu"] *:focus,
-[class*="Board"] *:focus,
-[class*="Card"] *:focus,
-[class*="Core"] *:focus {
-    box-shadow: 0 0 0 1px #fff, 0 0 0 4px var(--cpd-color-green-700) !important;
-}
-
-/* Supprimer les ombres portées lourdes de Projects */
-[class*="LeftMenu_boards"],
-[class*="Board_addCardButton"],
-[class*="Core_menuBackdrop"] {
-    box-shadow: none !important;
-}
-
-/* ================================================================
- * MESSAGES : barre de recherche 100% arrondie (pilule Compound Search)
- * Compound Search spec : radius 9999px, height 36px, border 1px gray-400.
- * Cible le PARENT (conteneur) et l'input.
+ * SEARCH (Compound Search — pilule 100% arrondie)
+ * radius 9999px, height 36px, border gray-400, padding 6px 12px
  * ================================================================ */
 input[type="search"],
 .c__search-filter,
-[class*="search-bar"],
-[class*="SearchBar"],
-[class*="searchBar"] {
+[class*="SearchBar"], [class*="search-bar"], [class*="searchBar"] {
     border-radius: var(--cpd-radius-pill-effect) !important;
-    min-height: 36px;
-    padding-left: 16px !important;
+    min-height: var(--cpd-space-9x);
+    border: 1px solid var(--cpd-color-border-interactive-secondary) !important;
+    padding: 6px 12px;
 }
 
-.c__search-filter input,
-.c__search-filter [class*="input"] {
+.c__search-filter input, .c__search-filter [class*="input"] {
     border-radius: var(--cpd-radius-pill-effect) !important;
     border: none !important;
     background: transparent !important;
+    min-height: auto !important;
 }
 
 /* ================================================================
- * DRIVE : bouton upload/créer dossier en VERT (accent Element)
- * ATTENTION : cibler UNIQUEMENT les <button>, pas les conteneurs
- * (la dropzone de Transfers a une classe "upload" → ne doit PAS être verte).
+ * MENU/DROPDOWN (Compound FloatingMenu + MenuItem — specs exactes)
+ * container : radius 12px, bg blanc, border 1px gray-400, SANS ombre
+ * items : padding 8px 16px, min-width 200px, color gray-900, hover gray-300
  * ================================================================ */
-button[class*="upload"],
-button[class*="create-folder"],
-button[class*="CreateFolder"],
-button[class*="add-folder"],
-button[class*="new-folder"],
-button[aria-label*="dossier"],
-button[aria-label*="Dossier"],
-button[class*="btn-add"] {
-    background-color: var(--cpd-color-green-700) !important;
-    color: #ffffff !important;
-    border: none !important;
-    border-radius: var(--cpd-radius-pill-effect) !important;
-}
-
-/* ================================================================
- * CLASSES CUNNINGHAM EXACTES — extraites des CSS de production
- * (drive, messages, transfers : c__button--brand--*, c__dropdown-menu…)
- * Ces sélecteurs précisent les patterns génériques ci-dessus.
- * ================================================================ */
-
-/* Boutons Cunningham : pilule Element */
-.c__button,
-button.c__button {
-    border-radius: var(--cpd-radius-pill-effect) !important;
-    font-family: var(--cpd-font-family-sans) !important;
-    font-weight: 500 !important;
-    min-height: 36px;
-}
-
-/* Primary : gris foncé plein */
-.c__button--brand--primary,
-.c__button--error--primary {
-    background-color: var(--cpd-color-bg-action-primary-rest) !important;
-    color: var(--cpd-color-text-on-solid-primary) !important;
-    border: none !important;
-}
-
-.c__button--brand--primary:hover,
-.c__button--error--primary:hover {
-    background-color: var(--cpd-color-bg-action-primary-hovered) !important;
-}
-
-/* Secondary : blanc bordé */
-.c__button--brand--secondary,
-.c__button--error--secondary {
-    background-color: var(--cpd-color-bg-canvas-default) !important;
-    color: var(--cpd-color-text-primary) !important;
-    border: 1px solid var(--cpd-color-border-interactive-secondary) !important;
-}
-
-.c__button--brand--secondary:hover {
-    border-color: var(--cpd-color-border-interactive-hovered) !important;
-    background-color: var(--cpd-color-bg-subtle-secondary) !important;
-}
-
-/* Tertiary : souligné */
-.c__button--brand--tertiary,
-.c__button--error--tertiary {
-    background-color: transparent !important;
-    color: var(--cpd-color-text-primary) !important;
-    border: none !important;
-}
-
-/* Bordered (variante outline Cunningham) */
-.c__button--brand--bordered,
-.c__button--error--bordered {
-    background-color: transparent !important;
-    border: 1px solid var(--cpd-color-border-interactive-primary) !important;
-    color: var(--cpd-color-text-primary) !important;
-}
-
-/* Dropdowns Cunningham : spec Compound FloatingMenu, SANS ombre.
- * radius 12px, fond blanc, bordure 1px grise. */
 .c__dropdown-menu,
-[class*="dropdown-menu"] {
-    border-radius: 12px !important;
-    border: 1px solid var(--cpd-color-border-interactive-secondary) !important;
+[class*="dropdown-menu"],
+[class*="popover-content"],
+[class*="menu-content"],
+[class*="Core_menu"]:not([class*="Backdrop"]) {
+    border-radius: var(--cpd-space-3x) !important; /* 12px — spec Compound */
     background: var(--cpd-color-bg-canvas-default) !important;
+    border: 1px solid var(--cpd-color-border-interactive-secondary) !important;
     box-shadow: none !important;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: var(--cpd-space-1x);
+    padding: var(--cpd-space-5x) var(--cpd-space-4x);
 }
 
-/* Items de menu Cunningham */
+/* MenuItem : grid icon+label, padding 8px 16px, color gray-900 */
 .c__dropdown-menu [role="menuitem"],
 .c__dropdown-menu li,
-[class*="menu--item"],
-[class*="menu__item"] {
+[class*="menu--item"], [class*="menu__item"],
+[class*="MenuItem"] {
+    padding: var(--cpd-space-2x) var(--cpd-space-4x) !important;
+    min-width: 200px;
+    color: var(--cpd-color-text-secondary) !important;
     border-radius: var(--cpd-radius-small) !important;
-}
-
-/* Alertes Cunningham */
-.c__alert {
-    border-radius: var(--cpd-radius-medium) !important;
-}
-
-/* Inputs Cunningham (si classes spécifiques) */
-.c__input,
-[class*="c__text-field"],
-[class*="c__input"] {
-    border-radius: var(--cpd-radius-medium) !important;
-    font-family: var(--cpd-font-family-sans) !important;
-}
-
-/* ================================================================
- * PROJECTS (React CRA) — classes CSS modules observées
- * ================================================================ */
-
-/* Sidebar gauche : LeftMenu_* */
-[class*="LeftMenu_boards"],
-[class*="LeftMenu_projects"] {
-    font-family: var(--cpd-font-family-sans) !important;
-}
-
-[class*="LeftMenu_addBoardButton"],
-[class*="Board_addCardButton"],
-[class*="Board_listHeaderButton"],
-[class*="CardModal_optionsButton"] {
-    border-radius: var(--cpd-radius-pill-effect) !important;
-}
-
-/* Fond des menus déroulants Projects */
-[class*="Core_menuBackdrop"] {
-    background: rgba(0, 0, 0, 0.3) !important;
-}
-
-/* ================================================================
- * ZÉRO OMBRE — suppression globale sur TOUS les composants courants
- * ================================================================ */
-button,
-[class*="card"],
-[class*="menu"],
-[class*="dropdown"],
-[class*="popover"],
-[class*="modal"]:not([class*="modal-overlay"]),
-[class*="tooltip"],
-[class*="panel"]:not([class*="panel-header"]),
-[class*="sheet"],
-.c__button,
-.c__dropdown-menu {
-    box-shadow: none !important;
-}
-
-/* ================================================================
- * MESSAGES : logo top-left sans fond + boutons À propos/Paramètres
- * ================================================================ */
-[class*="logo"],
-[class*="brand-logo"],
-[class*="app-logo"] {
     background: transparent !important;
-    box-shadow: none !important;
+    cursor: pointer;
 }
 
-[class*="about"],
-[class*="settings"]:not([class*="settings-content"]),
-[class*="parametres"],
-[class*="a-propos"] {
-    box-shadow: none !important;
-    border-radius: var(--cpd-radius-medium) !important;
+.c__dropdown-menu [role="menuitem"]:hover,
+[class*="menu--item"]:hover, [class*="menu__item"]:hover {
+    background: var(--cpd-color-bg-subtle-primary) !important;
 }
 
-/* ================================================================
- * PROJECTS : supprimer boutons support/chapdocs/centre d'app
- * ================================================================ */
-[class*="support"],
-[class*="chapdocs"],
-[class*="help-center"],
-[class*="HelpCenter"],
-[class*="app-center"],
-a[href*="support"],
-a[href*="docs."] {
-    display: none !important;
+/* MenuSeparator */
+.c__dropdown-menu hr,
+[class*="separator"], [class*="Separator"], hr {
+    border: none !important;
+    border-top: 1px solid var(--cpd-color-separator-primary) !important;
+    height: 1px;
+    margin: var(--cpd-space-1x) 0;
 }
 
 /* ================================================================
- * DRIVE : zone de contenu fond blanc + filtres non coupés
+ * SWITCH/TOGGLE (Compound Switch)
+ * radius pill, bg blanc, border 1px gray-400, SANS ombre
  * ================================================================ */
-[class*="explorer"] [class*="content"],
-[class*="my-files"],
-[class*="MyFiles"] {
+[class*="switch"], [class*="toggle"], [class*="Switch"], [class*="Toggle"] {
+    border-radius: var(--cpd-radius-pill-effect) !important;
+    border: 1px solid var(--cpd-color-border-interactive-secondary) !important;
     background: var(--cpd-color-bg-canvas-default) !important;
+    box-shadow: none !important;
 }
 
-/* Filtres : ne pas couper avec overflow/border-radius */
-[class*="filter"],
-[class*="Filter"],
-[class*="toolbar"],
-[class*="Toolbar"] {
-    overflow: visible !important;
+input[type="checkbox"], input[type="radio"] {
+    accent-color: var(--cpd-color-green-700) !important;
+    width: 16px; height: 16px;
 }
 
 /* ================================================================
- * SIDEBARS : harmonisation Element Web (fond gris, items hover)
+ * BADGE (Compound Badge)
+ * padding-block 3px, radius pill
+ * ================================================================ */
+[class*="badge"], [class*="tag"], [class*="chip"], [class*="Badge"] {
+    border-radius: var(--cpd-radius-pill-effect) !important;
+    padding: 3px 10px !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    min-height: auto !important;
+    box-shadow: none !important;
+}
+
+/* ================================================================
+ * ALERT (Compound Alert)
+ * ================================================================ */
+[class*="alert"], [class*="Alert"] {
+    border-radius: var(--cpd-radius-medium) !important;
+    box-shadow: none !important;
+}
+[class*="alert-success"] { background: var(--cpd-color-green-300) !important; color: var(--cpd-color-green-900) !important; border: none !important; }
+[class*="alert-error"], [class*="alert-danger"] { background: var(--cpd-color-red-300) !important; color: var(--cpd-color-red-900) !important; border: none !important; }
+
+/* ================================================================
+ * AVATAR (Compound Avatar — circulaire)
+ * ================================================================ */
+[class*="avatar"], [class*="Avatar"] {
+    border-radius: 50% !important;
+    box-shadow: none !important;
+}
+
+/* ================================================================
+ * CARD/MODAL (Compound Dialog)
+ * radius 8px, border 1px, SANS ombre
+ * ================================================================ */
+[class*="card"],
+[class*="modal-content"],
+[class*="dialog"]:not([class*="overlay"]),
+[class*="sheet"] {
+    border-radius: var(--cpd-radius-medium) !important;
+    border: 1px solid var(--cpd-color-border-interactive-secondary);
+    box-shadow: none !important;
+    background: var(--cpd-color-bg-canvas-default);
+}
+
+/* ================================================================
+ * NAV/SIDEBAR (pattern Element Web)
+ * fond gray-300 (#f0f2f5), items hover gray-400, bordure droite
  * ================================================================ */
 aside,
 nav[class*="sidebar"],
@@ -654,14 +448,130 @@ nav[class*="sidebar"],
     border-right: 1px solid var(--cpd-color-border-interactive-secondary);
 }
 
-[class*="LeftMenu_boards"],
-[class*="LeftMenu_projects"] {
+[class*="LeftMenu_boards"], [class*="LeftMenu_projects"] {
     background: transparent !important;
 }
 
-[class*="sidebar"] a:hover,
-[class*="LeftMenu"] button:hover,
+[class*="sidebar"] a, [class*="sidebar"] button,
+[class*="LeftMenu"] button, [class*="nav-item"],
+[class*="NavItem"], [class*="menu-item"] {
+    border-radius: var(--cpd-radius-medium) !important;
+    box-shadow: none !important;
+}
+
+[class*="sidebar"] a:hover, [class*="LeftMenu"] button:hover,
 [class*="nav-item"]:hover {
     background: var(--cpd-color-bg-subtle-primary) !important;
-    border-radius: var(--cpd-radius-medium);
 }
+
+/* Item actif UNIQUEMENT dans nav/tablist (pas les conteneurs actifs). */
+nav a[class*="active"],
+[role="tablist"] [aria-selected="true"],
+[role="tab"][aria-selected="true"],
+nav [aria-current="page"] {
+    background: var(--cpd-color-bg-accent-subtle) !important;
+    color: var(--cpd-color-text-action-accent) !important;
+}
+
+/* Nav tabs : underline pilule (Compound Nav) */
+[role="tablist"] { border-bottom: 1px solid var(--cpd-color-gray-400); }
+[role="tab"] { position: relative; padding: 16px 0; border: none; background: transparent; }
+[role="tab"][aria-selected="true"]::after {
+    content: ""; position: absolute; bottom: 0; left: 0; right: 0;
+    height: 2px; border-radius: var(--cpd-radius-pill-effect) var(--cpd-radius-pill-effect) 0 0;
+    background: var(--cpd-color-bg-action-primary-rest);
+}
+
+/* ================================================================
+ * TABLES
+ * ================================================================ */
+th { font-weight: 500 !important; color: var(--cpd-color-text-secondary) !important; font-size: 13px !important; border-bottom: 1px solid var(--cpd-color-border-interactive-secondary); }
+td { border-bottom: 1px solid var(--cpd-color-bg-subtle-primary); }
+
+/* ================================================================
+ * LIENS : vert Element
+ * ================================================================ */
+a:not([class*="btn"]):not([class*="button"]):not([class*="tile"]):not([class*="tab"]) {
+    color: var(--cpd-color-text-action-accent);
+    text-decoration: none;
+}
+a:not([class*="btn"]):hover { color: var(--cpd-color-bg-accent-hovered); }
+
+/* ================================================================
+ * TOOLTIP (Compound Tooltip : bg sombre, radius 4px, 11px)
+ * ================================================================ */
+[class*="tooltip"], [class*="Tooltip"] {
+    background: var(--cpd-color-gray-1400) !important;
+    color: #fff !important;
+    border-radius: var(--cpd-radius-small) !important;
+    padding: 6px 12px !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    box-shadow: none !important;
+}
+
+/* ================================================================
+ * PROGRESS (Compound Progress)
+ * ================================================================ */
+progress, [class*="progress"], [class*="Progress"] {
+    border-radius: var(--cpd-radius-pill-effect) !important;
+    accent-color: var(--cpd-color-green-700);
+}
+
+/* ================================================================
+ * SCROLLBARS : fines, thumb pilule
+ * ================================================================ */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background-color: var(--cpd-color-gray-500); border-radius: var(--cpd-radius-pill-effect); }
+
+/* ================================================================
+ * FOCUS VISIBLE : ring vert 2px
+ * ================================================================ */
+button:focus-visible, a:focus-visible,
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--cpd-color-green-700) !important;
+    outline-offset: 2px;
+}
+
+/* ================================================================
+ * ZÉRO OMBRE — override global sur tous les composants
+ * ================================================================ */
+button, [class*="card"], [class*="menu"], [class*="dropdown"],
+[class*="popover"], [class*="modal"]:not([class*="overlay"]),
+[class*="tooltip"], [class*="panel"]:not([class*="header"]),
+[class*="sheet"], .c__button, .c__dropdown-menu {
+    box-shadow: none !important;
+}
+
+/* ================================================================
+ * FIXES PAR APP (sélecteurs sûrs — buttons uniquement, pas conteneurs)
+ * ================================================================ */
+
+/* Messages : logo sans fond, boutons À propos/Paramètres sans ombre */
+[class*="logo"], [class*="brand-logo"] { background: transparent !important; box-shadow: none !important; }
+[class*="about"], [class*="settings"]:not([class*="content"]) { box-shadow: none !important; border-radius: var(--cpd-radius-medium) !important; }
+
+/* Projects : cacher support/chapdocs/centre d'app */
+[class*="support"], [class*="chapdocs"], [class*="help-center"],
+[class*="HelpCenter"], [class*="app-center"],
+a[href*="support"], a[href*="docs."] { display: none !important; }
+
+/* Drive : contenu fond blanc, filtres non coupés */
+[class*="explorer"] [class*="content"], [class*="my-files"] {
+    background: var(--cpd-color-bg-canvas-default) !important;
+}
+[class*="filter"], [class*="Filter"], [class*="toolbar"] { overflow: visible !important; }
+
+/* Drive : bouton upload/dossier VERT — UNIQUEMENT les <button> */
+button[class*="upload"], button[class*="create-folder"],
+button[class*="add-folder"], button[class*="new-folder"],
+button[aria-label*="dossier"], button[class*="btn-add"] {
+    background: var(--cpd-color-green-700) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: var(--cpd-radius-pill-effect) !important;
+}
+
+/* Overlay des modals Projects */
+[class*="Core_menuBackdrop"] { background: rgba(0, 0, 0, 0.3) !important; }
