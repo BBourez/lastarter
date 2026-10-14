@@ -10,6 +10,8 @@ from . import __version__
 from .cmd import deploy as cmd_deploy
 from .cmd import detect as cmd_detect
 from .cmd import init as cmd_init
+from .cmd import licenses as cmd_licenses
+from .cmd import smoke as cmd_smoke
 from .cmd.deploy import DeployError
 
 
@@ -44,6 +46,14 @@ def build_parser() -> argparse.ArgumentParser:
     detect = sub.add_parser("detect", help="Audit d'environnement : IP, Docker, k8s, DNS, ports")
     detect.add_argument("--domain", help="Domaine cible (résolution DNS des sous-domaines)")
     detect.add_argument("--public-ip", action="store_true", help="Détecter aussi l'IP publique (api.ipify.org)")
+
+    sub.add_parser("licenses", help="Gate licence : bloquer toute brique hors liste blanche")
+
+    smoke = sub.add_parser("smoke", help="Vérifier chaque surface d'un déploiement (post-release)")
+    smoke.add_argument("--client", required=True, help="Slug du déploiement")
+
+    sbom = sub.add_parser("sbom", help="Générer l'inventaire CycloneDX des briques épinglées")
+    sbom.add_argument("--client", required=True, help="Slug du déploiement")
     return parser
 
 
@@ -94,6 +104,12 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_deploy.run_ps(opts)
         if opts.command == "detect":
             return cmd_detect.run_detect(opts)
+        if opts.command == "licenses":
+            return cmd_licenses.run_licenses(opts)
+        if opts.command == "smoke":
+            return cmd_smoke.run_smoke(opts)
+        if opts.command == "sbom":
+            return cmd_smoke.run_sbom(opts)
         if opts.command == "list":
             return run_list()
     except (DeployError, KeyError) as exc:

@@ -172,25 +172,33 @@ def render_realm(template: str, answers: dict, vault: dict[str, str], clients_js
     return REALM_SECRET_TOKEN.sub(secret, rendered)
 
 
-def ensure_dev_certs(runtime_dir: Path) -> tuple[Path, Path, Path]:
-    """CA locale + certificat wildcard (*.localhost) pour la passerelle TLS.
+def ensure_dev_certs(runtime_dir: Path, san_names: list[str]) -> tuple[Path, Path, Path, bool]:
+    """CA locale + certificat pour la passerelle TLS (POC).
 
-    Générés une fois via l'image nginx:alpine (openssl) si absents — POC only :
-    en production, les certificats réels sont fournis par le client.
-    Retourne (ca.crt, server.crt, server.key).
+    SANs explicites pour chaque hôte déployé (CPython 3.12+ refuse les wildcards
+    sur un domaine mono-label type *.localhost côté vérification stricte ; les
+    navigateurs, eux, acceptent le wildcard). Retourne (ca, crt, key, changé) —
+    `changé` = certificats (re)générés → le serveur doit recharger.
     """
     certs_dir = runtime_dir / "certs"
     certs_dir.mkdir(parents=True, exist_ok=True)
     ca, crt, key = certs_dir / "ca.crt", certs_dir / "server.crt", certs_dir / "server.key"
-    if ca.is_file() and crt.is_file() and key.is_file():
-        return ca, crt, key
+    wanted_sans = sorted(set(san_names) | {"localhost", "*.localhost"})
+    marker = certs_dir / ".sans"
+    current_sans = marker.read_text(encoding="utf-8").strip() if marker.is_file() else ""
+    if (
+        ca.is_file() and crt.is_file() and key.is_file()
+        and current_sans == "\n".join(wanted_sans)
+    ):
+        return ca, crt, key, False
+    san_line = ",".join(f"DNS:{name}" for name in wanted_sans)
     script = (
         "set -e; "
         "openssl req -x509 -newkey rsa:2048 -nodes -days 3650 "
         "-keyout /certs/ca.key -out /certs/ca.crt -subj '/CN=LaStarter POC CA'; "
         "openssl req -newkey rsa:2048 -nodes "
         "-keyout /certs/server.key -out /certs/server.csr -subj '/CN=localhost'; "
-        "printf 'subjectAltName=DNS:localhost,DNS:*.localhost\\nbasicConstraints=CA:FALSE\\n' > /certs/san.ext; "
+        f"printf 'subjectAltName={san_line}\\nbasicConstraints=CA:FALSE\\n' > /certs/san.ext; "
         "openssl x509 -req -in /certs/server.csr -CA /certs/ca.crt -CAkey /certs/ca.key "
         "-CAcreateserial -out /certs/server.crt -days 825 -extfile /certs/san.ext; "
         "rm -f /certs/server.csr /certs/san.ext /certs/ca.srl"
@@ -206,7 +214,8 @@ def ensure_dev_certs(runtime_dir: Path) -> tuple[Path, Path, Path]:
     )
     if result.returncode != 0 or not (ca.is_file() and crt.is_file() and key.is_file()):
         raise DeployError(f"échec de génération des certificats POC : {result.stderr[:300]}")
-    return ca, crt, key
+    marker.write_text("\n".join(wanted_sans) + "\n", encoding="utf-8")
+    return ca, crt, key, True
 
 
 def render_edge(bricks: list[Brick], answers: dict) -> str:
@@ -752,9 +761,21 @@ def run_deploy(opts) -> int:
         )
         compose_env["PORTAL_DIR"] = _portable(runtime_portal)
 
-    # Certificats TLS POC (CA locale + wildcard *.localhost) — générés une fois.
-    ca_path, crt_path, key_path = ensure_dev_certs(runtime_dir)
+    # Certificats TLS POC — SANs explicites pour chaque hôte déployé (id + apps
+    # + serveurs additionnels type media/livekit) ; CPython exige du non-wildcard.
+    cert_bare = answers["domain"].split(":")[0]
+    cert_san_names = [f"id.{cert_bare}"]
+    for brick in selected_bricks:
+        if brick.core:
+            continue
+        cert_san_names.append(f"{brick.compose.get('route_label', brick.name)}.{cert_bare}")
+        for extra in brick.compose.get("extra_servers", []):
+            cert_san_names.append(f"{extra['label']}.{cert_bare}")
+    ca_path, crt_path, key_path, certs_changed = ensure_dev_certs(runtime_dir, cert_san_names)
     compose_env["CERTS_DIR"] = _portable(ca_path.parent)
+    # Certificats changés → nginx recharge ses certs au boot : recreation gateway.
+    if certs_changed:
+        to_recreate.setdefault("gateway", "certificats TLS régénérés")
     # Thème de login LaStarter (drop-in Keycloak).
     theme_dir = repo_root / "identity" / "keycloak-theme"
     if theme_dir.is_dir():

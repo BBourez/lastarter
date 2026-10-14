@@ -1,0 +1,102 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "lastarter-demo-coop"
+    }
+  },
+  "components": [
+    {
+      "type": "application",
+      "name": "keycloak",
+      "version": "26.3.2",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/keycloak/keycloak"
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "name": "drive",
+      "version": "v0.24.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/suitenumerique/drive"
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "name": "meet",
+      "version": "v1.35.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/suitenumerique/meet"
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "name": "synapse",
+      "version": "v1.162.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-only"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/element-hq/synapse"
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "name": "element-web",
+      "version": "v1.11.102",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0 OR GPL-3.0 OR Element-Commercial"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/element-hq/element-web"
+        }
+      ]
+    }
+  ]
+}

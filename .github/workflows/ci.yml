@@ -1,0 +1,25 @@
+# CI LaStarter — tests + gate licence à chaque push.
+# Les smoke tests post-déploiement tournent sur l'environnement de recette
+# (self-hosted runner Docker) : voir ci/smoke.md (phase 6, runner dédié).
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests-and-license-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tests unitaires (offline, stdlib uniquement)
+        run: python -m unittest discover -s tests -v
+        working-directory: cli
+      - name: Gate licence (liste blanche + registre docs/licences.md)
+        run: python -m lastarter_cli licenses
+        working-directory: cli
+      - name: Cohérence du catalogue
+        run: python -m lastarter_cli list
+        working-directory: cli
