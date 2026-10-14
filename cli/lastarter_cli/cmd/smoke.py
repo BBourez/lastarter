@@ -30,11 +30,13 @@ def _fetch(url: str, ca_file: Path | None = None, follow: bool = True) -> tuple[
         context = ssl.create_default_context(cafile=str(ca_file))
     request = urllib.request.Request(url, headers={"User-Agent": "lastarter-smoke/1"})
     handlers: list = []
+    if context is not None:
+        handlers.append(urllib.request.HTTPSHandler(context=context))
     if not follow:
         handlers.append(_NoRedirect())
-    opener = urllib.request.build_opener(*handlers) if handlers else urllib.request.build_opener()
+    opener = urllib.request.build_opener(*handlers)
     try:
-        with opener.open(request, timeout=15, context=context) as response:
+        with opener.open(request, timeout=15) as response:
             return response.status, response.read().decode(errors="replace"), response.headers.get("Location", "")
     except urllib.error.HTTPError as exc:
         return exc.code, exc.read().decode(errors="replace"), exc.headers.get("Location", "") if exc.headers else ""
