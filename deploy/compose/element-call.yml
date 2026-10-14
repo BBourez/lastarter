@@ -12,8 +12,11 @@ services:
     networks: [lastarter]
 
   # SPA Element Call : statique (nginx:8080), sert aussi la route /widget.
+  # config.json standalone rendu par le CLI (mode direct, sans widget).
   element_call:
     image: ghcr.io/element-hq/element-call:latest
+    volumes:
+      - ${ELEMENT_CALL_CONFIG_PATH:-/dev/null}:/app/config.json:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
       interval: 5s

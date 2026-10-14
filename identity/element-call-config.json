@@ -1,0 +1,5 @@
+{
+  "homeserver": "{{MATRIX_ORIGIN}}",
+  "livekit_url": "{{LIVEKIT_URL}}",
+  "brand": "{{BRAND}}"
+}

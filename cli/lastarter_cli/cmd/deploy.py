@@ -486,6 +486,20 @@ def render_element_config(template: str, answers: dict, brick: Brick) -> str:
     return rendered
 
 
+def render_element_call_config(template: str, answers: dict) -> str:
+    """Rend config.json element-call (mode standalone) : homeserver + LiveKit."""
+    domain = answers["domain"]
+    bare = domain.split(":")[0]
+    port = domain.split(":")[1] if ":" in domain else ""
+    scheme = _scheme(domain)
+    matrix_origin = f"{scheme}://matrix.{bare}" + (f":{port}" if port else "")
+    livekit_url = f"wss://livekit.{bare}" + (f":{port}" if port else "")
+    rendered = template.replace("{{MATRIX_ORIGIN}}", matrix_origin)
+    rendered = rendered.replace("{{LIVEKIT_URL}}", livekit_url)
+    rendered = rendered.replace("{{BRAND}}", answers.get("brand_name", "LaStarter"))
+    return rendered
+
+
 APP_EMOJI = {
     "drive": "📁",
     "meet": "🎥",
@@ -824,6 +838,19 @@ def run_deploy(opts) -> int:
             encoding="utf-8",
         )
         compose_env["ELEMENT_CONFIG_PATH"] = _portable(element_path)
+
+    # element-call : config.json standalone (homeserver + LiveKit).
+    if "element-call" in selected:
+        ec_template = repo_root / "identity" / "element-call-config.json"
+        if ec_template.is_file():
+            ec_path = runtime_dir / "element-call-config.json"
+            ec_path.write_text(
+                render_element_call_config(
+                    ec_template.read_text(encoding="utf-8"), answers
+                ),
+                encoding="utf-8",
+            )
+            compose_env["ELEMENT_CALL_CONFIG_PATH"] = _portable(ec_path)
 
     # Portail : copie des pages + config générée dans .runtime/portal/ (montage unique).
     portal_dir = repo_root / "portal"

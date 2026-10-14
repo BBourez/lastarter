@@ -88,7 +88,7 @@ migrate_command = "python manage.py migrate --no-input"
 recreate_service = "transfers_frontend"   # Caddyfile/ENV montés par env : recreation au changement
 route_label = "transfers"
 frontend_target = "transfers_frontend:8080"
-# pas d'api_target : le Caddy du frontend proxifie /api lui-même.
+api_target = "transfers_app:8000"   # /api/ routé par la passerelle (Caddy distroless ≠ proxy DNS)
 extra_servers = [
   { label = "transfers-media", target = "transfers_rustfs:9000" },
 ]
