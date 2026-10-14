@@ -1,6 +1,6 @@
 # Déploiement « Demo Coop »
 
-- Domaine : localhost:8083
+- Domaine : localhost:8443
 - Marque : LaStarter
 - Briques : keycloak, drive, meet, synapse, element-web
 

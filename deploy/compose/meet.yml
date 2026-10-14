@@ -1,4 +1,4 @@
-﻿# Brique meet â€” visioconfÃ©rence (lasuite/meet-{backend,frontend} v1.35.0).
+# Brique meet â€” visioconfÃ©rence (lasuite/meet-{backend,frontend} v1.35.0).
 # Services prÃ©fixÃ©s meet_* ; infra via env_file de la brique (catalogue/meet.toml).
 
 services:
@@ -22,11 +22,10 @@ services:
     image: dxflrs/garage:v2.4.1
     command: /garage server --single-node --default-bucket
     env_file: ["${RUNTIME_DIR}/meet.env"]
+    # Média exposé via la passerelle (meet-media.<domaine>), plus de port hôte.
     volumes:
       - ./files/garage-meet.toml:/etc/garage.toml:ro
       - meet_garagedata:/var/lib/garage
-    ports:
-      - "${GARAGE_PORT:-9010}:9000"   # POC : mÃ©dia servi directement
     healthcheck:
       test: ["CMD", "/garage", "health"]
       interval: 3s

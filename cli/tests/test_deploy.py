@@ -33,19 +33,19 @@ REALM_TEMPLATE = (
 ANSWERS = {
     "client_name": "Demo Coop",
     "client_slug": "demo-coop",
-    "domain": "localhost:8083",
+    "domain": "localhost:8443",
     "brand_name": "LaStarter",
 }
 
 
 class OriginTests(unittest.TestCase):
-    def test_http_en_local_https_en_production(self):
-        self.assertEqual(compute_origin("localhost:8083"), "http://localhost:8083")
-        self.assertEqual(compute_origin("127.0.0.1"), "http://127.0.0.1")
+    def test_toujours_https_meme_en_local(self):
+        # La passerelle sert TLS partout (POC : CA locale) — scheme unique.
+        self.assertEqual(compute_origin("localhost:8443"), "https://localhost:8443")
         self.assertEqual(compute_origin("acme.example.com"), "https://acme.example.com")
 
     def test_app_origin_par_label(self):
-        self.assertEqual(app_origin("localhost:8083", "drive"), "http://drive.localhost:8083")
+        self.assertEqual(app_origin("localhost:8443", "drive"), "https://drive.localhost:8443")
         self.assertEqual(app_origin("acme.example.com", "meet"), "https://meet.acme.example.com")
 
 
@@ -61,18 +61,17 @@ class RuntimeRenderTests(unittest.TestCase):
         }
 
     def test_contexte_par_brique_label_et_ws(self):
-        draft = "URL={origin}\nSSO={sso_origin}\nWS={ws}://livekit.{domain}\nHOST={app_host}\n"
+        draft = "URL={origin}\nSSO={sso_origin}\nWS={ws}://livekit.{domain}\nHOST={app_host}\nCONF={django_configuration}\n"
         rendered = render_runtime_env(draft, ANSWERS, self.vault, label="meet")
-        self.assertIn("URL=http://meet.localhost:8083", rendered)
-        self.assertIn("SSO=http://localhost:8083", rendered)
-        self.assertIn("WS=ws://livekit.localhost:8083", rendered)
-        self.assertIn("HOST=meet.localhost:8083", rendered)
+        self.assertIn("URL=https://meet.localhost:8443", rendered)
+        self.assertIn("SSO=https://localhost:8443", rendered)
+        self.assertIn("WS=wss://livekit.localhost:8443", rendered)
+        self.assertIn("HOST=meet.localhost:8443", rendered)
+        self.assertIn("CONF=Feature", rendered)
 
-    def test_s3_port_par_brique(self):
-        rendered = render_runtime_env(
-            "S3=http://{domain_s3}", ANSWERS, self.vault, label="meet", s3_port="9010"
-        )
-        self.assertIn("S3=http://localhost:9010", rendered)
+    def test_domain_s3_passe_par_la_passerelle(self):
+        rendered = render_runtime_env("S3=https://{domain_s3}", ANSWERS, self.vault, label="meet")
+        self.assertIn("S3=https://meet-media.localhost:8443", rendered)
 
     def test_secret_manquant_rejette(self):
         with self.assertRaises(DeployError):
@@ -89,8 +88,8 @@ class RuntimeRenderTests(unittest.TestCase):
         by_id = {c["clientId"]: c for c in clients}
         self.assertEqual(set(by_id), {"drive", "meet"})
         self.assertEqual(by_id["drive"]["secret"], "s3cret-oidc")
-        self.assertEqual(by_id["drive"]["redirectUris"], ["http://drive.localhost:8083/*"])
-        self.assertEqual(by_id["meet"]["redirectUris"], ["http://meet.localhost:8083/*"])
+        self.assertEqual(by_id["drive"]["redirectUris"], ["https://drive.localhost:8443/*"])
+        self.assertEqual(by_id["meet"]["redirectUris"], ["https://meet.localhost:8443/*"])
 
     def test_realm_rendu_avec_clients(self):
         clients = json.dumps([{"clientId": "drive", "secret": "s"}])
@@ -110,11 +109,11 @@ class RuntimeRenderTests(unittest.TestCase):
         edge = render_edge(selected, ANSWERS)
         self.assertIn("server_name localhost _;", edge)          # apex SSO (sans port)
         self.assertIn("server_name drive.localhost;", edge)       # app drive
-        self.assertIn("proxy_pass http://drive_frontend:3000;", edge)
+        self.assertIn("set $backend_front drive_frontend:3000;", edge)
         self.assertIn("server_name meet.localhost;", edge)        # app meet
         self.assertIn("server_name livekit.localhost;", edge)     # SFU ws
         self.assertIn('proxy_set_header Connection "upgrade";', edge)
-        self.assertIn("return 302 http://drive.localhost:8083/;", edge)  # apex → 1re app
+        self.assertIn("return 302 https://drive.localhost:8443/;", edge)  # apex → 1re app
         self.assertNotIn("server_name drive.localhost:8083;", edge)      # port interdit
 
 
@@ -128,8 +127,8 @@ class RuntimeRenderTests(unittest.TestCase):
         vault = {"synapse_oidc_secret": "s3cret-syn"}
         rendered = render_synapse_homeserver(template, ANSWERS, vault)
         self.assertIn("server_name: localhost", rendered)
-        self.assertIn("public_baseurl: http://matrix.localhost:8083/", rendered)
-        self.assertIn("issuer: http://localhost:8083/realms/lastarter", rendered)
+        self.assertIn("public_baseurl: https://matrix.localhost:8443/", rendered)
+        self.assertIn("issuer: https://localhost:8443/realms/lastarter", rendered)
         self.assertIn('secret: "s3cret-syn"', rendered)
         self.assertNotIn("{{", rendered)
 
@@ -146,7 +145,7 @@ class RuntimeRenderTests(unittest.TestCase):
         self.assertEqual(parsed["default_theme"], "custom-LaStarter Light")
         self.assertEqual(
             parsed["default_server_config"]["m.homeserver"]["base_url"],
-            "http://matrix.localhost:8083",
+            "https://matrix.localhost:8443",
         )
         theme = parsed["setting_defaults"]["custom_themes"][0]
         self.assertEqual(theme["accent-color"], "#4F46E5")
@@ -170,7 +169,7 @@ class RuntimeRenderTests(unittest.TestCase):
         selected = [self.bricks[n] for n in names]
         edge = render_edge(selected, ANSWERS)
         self.assertIn("server_name chat.localhost;", edge)
-        self.assertIn("proxy_pass http://element_web:80;", edge)
+        self.assertIn("set $backend_front element_web:80;", edge)
         block = edge.split("server_name chat.localhost;")[1].split("}")[0]
         self.assertNotIn("location /api/", block)  # app statique : pas de /api/
 

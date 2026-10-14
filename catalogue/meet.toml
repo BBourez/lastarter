@@ -20,8 +20,11 @@ scopes = "openid email"
 DJANGO_EMAIL_BRAND_NAME = "{brand_name}"
 
 [env]
-DJANGO_CONFIGURATION = "Production"
-DJANGO_ALLOWED_HOSTS = "{app_host}"
+# Production/Feature attendent ALLOWED_HOSTS sans préfixe DJANGO_ (settings amont) ;
+# en local (http), Development évite SECURE_SSL_REDIRECT=True qui bouclerait en https.
+DJANGO_CONFIGURATION = "{django_configuration}"
+ALLOWED_HOSTS = "{app_bare}"
+DJANGO_ALLOWED_HOSTS = "{app_bare}"  # django-configurations préfixe malgré environ_name (vérifié en réel)
 DJANGO_SECRET_KEY = "{secret:meet_django_secret_key}"
 DJANGO_SETTINGS_MODULE = "meet.settings"
 DJANGO_CSRF_TRUSTED_ORIGINS = "{origin}"
@@ -50,7 +53,7 @@ AWS_S3_ACCESS_KEY_ID = "meet-access-key"
 AWS_S3_SECRET_ACCESS_KEY = "{secret:meet_s3_secret_key}"
 AWS_S3_REGION_NAME = "local"
 AWS_S3_SIGNATURE_VERSION = "s3v4"
-AWS_S3_DOMAIN_REPLACE = "http://{domain_s3}"
+AWS_S3_DOMAIN_REPLACE = "https://{domain_s3}"
 AWS_STORAGE_BUCKET_NAME = "meet-media-storage"
 GARAGE_DEFAULT_ACCESS_KEY = "meet-access-key"
 GARAGE_DEFAULT_SECRET_KEY = "{secret:meet_s3_secret_key}"
@@ -93,9 +96,9 @@ migrate_command = "python manage.py migrate --no-input"
 route_label = "meet"
 frontend_target = "meet_frontend:8080"
 api_target = "meet_app:8000"
-s3_public_port = "9010"           # garage publié (média POC)
 extra_servers = [
-  { label = "livekit", target = "meet_livekit:7880" },   # websocket SFU
+  { label = "livekit", target = "meet_livekit:7880" },      # websocket SFU (wss)
+  { label = "meet-media", target = "meet_garage:9000" },    # S3 média via passerelle
 ]
 services = [
   "meet_app",          # lasuite/meet-backend — gunicorn

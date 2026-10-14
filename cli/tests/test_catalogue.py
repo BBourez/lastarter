@@ -112,7 +112,8 @@ class WriterTests(unittest.TestCase):
         ordered = [self.bricks[n] for n in names]
         generate_secrets(ordered, None)  # le coffre existe, mais n'est pas injecté
         rendered = render_env(self.bricks["drive"], self.answers)
-        self.assertIn("DJANGO_ALLOWED_HOSTS={app_host}", rendered)
+        self.assertIn("DJANGO_ALLOWED_HOSTS={app_bare}", rendered)  # sans port (Django split_domain_port)
+        self.assertIn("DJANGO_CONFIGURATION={django_configuration}", rendered)
         self.assertIn("OIDC_RP_CLIENT_SECRET={secret:oidc_client_secret}", rendered)
         self.assertNotIn("{origin}=", rendered)  # jetons déploy (pas subst. à l'init)
         self.assertIn("DJANGO_EMAIL_BRAND_NAME=LaStarter", rendered)

@@ -1,4 +1,4 @@
-﻿"""`lastarter deploy` — assemblage et lancement docker-compose d'un déploiement client.
+"""`lastarter deploy` — assemblage et lancement docker-compose d'un déploiement client.
 
 Phase 2 : cible mono-VM (compose). Gates avant tout effet réseau :
 docker présent, déploiement initialisé, secrets présents, chaque brique sélectionnée
@@ -12,6 +12,7 @@ import json
 import re
 import shlex
 import shutil
+import ssl
 import subprocess
 import sys
 import tomllib
@@ -35,9 +36,10 @@ class DeployError(Exception):
 
 
 def _scheme(domain: str) -> str:
-    host = domain.split(":")[0]
-    local = host in {"localhost", "127.0.0.1", "::1", "[::1]", "host.docker.internal"}
-    return "http" if local else "https"
+    """Toujours https : le POC local aussi passe par la passerelle TLS
+    (les apps La Suite forcent SECURE_SSL_REDIRECT en configuration prod,
+    et livekit/wss + média exigent une origine sécurisée)."""
+    return "https"
 
 
 def compute_origin(domain: str) -> str:
@@ -56,16 +58,26 @@ def _context(answers: dict, label: str | None, s3_port: str = "9000") -> dict[st
     context = {
         "{domain}": domain,
         "{sso_origin}": f"{scheme}://{domain}",
-        "{ws}": "ws" if scheme == "http" else "wss",
+        "{ws}": "wss",
         "{brand_name}": answers.get("brand_name", "LaStarter"),
-        "{domain_s3}": f"{domain.split(':')[0]}:{s3_port}",  # POC : S3 média direct
     }
+    # S3 média : routé par la passerelle (sous-domaine dédié par brique).
+    if label:
+        context["{domain_s3}"] = f"{label}-media.{domain}"
+    else:
+        context["{domain_s3}"] = f"s3.{domain}"
     if label:
         context["{origin}"] = f"{scheme}://{label}.{domain}"
         context["{app_host}"] = f"{label}.{domain}"
+        # ALLOWED_HOSTS Django : domaine SANS port (split_domain_port à la validation).
+        context["{app_bare}"] = f"{label}.{domain.split(':')[0]}"
     else:
         context["{origin}"] = context["{sso_origin}"]
         context["{app_host}"] = domain
+        context["{app_bare}"] = domain.split(":")[0]
+    # Les apps La Suite en mode Production/Feature forcent SECURE_SSL_REDIRECT :
+    # la passerelle sert TLS partout (POC compris), on sert donc Feature.
+    context["{django_configuration}"] = "Feature"
     return context
 
 
@@ -153,15 +165,55 @@ def render_realm(template: str, answers: dict, vault: dict[str, str], clients_js
     return REALM_SECRET_TOKEN.sub(secret, rendered)
 
 
+def ensure_dev_certs(runtime_dir: Path) -> tuple[Path, Path, Path]:
+    """CA locale + certificat wildcard (*.localhost) pour la passerelle TLS.
+
+    Générés une fois via l'image nginx:alpine (openssl) si absents — POC only :
+    en production, les certificats réels sont fournis par le client.
+    Retourne (ca.crt, server.crt, server.key).
+    """
+    certs_dir = runtime_dir / "certs"
+    certs_dir.mkdir(parents=True, exist_ok=True)
+    ca, crt, key = certs_dir / "ca.crt", certs_dir / "server.crt", certs_dir / "server.key"
+    if ca.is_file() and crt.is_file() and key.is_file():
+        return ca, crt, key
+    script = (
+        "set -e; "
+        "openssl req -x509 -newkey rsa:2048 -nodes -days 3650 "
+        "-keyout /certs/ca.key -out /certs/ca.crt -subj '/CN=LaStarter POC CA'; "
+        "openssl req -newkey rsa:2048 -nodes "
+        "-keyout /certs/server.key -out /certs/server.csr -subj '/CN=localhost'; "
+        "printf 'subjectAltName=DNS:localhost,DNS:*.localhost\\nbasicConstraints=CA:FALSE\\n' > /certs/san.ext; "
+        "openssl x509 -req -in /certs/server.csr -CA /certs/ca.crt -CAkey /certs/ca.key "
+        "-CAcreateserial -out /certs/server.crt -days 825 -extfile /certs/san.ext; "
+        "rm -f /certs/server.csr /certs/san.ext /certs/ca.srl"
+    )
+    result = subprocess.run(
+        [
+            "docker", "run", "--rm",
+            "-v", f"{_portable(certs_dir)}:/certs",
+            "--entrypoint", "sh",
+            "alpine/openssl", "-c", script,
+        ],
+        check=False, capture_output=True, text=True,
+    )
+    if result.returncode != 0 or not (ca.is_file() and crt.is_file() and key.is_file()):
+        raise DeployError(f"échec de génération des certificats POC : {result.stderr[:300]}")
+    return ca, crt, key
+
+
 def render_edge(bricks: list[Brick], answers: dict) -> str:
     """Génère la conf nginx de la passerelle : apex → SSO, <label>.<domain> → app."""
     domain = answers["domain"]
     bare = domain.split(":")[0]  # server_name nginx : jamais de port
     lines: list[str] = [
         "# LaStarter — passerelle générée par lastarter-cli (ne pas éditer à la main).",
-        "# Apex → Keycloak (SSO). Une app = un sous-domaine.",
+        "# Apex → Keycloak (SSO). Une app = un sous-domaine. TLS partout (POC : CA locale).",
         "server {",
-        "    listen 8083 default_server;",
+        "    listen 8443 ssl default_server;",
+        "    http2 on;",
+        "    ssl_certificate /etc/nginx/certs/server.crt;",
+        "    ssl_certificate_key /etc/nginx/certs/server.key;",
         f"    server_name {bare} _;",
         "    server_tokens off;",
         "    client_max_body_size 150m;",
@@ -169,10 +221,12 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
     for path in ("/realms/", "/resources/", "/js/", "/admin/"):
         lines += [
             f"    location {path} {{",
-            "        proxy_pass http://keycloak:8080;",
+            "        resolver 127.0.0.11 valid=10s ipv6=off;",
+            "        set $backend_keycloak keycloak:8080;",
+            "        proxy_pass http://$backend_keycloak;",
             "        proxy_set_header Host $http_host;",
             "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
-            "        proxy_set_header X-Forwarded-Proto $scheme;",
+            "        proxy_set_header X-Forwarded-Proto https;",
             "    }",
         ]
     apps = [b for b in bricks if not b.core and b.compose.get("frontend_target")]
@@ -190,7 +244,10 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
         lines += [
             f"# {brick.title}",
             "server {",
-            "    listen 8083;",
+            "    listen 8443 ssl;",
+            "    http2 on;",
+            "    ssl_certificate /etc/nginx/certs/server.crt;",
+            "    ssl_certificate_key /etc/nginx/certs/server.key;",
             f"    server_name {label}.{bare};",
             "    server_tokens off;",
             "    client_max_body_size 150m;",
@@ -199,11 +256,13 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
         if api_target:
             lines += [
                 "    location /api/ {",
-                f"        proxy_pass http://{api_target};",
+                "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                f"        set $backend_api {api_target};",
+                "        proxy_pass http://$backend_api;",
                 "        proxy_set_header Host $http_host;",
                 "        proxy_set_header X-Real-IP $remote_addr;",
                 "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
-                "        proxy_set_header X-Forwarded-Proto $scheme;",
+                "        proxy_set_header X-Forwarded-Proto https;",
                 "        proxy_http_version 1.1;",
                 "        proxy_set_header Upgrade $http_upgrade;",
                 '        proxy_set_header Connection "upgrade";',
@@ -212,7 +271,9 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             ]
         lines += [
             "    location / {",
-            f"        proxy_pass http://{brick.compose['frontend_target']};",
+            "        resolver 127.0.0.11 valid=10s ipv6=off;",
+            f"        set $backend_front {brick.compose['frontend_target']};",
+            "        proxy_pass http://$backend_front;",
             "        proxy_set_header Host $http_host;",
             "    }",
             "}",
@@ -225,10 +286,14 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             lines += [
                 f"# {brick.title} — {extra.get('label', '')}",
                 "server {",
-                "    listen 8083;",
+                "    listen 8443 ssl;",
+                "    ssl_certificate /etc/nginx/certs/server.crt;",
+                "    ssl_certificate_key /etc/nginx/certs/server.key;",
                 f"    server_name {extra['label']}.{bare};",
                 "    location / {",
-                f"        proxy_pass http://{extra['target']};",
+                "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                f"        set $backend_extra {extra['target']};",
+                "        proxy_pass http://$backend_extra;",
                 "        proxy_set_header Host $http_host;",
                 "        proxy_http_version 1.1;",
                 "        proxy_set_header Upgrade $http_upgrade;",
@@ -326,8 +391,11 @@ def render_element_config(template: str, answers: dict, brick: Brick) -> str:
 # Provisionnement Keycloak (API admin, stdlib urllib)
 
 
-def _http_json(url: str, method: str, token: str | None = None, body: dict | None = None, form: dict | None = None) -> tuple[int, str]:
-    """Requête HTTP JSON ou form-encoded, retourne (status, texte)."""
+def _http_json(url: str, method: str, token: str | None = None, body: dict | None = None, form: dict | None = None, ca_file: Path | None = None) -> tuple[int, str]:
+    """Requête HTTP JSON ou form-encoded, retourne (status, texte).
+
+    ca_file : CA à faire confiance (POC : CA locale de la passerelle TLS).
+    """
     data = None
     headers = {"Accept": "application/json"}
     if form is not None:
@@ -339,14 +407,17 @@ def _http_json(url: str, method: str, token: str | None = None, body: dict | Non
     if token:
         headers["Authorization"] = f"Bearer {token}"
     request = urllib.request.Request(url, data=data, headers=headers, method=method)
+    ssl_context = None
+    if url.startswith("https") and ca_file is not None:
+        ssl_context = ssl.create_default_context(cafile=str(ca_file))
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with urllib.request.urlopen(request, timeout=30, context=ssl_context) as response:
             return response.status, response.read().decode()
     except urllib.error.HTTPError as exc:
         return exc.code, exc.read().decode()
 
 
-def provision_realm_clients(base_url: str, admin_user: str, admin_password: str, clients_json: str) -> list[str]:
+def provision_realm_clients(base_url: str, admin_user: str, admin_password: str, clients_json: str, ca_file: Path | None = None) -> list[str]:
     """Crée ou met à jour chaque client OIDC du realm `lastarter` via l'API admin.
 
     Idempotent : GET par clientId, POST si absent, PUT sinon (secret + redirects).
@@ -361,6 +432,7 @@ def provision_realm_clients(base_url: str, admin_user: str, admin_password: str,
             "username": admin_user,
             "password": admin_password,
         },
+        ca_file=ca_file,
     )
     if status != 200:
         raise DeployError(f"authentification admin Keycloak impossible (HTTP {status}) : {text[:200]}")
@@ -371,17 +443,18 @@ def provision_realm_clients(base_url: str, admin_user: str, admin_password: str,
     for client in json.loads(clients_json):
         client_id = client["clientId"]
         status, text = _http_json(
-            f"{admin}/clients?clientId={urllib.parse.quote(client_id)}", method="GET", token=token
+            f"{admin}/clients?clientId={urllib.parse.quote(client_id)}",
+            method="GET", token=token, ca_file=ca_file,
         )
         if status != 200:
             raise DeployError(f"lecture clients Keycloak impossible (HTTP {status})")
         existing = json.loads(text)
         if existing:
             status, _ = _http_json(
-                f"{admin}/clients/{existing[0]['id']}", method="PUT", token=token, body=client
+                f"{admin}/clients/{existing[0]['id']}", method="PUT", token=token, body=client, ca_file=ca_file
             )
         else:
-            status, _ = _http_json(f"{admin}/clients", method="POST", token=token, body=client)
+            status, _ = _http_json(f"{admin}/clients", method="POST", token=token, body=client, ca_file=ca_file)
         if status not in (200, 201, 204):
             raise DeployError(f"synchronisation du client {client_id} impossible (HTTP {status})")
         done.append(client_id)
@@ -494,6 +567,10 @@ def run_deploy(opts) -> int:
             encoding="utf-8",
         )
         compose_env["ELEMENT_CONFIG_PATH"] = _portable(element_path)
+
+    # Certificats TLS POC (CA locale + wildcard *.localhost) — générés une fois.
+    ca_path, crt_path, key_path = ensure_dev_certs(runtime_dir)
+    compose_env["CERTS_DIR"] = _portable(ca_path.parent)
 
     # Passerelle : conf nginx générée depuis les briques sélectionnées.
     # Un bind mount ne déclenche ni recreation ni reload : on suit le hash et
@@ -616,10 +693,11 @@ def run_deploy(opts) -> int:
             admin_user=admin_user,
             admin_password=vault["kc_admin_password"],
             clients_json=build_realm_clients(selected_bricks, rendered_envs, answers),
+            ca_file=ca_path if compute_origin(answers["domain"]).startswith("https") else None,
         )
         print(f"Clients OIDC synchronisés via l'API admin : {', '.join(provisioned)}")
 
-    print(f"\nDéploiement « {slug} » opérationnel.")
+    print(f"\nDéploiement « {slug} » opérationnel (TLS, port 8443).")
     sso = compute_origin(answers["domain"])
     print(f"  SSO (apex)    : {sso}/realms/lastarter — console {sso}/admin")
     for brick in selected_bricks:
@@ -628,6 +706,11 @@ def run_deploy(opts) -> int:
         label = brick.compose.get("route_label", brick.name)
         print(f"  {brick.name:<12} : {app_origin(answers['domain'], label)}")
     print(f"  Utilisateur démo : demo / secrets.env:demo_user_password")
+    if (runtime_dir / "certs" / "ca.crt").is_file():
+        print()
+        print("  ⚠ POC TLS : faire confiance à la CA locale UNE fois (navigateurs) :")
+        print(f"    certutil -user -addstore Root \"{(runtime_dir / 'certs' / 'ca.crt')}\"")
+        print("    (ou accepter l'avertissement par sous-domaine dans le navigateur)")
     run(base + ["ps"])
     return 0
 

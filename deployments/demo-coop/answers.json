@@ -1,12 +1,12 @@
 {
   "client_name": "Demo Coop",
   "client_slug": "demo-coop",
-  "domain": "localhost:8083",
+  "domain": "localhost:8443",
   "brand_name": "LaStarter",
   "bricks": [
     "drive",
     "meet",
     "element-web"
   ],
-  "generated_at": "2026-10-14T01:56:08+00:00"
+  "generated_at": "2026-10-14T02:30:29+00:00"
 }

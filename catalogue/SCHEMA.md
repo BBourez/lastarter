@@ -54,6 +54,8 @@ extras = ["collabora", "onlyoffice"]  # services optionnels activables
 #   {origin}     — schéma + <label>.<domaine> (origine de CETTE app)
 #   {app_host}   — <label>.<domaine> (sans schéma, pour ALLOWED_HOSTS)
 #   {ws}         — "ws" en local, "wss" en production
+#   {django_configuration} — "Development" en local (http), "Feature" en prod
+#                  (les classes Production/Feature forcent SECURE_SSL_REDIRECT)
 #   {domain_s3}  — host:port du S3 média public (POC)
 #   {brand_name} — marque affichée
 #   {secret:KEY} — secret du coffre (jeton conservé dans les drafts committables,

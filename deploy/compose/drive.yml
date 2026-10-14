@@ -23,8 +23,7 @@ services:
   drive_rustfs:
     image: rustfs/rustfs:1.0.0
     env_file: ["${RUNTIME_DIR}/drive.env"]
-    ports:
-      - "${RUSTFS_PORT:-9000}:9000"   # POC : média servi directement (durcissement phase 6)
+    # Médédia exposé via la passerelle (drive-media.<domaine>), plus de port hôte.
     volumes:
       - drive_mediadata:/data
     healthcheck:
