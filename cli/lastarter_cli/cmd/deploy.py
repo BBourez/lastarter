@@ -558,6 +558,7 @@ def render_element_call_config(template: str, answers: dict) -> str:
     rendered = template.replace("{{MATRIX_ORIGIN}}", matrix_origin)
     rendered = rendered.replace("{{LIVEKIT_URL}}", livekit_url)
     rendered = rendered.replace("{{BRAND}}", answers.get("brand_name", "LaStarter"))
+    rendered = rendered.replace("{{SERVER_NAME}}", bare)
     return rendered
 
 
