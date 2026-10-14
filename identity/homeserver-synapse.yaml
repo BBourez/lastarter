@@ -6,6 +6,8 @@ pid_file: /data/homeserver.pid
 signing_key_path: /data/keys/signing.key
 server_name: {{SERVER_NAME}}
 public_baseurl: {{MATRIX_ORIGIN}}/
+# Element Call same-origin : le callback OIDC peut aussi passer par meet.<domaine>
+# (proxifié par la passerelle vers synapse).
 # Room version 10 : le createur est explicitement dans power_levels.users —
 # Element Web v1.11.x verifie users[userId] cote client (v12 l'omet → UI cassee).
 default_room_version: "10"

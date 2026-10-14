@@ -370,6 +370,58 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             "    }",
             "",
         ]
+        # Element Call standalone : proxy Matrix API sur le MEME domaine (same-origin,
+        # évite les problèmes CORS/certificat cross-domain).
+        if brick.name == "element-call":
+            lines += [
+                "    # Matrix Client-Server API proxy (same-origin pour element-call)",
+                "    location /_matrix/ {",
+                "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                "        set $backend_matrix synapse_synapse:8008;",
+                "        proxy_pass http://$backend_matrix;",
+                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
+                "        proxy_set_header X-Forwarded-Proto https;",
+                "    }",
+                "",
+                "    # Synapse OIDC callback (same-origin SSO)",
+                "    location /_synapse/ {",
+                "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                "        set $backend_syn synapse_synapse:8008;",
+                "        proxy_pass http://$backend_syn;",
+                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
+                "        proxy_set_header X-Forwarded-Proto https;",
+                "    }",
+                "",
+                "    # MatrixRTC Authorization (lk-jwt-service)",
+                "    location /livekit/jwt/ {",
+                "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                "        set $backend_jwt lk-jwt-service:6080;",
+                "        proxy_pass http://$backend_jwt;",
+                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header X-Forwarded-Proto https;",
+                "        proxy_http_version 1.1;",
+                "        proxy_set_header Upgrade $http_upgrade;",
+                '        proxy_set_header Connection "upgrade";',
+                "    }",
+                "",
+                "    # LiveKit SFU websocket",
+                "    location /livekit/sfu/ {",
+                "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                "        set $backend_sfu call_livekit:7880;",
+                "        proxy_pass http://$backend_sfu;",
+                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header X-Forwarded-Proto https;",
+                "        proxy_send_timeout 120;",
+                "        proxy_read_timeout 120;",
+                "        proxy_buffering off;",
+                "        proxy_http_version 1.1;",
+                "        proxy_set_header Upgrade $http_upgrade;",
+                '        proxy_set_header Connection "upgrade";',
+                "    }",
+                "",
+            ]
         # Element Call : routes MatrixRTC sur le domaine matrix (docs self_hosting).
         if brick.name == "synapse":
             lines += [
@@ -553,10 +605,11 @@ def render_element_call_config(template: str, answers: dict) -> str:
     bare = domain.split(":")[0]
     port = domain.split(":")[1] if ":" in domain else ""
     scheme = _scheme(domain)
+    # Same-origin : l'API Matrix est proxifiée sur meet.<domaine> (pas de cross-origin).
+    call_origin = f"{scheme}://meet.{bare}" + (f":{port}" if port else "")
     matrix_origin = f"{scheme}://matrix.{bare}" + (f":{port}" if port else "")
-    livekit_url = f"wss://livekit.{bare}" + (f":{port}" if port else "")
-    rendered = template.replace("{{MATRIX_ORIGIN}}", matrix_origin)
-    rendered = rendered.replace("{{LIVEKIT_URL}}", livekit_url)
+    rendered = template.replace("{{CALL_ORIGIN}}", call_origin)
+    rendered = rendered.replace("{{MATRIX_ORIGIN}}", matrix_origin)
     rendered = rendered.replace("{{BRAND}}", answers.get("brand_name", "LaStarter"))
     rendered = rendered.replace("{{SERVER_NAME}}", bare)
     return rendered
@@ -1072,6 +1125,36 @@ def run_deploy(opts) -> int:
             ca_file=ca_path,
         )
         print(f"Clients OIDC synchronisés via l'API admin : {', '.join(provisioned)}")
+
+        # Element-call same-origin : ajouter meet.<domaine> comme redirect URI
+        # pour le client synapse (le SSO callback passe par meet.<domaine>).
+        if "element-call" in selected:
+            s, t = _http_json(
+                f"{api_base}/admin/realms/lastarter/clients?clientId=synapse&exact=true",
+                method="GET", token=json.loads(_http_json(
+                    f"{api_base}/realms/master/protocol/openid-connect/token", "POST",
+                    form={"grant_type": "password", "client_id": "admin-cli",
+                          "username": admin_user, "password": vault["kc_admin_password"]},
+                    ca_file=ca_path,
+                )[1])["access_token"], ca_file=ca_path)
+            if s == 200:
+                clients = json.loads(t)
+                if clients:
+                    client = clients[0]
+                    call_origin = app_origin(answers["domain"], "meet")
+                    if call_origin not in client.get("redirectUris", []):
+                        client["redirectUris"].append(f"{call_origin}/*")
+                        client["webOrigins"].append(call_origin)
+                        s2, _ = _http_json(
+                            f"{api_base}/admin/realms/lastarter/clients/{client['id']}",
+                            method="PUT", token=json.loads(_http_json(
+                                f"{api_base}/realms/master/protocol/openid-connect/token", "POST",
+                                form={"grant_type": "password", "client_id": "admin-cli",
+                                      "username": admin_user, "password": vault["kc_admin_password"]},
+                                ca_file=ca_path,
+                            )[1])["access_token"], body=client, ca_file=ca_path)
+                            if s2 in (200, 204):
+                                print(f"Redirect URI ajouté : {call_origin}/*")
 
     print(f"\nDéploiement « {slug} » opérationnel (TLS, port 8443).")
     id_url = _id_origin(answers["domain"])
