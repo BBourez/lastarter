@@ -322,6 +322,8 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             f"        set $backend_front {brick.compose['frontend_target']};",
             "        proxy_pass http://$backend_front;",
             "        proxy_set_header Host $http_host;",
+            "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
+            "        proxy_set_header X-Forwarded-Proto https;",
             "    }",
             "}",
             "",
@@ -342,6 +344,8 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 f"        set $backend_extra {extra['target']};",
                 "        proxy_pass http://$backend_extra;",
                 "        proxy_set_header Host $http_host;",
+                "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
+                "        proxy_set_header X-Forwarded-Proto https;",
                 "        proxy_http_version 1.1;",
                 "        proxy_set_header Upgrade $http_upgrade;",
                 '        proxy_set_header Connection "upgrade";',
@@ -501,10 +505,59 @@ def _http_json(url: str, method: str, token: str | None = None, body: dict | Non
         return exc.code, exc.read().decode()
 
 
-def provision_realm(base_url: str, admin_user: str, admin_password: str, demo_password: str, ca_file: Path | None = None) -> None:
-    """Applique les réglages realm (inscription, thème, sécurité) + l'utilisateur démo.
+def _ensure_realm_user(admin: str, token: str, username: str, first_name: str,
+                       password: str, ca_file: Path | None) -> None:
+    """Crée l'utilisateur realm si absent et (re)synchronise son mot de passe."""
+    status, text = _http_json(
+        f"{admin}/users?username={urllib.parse.quote(username)}&exact=true",
+        method="GET", token=token, ca_file=ca_file,
+    )
+    if status != 200:
+        raise DeployError(f"recherche utilisateur {username} impossible (HTTP {status})")
+    found = json.loads(text)
+    if found:
+        user_id = found[0]["id"]
+    else:
+        status, _ = _http_json(
+            f"{admin}/users",
+            method="POST",
+            token=token,
+            body={
+                "username": username,
+                "email": f"{username}@lastarter.local",
+                "firstName": first_name,
+                "lastName": "LaStarter",
+                "enabled": True,
+                "emailVerified": True,
+            },
+            ca_file=ca_file,
+        )
+        if status not in (200, 201):
+            raise DeployError(f"création utilisateur {username} impossible (HTTP {status})")
+        status, text = _http_json(
+            f"{admin}/users?username={urllib.parse.quote(username)}&exact=true",
+            method="GET", token=token, ca_file=ca_file,
+        )
+        user_id = json.loads(text)[0]["id"]
+    status, _ = _http_json(
+        f"{admin}/users/{user_id}/reset-password",
+        method="PUT",
+        token=token,
+        body={"type": "password", "value": password, "temporary": False},
+        ca_file=ca_file,
+    )
+    if status not in (200, 204):
+        raise DeployError(f"mot de passe {username} impossible (HTTP {status})")
+
+
+def provision_realm(base_url: str, admin_user: str, admin_password: str,
+                    demo_password: str, realm_admin_password: str = "",
+                    ca_file: Path | None = None) -> None:
+    """Applique les réglages realm (inscription, thème, sécurité) + utilisateurs.
 
     Idempotent via l'API admin — fait autorité après le premier import du realm.
+    Deux comptes : `demo` (démo) et `admin` (admin DU realm — distinct de la
+    console master Keycloak).
     """
     auth = _http_json(
         f"{base_url}/realms/master/protocol/openid-connect/token",
@@ -541,45 +594,9 @@ def provision_realm(base_url: str, admin_user: str, admin_password: str, demo_pa
     if status not in (200, 204):
         raise DeployError(f"mise à jour du realm impossible (HTTP {status})")
 
-    # Utilisateur démo : créé si absent, mot de passe (re)mis à jour depuis le coffre.
-    status, text = _http_json(
-        f"{admin}/users?username=demo&exact=true", method="GET", token=token, ca_file=ca_file
-    )
-    if status != 200:
-        raise DeployError(f"recherche utilisateur démo impossible (HTTP {status})")
-    found = json.loads(text)
-    if found:
-        user_id = found[0]["id"]
-    else:
-        status, _ = _http_json(
-            f"{admin}/users",
-            method="POST",
-            token=token,
-            body={
-                "username": "demo",
-                "email": "demo@lastarter.local",
-                "firstName": "Demo",
-                "lastName": "LaStarter",
-                "enabled": True,
-                "emailVerified": True,
-            },
-            ca_file=ca_file,
-        )
-        if status not in (200, 201):
-            raise DeployError(f"création utilisateur démo impossible (HTTP {status})")
-        status, text = _http_json(
-            f"{admin}/users?username=demo&exact=true", method="GET", token=token, ca_file=ca_file
-        )
-        user_id = json.loads(text)[0]["id"]
-    status, _ = _http_json(
-        f"{admin}/users/{user_id}/reset-password",
-        method="PUT",
-        token=token,
-        body={"type": "password", "value": demo_password, "temporary": False},
-        ca_file=ca_file,
-    )
-    if status not in (200, 204):
-        raise DeployError(f"mot de passe démo impossible (HTTP {status})")
+    _ensure_realm_user(admin, token, "demo", "Demo", demo_password, ca_file)
+    if realm_admin_password:
+        _ensure_realm_user(admin, token, "admin", "Admin", realm_admin_password, ca_file)
 
 
 def provision_realm_clients(base_url: str, admin_user: str, admin_password: str, clients_json: str, ca_file: Path | None = None) -> list[str]:
@@ -896,6 +913,7 @@ def run_deploy(opts) -> int:
             admin_user=admin_user,
             admin_password=vault["kc_admin_password"],
             demo_password=vault.get("demo_user_password", ""),
+            realm_admin_password=vault.get("realm_admin_password", ""),
             ca_file=ca_path,
         )
         provisioned = provision_realm_clients(

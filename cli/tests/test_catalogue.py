@@ -80,7 +80,7 @@ class CatalogueTests(unittest.TestCase):
         )
         self.assertEqual(
             set(secret_names(self.bricks["keycloak"])),
-            {"kc_admin_password", "kc_db_password", "demo_user_password"},
+            {"kc_admin_password", "kc_db_password", "demo_user_password", "realm_admin_password"},
         )
 
 

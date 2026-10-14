@@ -12,7 +12,10 @@ upstream_image = "quay.io/keycloak/keycloak:26.3.2"
 upstream_pin = "26.3.2"
 core = true
 requires = []
-extra_secrets = ["demo_user_password"]   # utilisateur de démo du realm as-code
+extra_secrets = [
+  "demo_user_password",    # utilisateur de démo du realm as-code
+  "realm_admin_password",  # utilisateur « admin » DU REALM (≠ console master)
+]
 
 [oidc]
 # Le realm `lastarter` est provisionné par identity/ (phase 2) ; les clients

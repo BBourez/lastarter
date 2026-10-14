@@ -18,30 +18,44 @@ from ..catalogue import Brick, find_catalogue, load_catalogue
 from .deploy import DeployError, _id_origin, app_origin, compute_origin, load_deployment
 
 
-def _fetch(url: str, ca_file: Path | None = None) -> tuple[int, str]:
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: D102
+        return None
+
+
+def _fetch(url: str, ca_file: Path | None = None, follow: bool = True) -> tuple[int, str, str]:
+    """Retourne (status, corps, Location). follow=False : expose les 3xx."""
     context = None
     if url.startswith("https") and ca_file is not None:
         context = ssl.create_default_context(cafile=str(ca_file))
     request = urllib.request.Request(url, headers={"User-Agent": "lastarter-smoke/1"})
+    handlers: list = []
+    if not follow:
+        handlers.append(_NoRedirect())
+    opener = urllib.request.build_opener(*handlers) if handlers else urllib.request.build_opener()
     try:
-        with urllib.request.urlopen(request, timeout=15, context=context) as response:
-            return response.status, response.read().decode(errors="replace")
+        with opener.open(request, timeout=15, context=context) as response:
+            return response.status, response.read().decode(errors="replace"), response.headers.get("Location", "")
     except urllib.error.HTTPError as exc:
-        return exc.code, exc.read().decode(errors="replace")
+        return exc.code, exc.read().decode(errors="replace"), exc.headers.get("Location", "") if exc.headers else ""
     except (urllib.error.URLError, OSError) as exc:
-        return 0, str(exc)
+        return 0, str(exc), ""
 
 
 def _check(results: list, label: str, url: str, expect: int, contains: str | None = None,
-           ca_file: Path | None = None) -> None:
-    status, body = _fetch(url, ca_file)
+           ca_file: Path | None = None, follow: bool = True, location_prefix: str | None = None) -> None:
+    status, body, location = _fetch(url, ca_file, follow)
     ok = status == expect and (contains is None or contains in body)
+    if ok and location_prefix is not None:
+        ok = location.startswith(location_prefix)
     mark = "✓" if ok else "✗"
     detail = f"HTTP {status}" + (f" (attendu {expect})" if status != expect else "")
     if status == 0:
         detail += f" — {body[:120]}"  # cause réseau (DNS, TLS, refus)
     if ok is False and contains is not None and status == expect:
         detail += f" — contenu attendu manquant: {contains!r}"
+    if ok is False and location_prefix is not None and status == expect:
+        detail += f" — Location: {location[:100]!r}"
     results.append((ok, f"{mark} {label:<34} {detail}"))
 
 
@@ -94,8 +108,14 @@ def run_smoke(opts) -> int:
         label = brick.compose.get("route_label", name)
         origin = app_origin(domain, label)
         if brick.compose.get("portal_visible", "true") == "false":
-            # Backend (ex. synapse) : on teste son endpoint d'API, pas une page.
+            # Backend (ex. synapse) : API + chaîne SSO (redirect vers l'IdP).
             _check(results, f"{name} (API)", f"{origin}/_matrix/client/versions", 200, '"versions"', ca_file)
+            _check(
+                results, f"{name} (SSO redirect)",
+                f"{origin}/_matrix/client/v3/login/sso/redirect?redirectUrl={origin}",
+                302, None, ca_file, follow=False,
+                location_prefix=_id_origin(domain),
+            )
             continue
         _check(results, f"{name} (frontend /)", origin, 200, None, ca_file)
         if brick.compose.get("api_target"):
