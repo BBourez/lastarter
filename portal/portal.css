@@ -1,253 +1,239 @@
-/* LaStarter — portail au design Element (Compound).
- * Layout : sidebar gauche + contenu, boutons pilule, Inter.
- * Palette : via /__lastarter/theme.css (tokens --cpd-* et --lastarter-*).
+/* LaStarter — portail au design Element Web authentique.
+ * Topbar horizontale + contenu centré, tuiles bordées, boutons pilule.
+ * Palette : /__lastarter/theme.css (tokens Compound officiels).
  */
 
 * { box-sizing: border-box; }
-
-:root {
-    --portal-radius: 8px;
-    --portal-pill: 9999px;
-    --portal-sidebar-w: 260px;
-}
 
 body {
     margin: 0;
     font-family: var(--cpd-font-family-sans, "Inter", system-ui, sans-serif);
     color: var(--cpd-color-text-primary, #1b1d22);
-    background: var(--cpd-color-bg-canvas-default, #fff);
+    background: var(--cpd-color-bg-canvas-default, #ffffff);
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
 }
 
 /* ================================================================
- * LAYOUT : sidebar + contenu
+ * TOPBAR — barre horizontale fine, style Element Web
  * ================================================================ */
-.layout {
-    display: flex;
-    min-height: 100vh;
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--cpd-color-bg-canvas-default, #fff);
+    border-bottom: 1px solid var(--cpd-color-border-interactive-secondary, #e1e6ec);
 }
 
-/* ================================================================
- * SIDEBAR — style Element Web (fond gris subtil)
- * ================================================================ */
-.sidebar {
-    width: var(--portal-sidebar-w);
-    flex-shrink: 0;
+.topbar-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+    height: 56px;
     display: flex;
-    flex-direction: column;
-    background: var(--cpd-color-bg-subtle-secondary, #f0f2f5);
-    border-right: 1px solid var(--cpd-color-border-interactive-secondary, #e1e6ec);
-    padding: 20px 12px;
+    align-items: center;
+    gap: 32px;
 }
 
-.sidebar-brand {
+.topbar-brand {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 4px 12px 20px;
+    flex-shrink: 0;
 }
 
-.brand-logo {
-    width: 32px;
-    height: 32px;
-    border-radius: var(--portal-radius);
-    background: var(--cpd-color-bg-accent-subtle, #e3f7ed)
-        center / contain no-repeat;
+.brand-mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--cpd-color-bg-accent-subtle, #e3f7ed) center / contain no-repeat;
     display: none;
 }
 
-.brand-name {
-    font-size: 1.125rem;
+.brand-text {
+    font-size: 1.0625rem;
     font-weight: 600;
     color: var(--cpd-color-text-primary);
-    letter-spacing: -0.01em;
 }
 
-.sidebar-nav {
+/* Navigation horizontale */
+.topbar-nav {
     flex: 1;
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    gap: 4px;
+    overflow-x: auto;
 }
 
-/* Item de navigation : hover subtil, actif accent */
-.nav-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 12px;
-    border-radius: var(--portal-radius);
-    color: var(--cpd-color-text-primary);
-    text-decoration: none;
-    font-size: 0.9375rem;
+.nav-link {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 0.875rem;
     font-weight: 500;
-    transition: background-color 0.1s;
+    color: var(--cpd-color-text-secondary);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.1s, background-color 0.1s;
 }
 
-.nav-item:hover {
-    background: var(--cpd-color-bg-subtle-primary, #e1e6ec);
+.nav-link:hover {
+    color: var(--cpd-color-text-primary);
+    background: var(--cpd-color-bg-subtle-secondary);
 }
 
-.nav-item.active {
-    background: var(--cpd-color-bg-accent-subtle, #e3f7ed);
-    color: var(--cpd-color-text-action-accent);
-}
-
-.nav-icon {
-    font-size: 1.125rem;
-    line-height: 1;
-    width: 24px;
-    text-align: center;
-}
-
-.nav-label { flex: 1; }
-
-.sidebar-footer {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-top: 16px;
-    border-top: 1px solid var(--cpd-color-border-interactive-secondary);
-}
-
-/* Bouton pilule Element : gris foncé plein */
-.btn-primary {
+/* Bouton pilule Element (gris foncé) */
+.btn-pill {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
     min-height: 36px;
-    padding: 6px 20px;
-    border-radius: var(--portal-pill);
+    padding: 0 20px;
+    border-radius: 9999px;
     background: var(--cpd-color-bg-action-primary-rest, #1b1d22);
-    color: var(--cpd-color-text-on-solid-primary, #fff);
-    font-size: 0.9375rem;
+    color: #fff;
+    font-size: 0.875rem;
     font-weight: 500;
     text-decoration: none;
-    border: none;
-    cursor: pointer;
     transition: background-color 0.1s;
 }
 
-.btn-primary:hover {
+.btn-pill:hover {
     background: var(--cpd-color-bg-action-primary-hovered, #3c4045);
 }
 
-.btn-primary:active {
-    background: var(--cpd-color-bg-action-primary-pressed, #4c5158);
-}
-
-.sidebar-link {
-    text-align: center;
-    font-size: 0.8125rem;
-    color: var(--cpd-color-text-secondary);
-    text-decoration: none;
-    padding: 4px;
-}
-
-.sidebar-link:hover {
-    color: var(--cpd-color-text-action-accent);
-    text-decoration: underline;
-}
-
 /* ================================================================
- * CONTENU — cartes d'applications
+ * CONTENU
  * ================================================================ */
-.content {
-    flex: 1;
-    padding: 48px 48px 32px;
-    max-width: 960px;
+.main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 64px 24px 32px;
 }
 
-.content-header {
-    margin-bottom: 32px;
+/* Hero sobre */
+.hero {
+    text-align: center;
+    margin-bottom: 48px;
 }
 
-.content-title {
+.hero-title {
     margin: 0 0 8px;
-    font-size: 1.75rem;
+    font-size: 2rem;
     font-weight: 600;
-    color: var(--cpd-color-text-primary);
     letter-spacing: -0.02em;
+    color: var(--cpd-color-text-primary);
 }
 
-.content-subtitle {
+.hero-sub {
     margin: 0;
     font-size: 1rem;
     color: var(--cpd-color-text-secondary);
-    line-height: 1.5;
 }
 
-/* Grille de cartes */
-.cards {
+/* ================================================================
+ * TUILES — cartes horizontales avec flèche
+ * ================================================================ */
+.apps {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
 }
 
-.app-card {
+.app-tile {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 16px;
-    padding: 20px;
-    border-radius: var(--portal-radius);
-    border: 1px solid var(--cpd-color-border-interactive-secondary);
+    padding: 16px 20px;
+    border-radius: 12px;
+    border: 1px solid var(--cpd-color-border-interactive-secondary, #e1e6ec);
     background: var(--cpd-color-bg-canvas-default);
     text-decoration: none;
     transition: border-color 0.1s, background-color 0.1s;
 }
 
-.app-card:hover {
-    border-color: var(--cpd-color-green-700);
+.app-tile:hover {
+    border-color: var(--cpd-color-gray-800);
     background: var(--cpd-color-bg-subtle-secondary);
 }
 
-.card-icon {
+.app-tile:active {
+    background: var(--cpd-color-bg-subtle-primary);
+}
+
+.tile-glyph {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 44px;
     height: 44px;
     flex-shrink: 0;
-    font-size: 1.375rem;
+    font-size: 1.25rem;
     border-radius: 50%;
     background: var(--cpd-color-bg-accent-subtle, #e3f7ed);
 }
 
-.card-body {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+.tile-info {
+    flex: 1;
+    min-width: 0;
 }
 
-.card-name {
-    font-size: 1rem;
+.tile-title {
+    display: block;
+    font-size: 0.9375rem;
     font-weight: 600;
     color: var(--cpd-color-text-primary);
 }
 
-.card-desc {
-    font-size: 0.875rem;
+.tile-sub {
+    display: block;
+    font-size: 0.8125rem;
     color: var(--cpd-color-text-secondary);
     line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.empty {
+.tile-arrow {
     color: var(--cpd-color-text-secondary);
     font-size: 1rem;
+    transition: transform 0.15s, color 0.1s;
+}
+
+.app-tile:hover .tile-arrow {
+    transform: translateX(3px);
+    color: var(--cpd-color-text-primary);
 }
 
 /* ================================================================
- * RESPONSIVE : sidebar cachée en mobile
+ * FOOTER
  * ================================================================ */
-@media (max-width: 768px) {
-    .layout { flex-direction: column; }
-    .sidebar {
-        width: 100%;
-        border-right: none;
-        border-bottom: 1px solid var(--cpd-color-border-interactive-secondary);
-        padding: 16px;
-    }
-    .sidebar-nav { flex-direction: row; flex-wrap: wrap; gap: 8px; }
-    .content { padding: 24px 16px; }
+.footer {
+    margin-top: 64px;
+    text-align: center;
+    font-size: 0.8125rem;
+    color: var(--cpd-color-text-secondary);
+}
+
+.footer a {
+    color: var(--cpd-color-text-secondary);
+}
+
+.footer a:hover {
+    color: var(--cpd-color-text-action-accent);
+}
+
+.empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--cpd-color-text-secondary);
+    padding: 32px;
+}
+
+/* ================================================================
+ * RESPONSIVE
+ * ================================================================ */
+@media (max-width: 640px) {
+    .topbar-nav { display: none; }
+    .hero-title { font-size: 1.5rem; }
+    .main { padding: 32px 16px; }
+    .apps { grid-template-columns: 1fr; }
 }

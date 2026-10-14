@@ -8,41 +8,45 @@
   <link rel="stylesheet" href="/portal.css" />
 </head>
 <body>
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="sidebar-brand">
-        <span class="brand-logo" id="brand-logo" aria-hidden="true"></span>
-        <span class="brand-name" id="brand">LaStarter</span>
+  <div class="app">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="topbar-brand">
+          <span class="brand-mark" id="brand-logo" aria-hidden="true"></span>
+          <span class="brand-text" id="brand">LaStarter</span>
+        </div>
+        <nav class="topbar-nav" id="nav">
+          <!-- Items générés -->
+        </nav>
+        <div class="topbar-actions">
+          <a class="btn-pill" id="login" href="#">Se connecter</a>
+        </div>
       </div>
-      <nav class="sidebar-nav" id="nav" aria-label="Applications">
-        <!-- Items générés depuis /portal-config.json -->
-      </nav>
-      <div class="sidebar-footer">
-        <a class="btn-primary" id="login" href="#">Se connecter</a>
-        <a href="/sources.html" class="sidebar-link">Mentions &amp; sources</a>
-      </div>
-    </aside>
+    </header>
 
-    <main class="content">
-      <header class="content-header">
-        <h1 class="content-title" id="tagline">La suite collaborative de votre organisation.</h1>
-        <p class="content-subtitle">Toutes vos applications, un seul point d'entrée.</p>
-      </header>
-
-      <section class="cards" id="apps" aria-label="Applications disponibles">
-        <!-- Tuiles générées depuis /portal-config.json -->
+    <main class="main">
+      <section class="hero">
+        <h1 class="hero-title" id="tagline">La suite collaborative de votre organisation.</h1>
+        <p class="hero-sub">Un seul compte, toutes vos applications.</p>
       </section>
+
+      <section class="apps" id="apps" aria-label="Applications">
+        <!-- Tuiles générées -->
+      </section>
+
+      <footer class="footer">
+        <span id="footer-brand">LaStarter</span> · <a href="/sources.html">Mentions &amp; sources</a>
+      </footer>
     </main>
   </div>
 
   <script>
-    // Portail LaStarter — statique, zéro dépendance, configuré par le CLI.
-    // Design : Compound (Element) — sidebar + contenu, boutons pilule.
     fetch("/portal-config.json")
       .then((r) => r.json())
       .then((cfg) => {
         document.title = cfg.brand;
         document.getElementById("brand").textContent = cfg.brand;
+        document.getElementById("footer-brand").textContent = cfg.brand;
         if (cfg.tagline) document.getElementById("tagline").textContent = cfg.tagline;
         document.getElementById("login").href = cfg.account_url;
 
@@ -52,31 +56,29 @@
           document.getElementById("brand-logo").style.backgroundImage = logo;
         }
 
-        // Navigation latérale (items) + cartes (contenu).
         const nav = document.getElementById("nav");
-        const cards = document.getElementById("apps");
+        const apps = document.getElementById("apps");
         for (const app of cfg.apps) {
-          const navItem = document.createElement("a");
-          navItem.className = "nav-item";
-          navItem.href = app.url;
-          navItem.innerHTML =
-            '<span class="nav-icon" aria-hidden="true">' + (app.emoji || "◆") + "</span>" +
-            '<span class="nav-label">' + app.name + "</span>";
-          nav.appendChild(navItem);
+          const n = document.createElement("a");
+          n.className = "nav-link";
+          n.href = app.url;
+          n.textContent = app.name;
+          nav.appendChild(n);
 
-          const card = document.createElement("a");
-          card.className = "app-card";
-          card.href = app.url;
-          card.innerHTML =
-            '<span class="card-icon" aria-hidden="true">' + (app.emoji || "◆") + "</span>" +
-            '<span class="card-body">' +
-              '<span class="card-name">' + app.name + "</span>" +
-              '<span class="card-desc">' + (app.description || "") + "</span>" +
-            "</span>";
-          cards.appendChild(card);
+          const a = document.createElement("a");
+          a.className = "app-tile";
+          a.href = app.url;
+          a.innerHTML =
+            '<span class="tile-glyph" aria-hidden="true">' + (app.emoji || "◆") + "</span>" +
+            '<span class="tile-info">' +
+              '<span class="tile-title">' + app.name + "</span>" +
+              '<span class="tile-sub">' + (app.description || "") + "</span>" +
+            "</span>" +
+            '<span class="tile-arrow" aria-hidden="true">→</span>';
+          apps.appendChild(a);
         }
         if (!cfg.apps.length) {
-          cards.innerHTML = '<p class="empty">Aucune application activée.</p>';
+          apps.innerHTML = '<p class="empty">Aucune application activée.</p>';
         }
       })
       .catch(() => {

@@ -392,6 +392,70 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 
 /* ================================================================
+ * FONDS NEUTRES — les apps La Suite utilisent « brand » comme fond
+ * de section : on force les contextuals vers du NEUTRE (gris/blanc)
+ * pour éviter les aplats verts. Le vert ne reste que sur les accents.
+ * ================================================================ */
+:root {
+    --c--contextuals--background--semantic--brand--primary: var(--c--globals--colors--gray-1000);
+    --c--contextuals--background--semantic--brand--primary-hover: var(--c--globals--colors--gray-950);
+    --c--contextuals--background--semantic--brand--secondary: var(--c--globals--colors--gray-100);
+    --c--contextuals--background--semantic--brand--secondary-hover: var(--c--globals--colors--gray-150);
+    --c--contextuals--background--semantic--brand--tertiary: var(--c--globals--colors--gray-50);
+    --c--contextuals--background--semantic--brand--tertiary-hover: var(--c--globals--colors--gray-100);
+    --c--contextuals--content--semantic--brand--on-brand: #ffffff;
+}
+
+/* ================================================================
+ * PROJECTS : tuer les shadows violets codés en dur (#5e5cd0, #69697d)
+ * Ces valeurs sont hardcodées dans le bundle CSS, pas via tokens.
+ * ================================================================ */
+[class*="LeftMenu"] *:focus,
+[class*="Board"] *:focus,
+[class*="Card"] *:focus,
+[class*="Core"] *:focus {
+    box-shadow: 0 0 0 1px #fff, 0 0 0 4px var(--cpd-color-green-700) !important;
+}
+
+/* Supprimer les ombres portées lourdes de Projects */
+[class*="LeftMenu_boards"],
+[class*="Board_addCardButton"],
+[class*="Core_menuBackdrop"] {
+    box-shadow: none !important;
+}
+
+/* ================================================================
+ * MESSAGES : barre de recherche 100% arrondie (pilule)
+ * ================================================================ */
+input[type="search"],
+[class*="search-bar"],
+[class*="SearchBar"],
+[class*="searchBar"],
+input[placeholder*="Rechercher"],
+input[placeholder*="rechercher"],
+input[placeholder*="Search"] {
+    border-radius: var(--cpd-radius-pill-effect) !important;
+    padding-left: 16px !important;
+}
+
+/* ================================================================
+ * DRIVE : bouton créer dossier en VERT Element (accent)
+ * ================================================================ */
+[class*="create-folder"],
+[class*="CreateFolder"],
+[class*="add-folder"],
+[class*="new-folder"],
+button[aria-label*="dossier"],
+button[aria-label*="Dossier"],
+[class*="btn-add"],
+[class*="upload"] {
+    background-color: var(--cpd-color-green-700) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: var(--cpd-radius-pill-effect) !important;
+}
+
+/* ================================================================
  * CLASSES CUNNINGHAM EXACTES — extraites des CSS de production
  * (drive, messages, transfers : c__button--brand--*, c__dropdown-menu…)
  * Ces sélecteurs précisent les patterns génériques ci-dessus.
