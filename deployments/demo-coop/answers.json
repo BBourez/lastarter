@@ -5,10 +5,11 @@
   "brand_name": "LaStarter",
   "bricks": [
     "drive",
+    "meet",
     "element-web",
     "transfers",
     "element-call",
     "messages"
   ],
-  "generated_at": "2026-10-14T11:29:39+00:00"
+  "generated_at": "2026-10-14T11:36:44+00:00"
 }

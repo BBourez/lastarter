@@ -46,6 +46,24 @@
     },
     {
       "type": "application",
+      "name": "meet",
+      "version": "v1.35.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/suitenumerique/meet"
+        }
+      ]
+    },
+    {
+      "type": "application",
       "name": "messages",
       "version": "latest@sha256:5d40c3cb71ae6cd9da158a32b88450be5b64b86615f99f48b82da9aafb5d70e0",
       "licenses": [

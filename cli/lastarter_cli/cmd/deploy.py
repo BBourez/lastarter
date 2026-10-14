@@ -369,16 +369,8 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             "    }",
             "",
         ]
-        # Element Call : l'accès direct à la racine redirige vers le chat
-        # (c'est une app widget, utilisable uniquement depuis un salon).
-        if brick.name == "element-call":
-            edge_port = domain.split(":")[1] if ":" in domain else ""
-            # Renommé Meet : redirige vers le chat (les appels se lancent depuis les salons).
-            chat_origin = f"https://chat.{bare}" + (f":{edge_port}" if edge_port else "")
-            lines += [
-                f"    location = / {{ return 302 {chat_origin}/; }}",
-                "",
-            ]
+        # Element Call : accessible directement (standalone + widget).
+        # Pas de redirection — meet.<domaine> est la visio standalone séparée.
         lines += [
             "    location / {",
             "        resolver 127.0.0.11 valid=10s ipv6=off;",

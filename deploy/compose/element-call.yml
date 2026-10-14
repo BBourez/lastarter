@@ -8,14 +8,12 @@ services:
     networks: [lastarter]
 
   # SFU LiveKit dédié à element-call (pas partagé avec meet).
+  # Pas de port hôte : tout passe par la passerelle (wss://livekit.<domaine>).
   call_livekit:
     image: livekit/livekit-server:v1.13.6
     command: ["--config", "/config.yaml"]
     volumes:
       - ./files/livekit-call.yaml:/config.yaml:ro
-    ports:
-      - "7881:7881"       # RTC tcp
-      - "7882:7882/udp"   # RTC udp
     depends_on:
       call_redis:
         condition: service_started
