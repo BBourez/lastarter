@@ -33,7 +33,7 @@ class CatalogueTests(unittest.TestCase):
         self.assertEqual(self.errors, [])
         self.assertEqual(
             set(self.bricks),
-            {"keycloak", "drive", "meet", "synapse", "element-web", "transfers", "element-call"},
+            {"keycloak", "drive", "meet", "synapse", "element-web", "transfers", "element-call", "messages"},
         )
 
     def test_keycloak_is_core_foundation(self):

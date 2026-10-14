@@ -2,7 +2,7 @@
 
 - Domaine : localhost:8443
 - Marque : LaStarter
-- Briques : keycloak, drive, meet, synapse, transfers, element-call, element-web
+- Briques : keycloak, drive, meet, messages, synapse, transfers, element-call, element-web
 
 ## Contenu
 

@@ -1,0 +1,116 @@
+# Brique messages — messagerie collaborative (GHCR, digest).
+# Opensearch (recherche) + rustfs (imports) + maildev (SMTP POC).
+
+services:
+  messages_postgresql:
+    image: postgres:16
+    env_file: ["${RUNTIME_DIR}/messages.env"]
+    volumes:
+      - messages_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 2s
+      timeout: 3s
+      retries: 150
+    networks: [lastarter]
+
+  messages_redis:
+    image: redis:5
+    networks: [lastarter]
+
+  messages_opensearch:
+    image: opensearchproject/opensearch:2.19.2
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+      - DISABLE_SECURITY_PLUGIN=true
+    volumes:
+      - messages_searchdata:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200 >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    networks: [lastarter]
+
+  messages_rustfs:
+    image: rustfs/rustfs:1.0.0
+    env_file: ["${RUNTIME_DIR}/messages.env"]
+    volumes:
+      - messages_mediadata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9000/health"]
+      interval: 3s
+      timeout: 20s
+      retries: 100
+    networks: [lastarter]
+
+  messages_maildev:
+    image: maildev/maildev:2.2.1
+    command: ["maildev", "--smtp", "1025", "--imap", "false"]
+    networks: [lastarter]
+
+  messages_app:
+    image: ghcr.io/suitenumerique/messages-backend:latest@sha256:5d40c3cb71ae6cd9da158a32b88450be5b64b86615f99f48b82da9aafb5d70e0
+    env_file: ["${RUNTIME_DIR}/messages.env"]
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      # Host explicite (ALLOWED_HOSTS = messages.<domaine>) + proto transmis.
+      test: ["CMD", "python", "-c", "import os; from urllib.request import Request, urlopen; urlopen(Request('http://localhost:8000/__heartbeat__/', headers={'Host': os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost').split(',')[0].strip(), 'X-Forwarded-Proto': 'https'}), timeout=2)"]
+      interval: 5s
+      timeout: 4s
+      retries: 60
+      start_period: 25s
+    depends_on:
+      messages_postgresql:
+        condition: service_healthy
+      messages_redis:
+        condition: service_started
+      messages_opensearch:
+        condition: service_healthy
+      messages_rustfs:
+        condition: service_healthy
+    networks: [lastarter]
+
+  messages_worker:
+    image: ghcr.io/suitenumerique/messages-backend:latest@sha256:5d40c3cb71ae6cd9da158a32b88450be5b64b86615f99f48b82da9aafb5d70e0
+    command: ["python", "worker.py", "--loglevel=INFO"]
+    env_file: ["${RUNTIME_DIR}/messages.env"]
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      disable: true
+    depends_on:
+      messages_app:
+        condition: service_healthy
+    networks: [lastarter]
+
+  messages_frontend:
+    image: ghcr.io/suitenumerique/messages-frontend:latest@sha256:3b7f8bee6d9c23e6a8419cf25672c1e16028f53d514467ce5a834b3a298f40f9
+    # Distroless Caddy : pas de shell/wget — la passerelle couvre la sonde.
+    healthcheck:
+      disable: true
+    depends_on:
+      messages_app:
+        condition: service_healthy
+    networks: [lastarter]
+
+volumes:
+  messages_pgdata:
+  messages_searchdata:
+  messages_mediadata:
