@@ -362,7 +362,7 @@ def render_synapse_homeserver(template: str, answers: dict, vault: dict[str, str
             raise DeployError(f"secret manquant dans secrets.env : {name}")
         return vault[name]
 
-    rendered = template.replace("{{SSO_ORIGIN}}", f"{scheme}://{domain}")
+    rendered = template.replace("{{SSO_ORIGIN}}", _id_origin(domain))  # cohérence cookies : id.<domaine> partout
     rendered = rendered.replace("{{MATRIX_ORIGIN}}", matrix_origin)
     rendered = rendered.replace("{{SERVER_NAME}}", bare)
     return REALM_SECRET_TOKEN.sub(secret, rendered)
@@ -578,8 +578,14 @@ def run_deploy(opts) -> int:
     runtime_dir.mkdir(parents=True, exist_ok=True)
 
     # Rendu runtime : env par brique + compose.env (substitution ${} du compose).
+    # Anti-dérive : chaque brique dont l'env rendu change voit son service
+    # principal re-créé (bind mount/env_file changés ≠ recreation automatique).
+    import hashlib
+
     compose_env: dict[str, str] = {}
     rendered_envs: dict[str, str] = {}
+    to_recreate: dict[str, str] = {}  # service -> raison
+    pending_markers: list[tuple[Path, str]] = []  # (marqueur, hash) écrits après succès
     selected_bricks = [bricks[name] for name in selected]
     for name in selected:
         draft_path = deployment_dir / "env" / f"{name}.env"
@@ -598,6 +604,18 @@ def run_deploy(opts) -> int:
             if "=" in line and not line.lstrip().startswith("#"):
                 key, _, value = line.partition("=")
                 compose_env[key.strip()] = value.strip()
+
+        env_hash = hashlib.sha256(rendered.encode()).hexdigest()
+        marker = runtime_dir / f".env-{name}.applied"
+        previous = marker.read_text(encoding="utf-8").strip() if marker.is_file() else ""
+        service = (
+            bricks[name].compose.get("recreate_service")
+            or bricks[name].compose.get("migrate_service")
+            or ""
+        )
+        if service and previous != env_hash:
+            to_recreate[service] = f"env {name} changé"
+            pending_markers.append((marker, env_hash))
 
     # Realm Keycloak : clients OIDC générés depuis le catalogue (secret = celui
     # de chaque brique, extrait de l'env rendu).
@@ -623,14 +641,12 @@ def run_deploy(opts) -> int:
         )
         homeserver_path = runtime_dir / "synapse-homeserver.yaml"
         homeserver_path.write_text(homeserver_rendered, encoding="utf-8")
-        # Comme la passerelle : un bind mount changé ne redémarre pas synapse.
-        import hashlib
-
+        # Comme les envs : un bind mount changé ne redémarre pas synapse.
         homeserver_hash = hashlib.sha256(homeserver_rendered.encode()).hexdigest()
         applied = runtime_dir / ".synapse-homeserver.applied"
-        synapse_needs_recreate = not applied.is_file() or (
-            applied.read_text(encoding="utf-8").strip() != homeserver_hash
-        )
+        if not applied.is_file() or applied.read_text(encoding="utf-8").strip() != homeserver_hash:
+            to_recreate.setdefault("synapse_synapse", "homeserver.yaml changé")
+            pending_markers.append((applied, homeserver_hash))
         signing_path = runtime_dir / "synapse-signing.key"
         signing_path.write_text(
             f"ed25519 0 {vault['synapse_signing_key']}\n", encoding="utf-8"
@@ -661,19 +677,19 @@ def run_deploy(opts) -> int:
         compose_env["THEME_DIR"] = _portable(theme_dir)
 
     # Passerelle : conf nginx générée depuis les briques sélectionnées.
-    # Un bind mount ne déclenche ni recreation ni reload : on suit le hash et
-    # on force la recreation du gateway quand la conf change.
+    # Un bind mount ne déclenche ni recreation ni reload : suivi de hash.
     edge_path = runtime_dir / "edge.conf"
     edge_conf = render_edge(selected_bricks, answers)
     edge_hash_path = runtime_dir / ".edge.applied"
     previous_edge_hash = (
         edge_hash_path.read_text(encoding="utf-8").strip() if edge_hash_path.is_file() else ""
     )
-    import hashlib
-
     edge_hash = hashlib.sha256(edge_conf.encode()).hexdigest()
     edge_path.write_text(edge_conf, encoding="utf-8")
     compose_env["EDGE_CONF_PATH"] = _portable(edge_path)
+    if edge_hash != previous_edge_hash:
+        to_recreate.setdefault("gateway", "conf passerelle changée")
+        pending_markers.append((edge_hash_path, edge_hash))
 
     compose_env["LASTARTER_CLIENT"] = slug
     compose_env["LASTARTER_DOMAIN"] = answers["domain"]
@@ -710,27 +726,6 @@ def run_deploy(opts) -> int:
         if result.returncode != 0:
             raise DeployError("échec du démarrage de l'infrastructure (voir logs ci-dessus)")
 
-    # 1bis. Passerelle : recréer AVANT la pile finale si la conf a changé
-    # (bind mount ≠ recreation, et les nouvelles routes doivent exister pour
-    # les healthchecks ; une passerelle en avance sur ses backends est saine,
-    # l'inverse ne l'est pas).
-    if edge_hash != previous_edge_hash:
-        result = run(base + ["up", "-d", "--force-recreate", "--no-deps", "gateway"])
-        if result.returncode != 0:
-            raise DeployError("échec de la recreation de la passerelle")
-        # Marqueur écrit seulement après succès : un déploiement interrompu
-        # rejouera la recreation au run suivant.
-        edge_hash_path.write_text(edge_hash + "\n", encoding="utf-8")
-
-    # 1ter. Synapse : recréer si le homeserver.yaml rendu a changé (bind mount).
-    if synapse_needs_recreate:
-        result = run(base + ["up", "-d", "--force-recreate", "--no-deps", "synapse_synapse"])
-        if result.returncode != 0:
-            raise DeployError("échec de la recreation de synapse")
-        (runtime_dir / ".synapse-homeserver.applied").write_text(
-            homeserver_hash + "\n", encoding="utf-8"
-        )
-
     # 2. Préparation one-off (ex. chown de volumes pour des images non-root).
     for name in selected:
         brick = bricks[name]
@@ -764,6 +759,17 @@ def run_deploy(opts) -> int:
     result = run(base + ["up", "-d", "--wait", "--remove-orphans"])
     if result.returncode != 0:
         raise DeployError("échec du démarrage (voir logs ci-dessus)")
+
+    # 3bis. Anti-dérive : re-créer les services dont un fichier monté a changé
+    # (env_file, config.json, homeserver.yaml, edge.conf — jamais automatique).
+    if to_recreate:
+        for service, reason in to_recreate.items():
+            print(f"recreation de {service} ({reason})")
+            result = run(base + ["up", "-d", "--force-recreate", "--no-deps", "--wait", service])
+            if result.returncode != 0:
+                raise DeployError(f"échec de la recreation de {service} ({reason})")
+        for marker_path, marker_hash in pending_markers:
+            marker_path.write_text(marker_hash + "\n", encoding="utf-8")
 
     # 4. Clients OIDC : l'API admin fait autorité après le premier import du realm
     #    (--import-realm ne re-importe pas un realm existant).

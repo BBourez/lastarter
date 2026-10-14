@@ -45,6 +45,7 @@ ELEMENT_CONFIG = "rendu par lastarter deploy (.runtime/element-config.json)"
 profile = "chat"
 infra_services = []
 migrate_service = ""
+recreate_service = "element_web"   # config.json monté : recreation au changement
 route_label = "chat"            # chat.<domaine> → client web
 frontend_target = "element_web:80"
 # pas d'api_target : le client parle directement au homeserver (matrix.<domaine>)

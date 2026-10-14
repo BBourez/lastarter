@@ -130,7 +130,7 @@ class RuntimeRenderTests(unittest.TestCase):
         rendered = render_synapse_homeserver(template, ANSWERS, vault)
         self.assertIn("server_name: localhost", rendered)
         self.assertIn("public_baseurl: https://matrix.localhost:8443/", rendered)
-        self.assertIn("issuer: https://localhost:8443/realms/lastarter", rendered)
+        self.assertIn("issuer: https://id.localhost:8443/realms/lastarter", rendered)
         self.assertIn('secret: "s3cret-syn"', rendered)
         self.assertNotIn("{{", rendered)
 
