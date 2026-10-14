@@ -12,6 +12,7 @@ référencée ici (cf. docs/licences.md du dépôt LaStarter).
 | Meet — visioconférence | MIT | v1.35.0 | https://github.com/suitenumerique/meet |
 | Synapse — serveur Matrix | AGPL-3.0-only | v1.162.0 | https://github.com/element-hq/synapse |
 | Transfers — transfert de fichiers | MIT | latest@sha256:9ec307a6b629027d10bae3f118a51f659fea13fd0f24a5826c319bde61c2db18 | https://github.com/suitenumerique/transfers |
+| Appels — Element Call (chat) | AGPL-3.0-only | latest | https://github.com/element-hq/element-call |
 | Chat — messagerie chiffrée (element-web) | AGPL-3.0 OR GPL-3.0 OR Element-Commercial | v1.11.102 | https://github.com/element-hq/element-web |
 
 Marques : « La Suite », « Element », « Tchap » et logos associés appartiennent à

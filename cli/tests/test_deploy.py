@@ -16,6 +16,7 @@ from lastarter_cli.cmd.deploy import (
     compute_origin,
     render_edge,
     render_element_config,
+    render_lk_registration,
     render_portal_config,
     render_realm,
     render_runtime_env,
@@ -135,6 +136,15 @@ class RuntimeRenderTests(unittest.TestCase):
         self.assertIn("issuer: https://id.localhost:8443/realms/lastarter", rendered)
         self.assertIn('secret: "s3cret-syn"', rendered)
         self.assertNotIn("{{", rendered)
+
+    def test_lk_registration_rendu(self):
+        vault = {"lk_as_token": "as-123", "lk_hs_token": "hs-456"}
+        rendered = render_lk_registration(ANSWERS, vault)
+        self.assertIn('as_token: "as-123"', rendered)
+        self.assertIn('hs_token: "hs-456"', rendered)
+        self.assertIn("regex: \"@.*:localhost\"", rendered)
+        self.assertIn('url: "http://lk_jwt_service:6080"', rendered)
+        self.assertIn("msc4512.proxy_prefix: \"rtc/livekit\"", rendered)
 
     def test_element_config_rendu_theme_et_homeserver(self):
         template = (

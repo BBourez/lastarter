@@ -32,6 +32,12 @@ database:
 media_store_path: /data/media
 max_upload_size: 100M
 
+# Appservice rtc/livekit (MSC4512) : Element Call via lk-jwt-service.
+# Le registration est rendu par le CLI (jetons du coffre) ; sans la brique
+# element-call, synapse le signale sans bloquer (appservice injoignable).
+app_service_config_files:
+  - /data/appservices/lk-jwt-service.yaml
+
 # B2B privé : pas d'enregistrement libre, pas de fédération par défaut (phase 6).
 enable_registration: false
 enable_registration_without_verification: false

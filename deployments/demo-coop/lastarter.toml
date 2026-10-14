@@ -6,7 +6,7 @@ name = "Demo Coop"
 slug = "demo-coop"
 domain = "localhost:8443"
 brand_name = "LaStarter"
-created = "2026-10-14T03:39:45+00:00"
+created = "2026-10-14T03:52:37+00:00"
 cli_version = "0.1.0"
 
 [bricks.keycloak]
@@ -38,6 +38,12 @@ title = "Transfers — transfert de fichiers"
 pin = "latest@sha256:9ec307a6b629027d10bae3f118a51f659fea13fd0f24a5826c319bde61c2db18"
 license = "MIT"
 upstream = "https://github.com/suitenumerique/transfers"
+
+[bricks.element-call]
+title = "Appels — Element Call (chat)"
+pin = "latest"
+license = "AGPL-3.0-only"
+upstream = "https://github.com/element-hq/element-call"
 
 [bricks.element-web]
 title = "Chat — messagerie chiffrée (element-web)"

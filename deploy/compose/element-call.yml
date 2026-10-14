@@ -1,0 +1,23 @@
+# Brique element-call — appels chiffrés intra-chat (MatrixRTC + LiveKit mutualisé).
+
+services:
+  # Service de jetons LiveKit : appservice Synapse (registration rendu par le CLI).
+  lk_jwt_service:
+    image: ghcr.io/element-hq/lk-jwt-service:0.8.0
+    env_file: ["${RUNTIME_DIR}/element-call.env"]
+    # Image distroless (sans shell) : pas de healthcheck exécutable — la sonde
+    # applicative passe par synapse (MSC4512 ping) et le smoke (call.<domaine>).
+    healthcheck:
+      disable: true
+    networks: [lastarter]
+
+  # SPA Element Call : statique (nginx:8080), sert aussi la route /widget.
+  element_call:
+    image: ghcr.io/element-hq/element-call:latest
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 10s
+    networks: [lastarter]

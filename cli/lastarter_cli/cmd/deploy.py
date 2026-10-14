@@ -85,6 +85,8 @@ def _context(answers: dict, label: str | None, s3_port: str = "9000") -> dict[st
     # Les apps La Suite en mode Production/Feature forcent SECURE_SSL_REDIRECT :
     # la passerelle sert TLS partout (POC compris), on sert donc Feature.
     context["{django_configuration}"] = "Feature"
+    # Domaine apex sans schéma ni port (server_name Matrix, HS_SERVER_NAME rtc).
+    context["{domain_bare}"] = domain.split(":")[0]
     return context
 
 
@@ -419,6 +421,28 @@ def validate_compose_targets(selected: list[str], bricks: dict[str, Brick], comp
             )
 
 
+def render_lk_registration(answers: dict, vault: dict[str, str]) -> str:
+    """Rend le registration YAML de l'appservice lk-jwt-service (MSC4512)."""
+    bare = answers["domain"].split(":")[0]
+    return (
+        "# LaStarter — appservice lk-jwt-service (rendu par lastarter-cli).\n"
+        'id: "lk-jwt-service"\n'
+        f'as_token: "{vault["lk_as_token"]}"\n'
+        f'hs_token: "{vault["lk_hs_token"]}"\n'
+        'sender_localpart: "_lk_jwt_service"\n'
+        "namespaces:\n"
+        "  users:\n"
+        "    - exclusive: false\n"
+        f"      regex: \"@.*:{re.escape(bare)}\"  # tous les utilisateurs locaux\n"
+        "# Synapse pousse les évènements et proxifie rtc/livekit (MSC4512) ici :\n"
+        'url: "http://lk_jwt_service:6080"\n'
+        "io.element.msc4502.scopes:\n"
+        '  ["urn:matrix:client:io.element.msc4502:rooms:is_joined"]\n'
+        "io.element.msc4512.proxy_prefix: \"rtc/livekit\"\n"
+        "io.element.msc4512.proxy_url: \"http://lk_jwt_service:6080\"\n"
+    )
+
+
 def render_synapse_homeserver(template: str, answers: dict, vault: dict[str, str]) -> str:
     """Rend homeserver.yaml : endpoints OIDC scindés + secrets du coffre."""
     domain = answers["domain"]
@@ -454,6 +478,9 @@ def render_element_config(template: str, answers: dict, brick: Brick) -> str:
     rendered = rendered.replace("{{THEME_NAME}}", theme_name)
     rendered = rendered.replace("{{MATRIX_ORIGIN}}", matrix_origin)
     rendered = rendered.replace("{{CHAT_ORIGIN}}", chat_origin)
+    # Appels de salon (Element Call) : SPA + widget sur call.<domaine>.
+    call_origin = f"{scheme}://call.{bare}" + (f":{port}" if port else "")
+    rendered = rendered.replace("{{CALL_ORIGIN}}", call_origin)
     rendered = rendered.replace("{{SERVER_NAME}}", bare)
     rendered = rendered.replace("{{CUSTOM_THEME}}", json.dumps(theme))
     return rendered
@@ -729,13 +756,17 @@ def run_deploy(opts) -> int:
         env_hash = hashlib.sha256(rendered.encode()).hexdigest()
         marker = runtime_dir / f".env-{name}.applied"
         previous = marker.read_text(encoding="utf-8").strip() if marker.is_file() else ""
-        service = (
+        principal = (
             bricks[name].compose.get("recreate_service")
             or bricks[name].compose.get("migrate_service")
             or ""
         )
-        if service and previous != env_hash:
-            to_recreate[service] = f"env {name} changé"
+        if previous != env_hash:
+            # Le principal ET les services d'infra consomment le même env_file :
+            # un env changé doit les recréer tous (env_file ≠ recreation auto).
+            targets = [principal] + list(bricks[name].compose.get("infra_services", []))
+            for target in filter(None, targets):
+                to_recreate.setdefault(target, f"env {name} changé")
             pending_markers.append((marker, env_hash))
 
     # Realm Keycloak : clients OIDC générés depuis le catalogue (secret = celui
@@ -774,6 +805,11 @@ def run_deploy(opts) -> int:
         )
         compose_env["SYNAPSE_HOMESERVER_PATH"] = _portable(homeserver_path)
         compose_env["SYNAPSE_SIGNING_KEY_PATH"] = _portable(signing_path)
+
+        # Registration appservice rtc/livekit (monté en permanence dans synapse).
+        registration_path = runtime_dir / "lk-jwt-service.yaml"
+        registration_path.write_text(render_lk_registration(answers, vault), encoding="utf-8")
+        compose_env["LK_REGISTRATION_PATH"] = _portable(registration_path)
 
     # element-web : config.json (marque + homeserver + thème) rendu as-code.
     if "element-web" in selected:
@@ -860,6 +896,18 @@ def run_deploy(opts) -> int:
         if result.returncode != 0:
             raise DeployError("échec de docker compose pull")
 
+    # 0. Anti-dérive : re-CRÉER (sans démarrer) les services dont un fichier
+    # monté a changé (env_file, config, homeserver, edge, certificats) — AVANT
+    # tout démarrage : un conteneur périmé ferait échouer le --wait de l'infra.
+    if to_recreate:
+        for service, reason in to_recreate.items():
+            print(f"recreation de {service} ({reason})")
+            result = run(base + ["create", "--force-recreate", service])
+            if result.returncode != 0:
+                raise DeployError(f"échec de la recreation de {service} ({reason})")
+        for marker_path, marker_hash in pending_markers:
+            marker_path.write_text(marker_hash + "\n", encoding="utf-8")
+
     # 1. Infrastructure (DB, cache, S3, keycloak) — healthchecks verts.
     infra: list[str] = []
     for name in selected:
@@ -902,17 +950,6 @@ def run_deploy(opts) -> int:
     result = run(base + ["up", "-d", "--wait", "--remove-orphans"])
     if result.returncode != 0:
         raise DeployError("échec du démarrage (voir logs ci-dessus)")
-
-    # 3bis. Anti-dérive : re-créer les services dont un fichier monté a changé
-    # (env_file, config.json, homeserver.yaml, edge.conf — jamais automatique).
-    if to_recreate:
-        for service, reason in to_recreate.items():
-            print(f"recreation de {service} ({reason})")
-            result = run(base + ["up", "-d", "--force-recreate", "--no-deps", "--wait", service])
-            if result.returncode != 0:
-                raise DeployError(f"échec de la recreation de {service} ({reason})")
-        for marker_path, marker_hash in pending_markers:
-            marker_path.write_text(marker_hash + "\n", encoding="utf-8")
 
     # 4. Clients OIDC : l'API admin fait autorité après le premier import du realm
     #    (--import-realm ne re-importe pas un realm existant).

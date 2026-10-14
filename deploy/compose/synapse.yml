@@ -24,6 +24,7 @@ services:
       # Rendus par le CLI (.runtime/) — jamais commités.
       - ${SYNAPSE_HOMESERVER_PATH}:/data/homeserver.yaml:ro
       - ${SYNAPSE_SIGNING_KEY_PATH}:/data/keys/signing.key:ro
+      - ${LK_REGISTRATION_PATH}:/data/appservices/lk-jwt-service.yaml:ro
     depends_on:
       synapse_postgresql:
         condition: service_healthy

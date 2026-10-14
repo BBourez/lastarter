@@ -21,6 +21,11 @@
     "UIFeature.registration": false,
     "UIFeature.passwordReset": false
   },
+  "element_call": {
+    "brand": "{{BRAND}}",
+    "use_exclusively": false
+  },
+  "widget_build_url": "{{CALL_ORIGIN}}/widget",
   "branding": {
     "auth_header_logo_url": "{{CHAT_ORIGIN}}/themes/element/img/logos/element-logo.svg"
   }

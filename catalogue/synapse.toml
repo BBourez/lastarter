@@ -22,6 +22,9 @@ extra_secrets = [
   "synapse_form",
   "synapse_oidc_secret",
   "synapse_db_password",
+  # Appservice rtc/livekit (fichier registration monté en permanence).
+  "lk_as_token",
+  "lk_hs_token",
 ]
 
 [oidc]

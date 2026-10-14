@@ -100,6 +100,24 @@
     },
     {
       "type": "application",
+      "name": "element-call",
+      "version": "latest",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-only"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/element-hq/element-call"
+        }
+      ]
+    },
+    {
+      "type": "application",
       "name": "element-web",
       "version": "v1.11.102",
       "licenses": [
