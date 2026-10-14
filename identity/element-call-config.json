@@ -16,7 +16,15 @@
   },
   "disable_custom_urls": true,
   "disable_guests": true,
+  "disable_3pid_login": true,
+  "disable_login_language_selector": false,
   "sso_redirect_options": {
-    "immediate": true
+    "immediate": true,
+    "on_welcome_page": true,
+    "on_login_page": true
+  },
+  "setting_defaults": {
+    "UIFeature.registration": false,
+    "UIFeature.passwordReset": false
   }
 }
