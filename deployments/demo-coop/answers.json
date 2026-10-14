@@ -6,9 +6,9 @@
   "bricks": [
     "drive",
     "element-web",
-    "transfers",
+    "messages",
     "element-call",
-    "messages"
+    "projects"
   ],
-  "generated_at": "2026-10-14T12:04:17+00:00"
+  "generated_at": "2026-10-14T18:30:37+00:00"
 }

@@ -64,6 +64,24 @@
     },
     {
       "type": "application",
+      "name": "projects",
+      "version": "latest",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-only"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/suitenumerique/projects"
+        }
+      ]
+    },
+    {
+      "type": "application",
       "name": "synapse",
       "version": "v1.162.0",
       "licenses": [
@@ -77,24 +95,6 @@
         {
           "type": "vcs",
           "url": "https://github.com/element-hq/synapse"
-        }
-      ]
-    },
-    {
-      "type": "application",
-      "name": "transfers",
-      "version": "latest@sha256:9ec307a6b629027d10bae3f118a51f659fea13fd0f24a5826c319bde61c2db18",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "externalReferences": [
-        {
-          "type": "vcs",
-          "url": "https://github.com/suitenumerique/transfers"
         }
       ]
     },

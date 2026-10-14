@@ -6,7 +6,7 @@ name = "Demo Coop"
 slug = "demo-coop"
 domain = "localhost:8443"
 brand_name = "LaStarter"
-created = "2026-10-14T12:04:17+00:00"
+created = "2026-10-14T18:30:37+00:00"
 cli_version = "0.1.0"
 
 [bricks.keycloak]
@@ -27,17 +27,17 @@ pin = "latest@sha256:5d40c3cb71ae6cd9da158a32b88450be5b64b86615f99f48b82da9aafb5
 license = "MIT"
 upstream = "https://github.com/suitenumerique/messages"
 
+[bricks.projects]
+title = "Projets — suivi collaboratif"
+pin = "latest"
+license = "AGPL-3.0-only"
+upstream = "https://github.com/suitenumerique/projects"
+
 [bricks.synapse]
 title = "Synapse — serveur Matrix"
 pin = "v1.162.0"
 license = "AGPL-3.0-only"
 upstream = "https://github.com/element-hq/synapse"
-
-[bricks.transfers]
-title = "Transfers — transfert de fichiers"
-pin = "latest@sha256:9ec307a6b629027d10bae3f118a51f659fea13fd0f24a5826c319bde61c2db18"
-license = "MIT"
-upstream = "https://github.com/suitenumerique/transfers"
 
 [bricks.element-call]
 title = "Meet — visioconférence"

@@ -33,7 +33,7 @@ class CatalogueTests(unittest.TestCase):
         self.assertEqual(self.errors, [])
         self.assertEqual(
             set(self.bricks),
-            {"keycloak", "drive", "meet", "synapse", "element-web", "transfers", "element-call", "messages"},
+            {"keycloak", "drive", "meet", "synapse", "element-web", "transfers", "element-call", "messages", "projects"},
         )
 
     def test_keycloak_is_core_foundation(self):
@@ -50,6 +50,16 @@ class CatalogueTests(unittest.TestCase):
         self.assertEqual(self.bricks["element-call"].requires, ["synapse"])
         self.assertIn("call_livekit", self.bricks["element-call"].compose.get("services", []))
         self.assertIn("livekit", [s["label"] for s in self.bricks["element-call"].compose.get("extra_servers", [])])
+
+    def test_projects_brique_complete(self):
+        """Projects : mono-conteneur (port 1337), OIDC, PostgreSQL, emoji portail."""
+        brick = self.bricks["projects"]
+        self.assertEqual(brick.requires, ["keycloak"])
+        self.assertEqual(brick.compose["frontend_target"], "projects:1337")
+        self.assertEqual(brick.compose["route_label"], "projects")
+        self.assertIn("projects_postgresql", brick.compose["infra_services"])
+        self.assertIn("OIDC_ISSUER", brick.env)
+        self.assertIn("{secret:projects_oidc_secret}", brick.env["OIDC_CLIENT_SECRET"])
 
     def test_chat_bricks_are_stable(self):
         # Phase 4 : synapse + element-web validés E2E ; phase 6 : transfers aussi.

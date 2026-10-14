@@ -1,0 +1,81 @@
+# Brique : Projects — suivi de projets collaboratif (La Suite numérique).
+# App mono-conteneur (Sails.js) : frontend React + backend Node sur le port 1337.
+# Migrations automatiques au démarrage (db/init.js via start.sh).
+
+[brick]
+name = "projects"
+title = "Projets — suivi collaboratif"
+category = "collaboration"
+description = "Tableaux kanban, cartes, équipes et notifications pour piloter vos projets en collaboration."
+license = "AGPL-3.0-only"
+upstream_repo = "https://github.com/suitenumerique/projects"
+upstream_image = "lasuite/projects"
+upstream_pin = "latest"
+requires = ["keycloak"]
+
+[oidc]
+client_id = "projects"
+redirect_path = "/*"
+
+[branding.env]
+SERVICE_NAME = "LaStarter Projets"
+
+[env]
+# --- Requis ---
+BASE_URL = "{origin}"
+SECRET_KEY = "{secret:projects_secret_key}"
+
+# --- Base de données ---
+DATABASE_URL = "postgresql://projects:{secret:projects_db_password}@projects_postgresql:5432/projects"
+# Exporté pour le compose (POSTGRES_PASSWORD du conteneur PostgreSQL).
+PROJECTS_DB_PASSWORD = "{secret:projects_db_password}"
+
+# --- OIDC (Keycloak) ---
+# Issuer PUBLIC : le navigateur doit y accéder pour la page de login.
+# Le conteneur le résout via l'alias réseau id.<domaine> sur la passerelle.
+OIDC_ISSUER = "{sso_origin}/realms/lastarter"
+OIDC_CLIENT_ID = "projects"
+OIDC_CLIENT_SECRET = "{secret:projects_oidc_secret}"
+OIDC_SCOPES = "openid email profile"
+OIDC_USE_DEFAULT_RESPONSE_MODE = "true"
+OIDC_FULLNAME_ATTRIBUTES = "name"
+OIDC_USERNAME_ATTRIBUTE = "preferred_username"
+OIDC_EMAIL_ATTRIBUTE = "email"
+OIDC_IGNORE_USERNAME = "true"
+OIDC_IGNORE_ROLES = "true"
+OIDC_ENFORCED = "true"
+
+# POC : la CA locale n'est pas dans le magasin du conteneur Node.js.
+# Production : monter la CA ou utiliser un certificat public.
+NODE_TLS_REJECT_UNAUTHORIZED = "0"
+
+# --- Permissions ---
+ALLOW_ALL_TO_CREATE_PROJECTS = "true"
+
+# --- Divers ---
+TRUST_PROXY = "1"
+TZ = "UTC"
+
+[compose]
+profile = "projects"
+infra_services = ["projects_postgresql"]
+migrate_service = ""            # migrations automatiques via start.sh (db/init.js)
+migrate_command = ""
+recreate_service = "projects"
+route_label = "projects"        # projects.<domaine>
+frontend_target = "projects:1337"  # mono-port : frontend ET backend sur 1337
+api_target = ""                 # pas d'API séparée — tout sur le même port
+extra_servers = []
+services = [
+  "projects",               # lasuite/projects (Sails.js, mono-conteneur)
+]
+extras = []
+
+extra_secrets = [
+  "projects_secret_key",
+  "projects_db_password",
+  "projects_oidc_secret",
+]
+
+[notes]
+warnings = "App mono-conteneur (frontend+backend sur 1337) : pas de Caddy, pas de Redis requis en mono-instance. Migrations et seed automatiques au démarrage."

@@ -112,11 +112,18 @@ def render_runtime_env(
 
 
 def _client_secret_from_env(rendered_env: str) -> str:
-    """Extrait OIDC_RP_CLIENT_SECRET d'un env rendu (source unique : la brique)."""
+    """Extrait le secret OIDC d'un env rendu (source unique : la brique).
+
+    Django (drive, messages…) : OIDC_RP_CLIENT_SECRET.
+    Node.js (projects) : OIDC_CLIENT_SECRET.
+    """
     for line in rendered_env.splitlines():
         if line.startswith("OIDC_RP_CLIENT_SECRET="):
             return line.partition("=")[2].strip()
-    raise DeployError("OIDC_RP_CLIENT_SECRET absent de l'env rendu")
+    for line in rendered_env.splitlines():
+        if line.startswith("OIDC_CLIENT_SECRET="):
+            return line.partition("=")[2].strip()
+    raise DeployError("OIDC_RP_CLIENT_SECRET / OIDC_CLIENT_SECRET absent de l'env rendu")
 
 
 def build_realm_clients(bricks: list[Brick], rendered_envs: dict[str, str], answers: dict) -> str:
@@ -647,6 +654,7 @@ APP_EMOJI = {
     "element-call": "📞",
     "transfers": "📨",
     "messages": "✉️",
+    "projects": "📊",
 }
 
 
