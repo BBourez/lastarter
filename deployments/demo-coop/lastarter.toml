@@ -6,7 +6,7 @@ name = "Demo Coop"
 slug = "demo-coop"
 domain = "localhost:8083"
 brand_name = "LaStarter"
-created = "2026-10-14T01:36:17+00:00"
+created = "2026-10-14T01:56:08+00:00"
 cli_version = "0.1.0"
 
 [bricks.keycloak]
@@ -26,3 +26,15 @@ title = "Meet — visioconférence"
 pin = "v1.35.0"
 license = "MIT"
 upstream = "https://github.com/suitenumerique/meet"
+
+[bricks.synapse]
+title = "Synapse — serveur Matrix"
+pin = "v1.162.0"
+license = "AGPL-3.0-only"
+upstream = "https://github.com/element-hq/synapse"
+
+[bricks.element-web]
+title = "Chat — messagerie chiffrée (element-web)"
+pin = "v1.11.102"
+license = "AGPL-3.0 OR GPL-3.0 OR Element-Commercial"
+upstream = "https://github.com/element-hq/element-web"

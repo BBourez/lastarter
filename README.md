@@ -56,8 +56,8 @@ brouillons d'environnement, les secrets générés (à chiffrer) et les mentions
 | Phase | Contenu | Statut |
 |---|---|---|
 | 1 | Fondations : scaffold, catalogue (keycloak, drive), maquette CLI `init` | ✅ |
-| 2 | POC vertical : compose keycloak+drive, realm as-code, branding, `deploy` | ✅ validé E2E (10 conteneurs, SSO opérationnel) |
-| 3 | CLI v1 + catalogue étendu (meet, messages, transfers) | ⏳ |
+| 2 | POC vertical : compose keycloak+drive, realm as-code, branding, `deploy` | ✅ validé E2E |
+| 3 | Multi-apps : passerelle sous-domaines, brique **meet** (livekit/garage), clients OIDC via API admin | ✅ validé E2E — transfers en brouillon, messages à suivre |
 | 4 | Chat : synapse + OIDC Keycloak + element-web, puis element-call | |
 | 5 | Portail SSO + Helm umbrella (k8s) | |
 | 6 | Industrialisation : Renovate, smoke tests, SBOM, gate licence | |

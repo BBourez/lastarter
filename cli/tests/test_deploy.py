@@ -15,8 +15,10 @@ from lastarter_cli.cmd.deploy import (
     compose_base,
     compute_origin,
     render_edge,
+    render_element_config,
     render_realm,
     render_runtime_env,
+    render_synapse_homeserver,
     validate_compose_targets,
 )
 
@@ -114,6 +116,63 @@ class RuntimeRenderTests(unittest.TestCase):
         self.assertIn('proxy_set_header Connection "upgrade";', edge)
         self.assertIn("return 302 http://drive.localhost:8083/;", edge)  # apex → 1re app
         self.assertNotIn("server_name drive.localhost:8083;", edge)      # port interdit
+
+
+    def test_homeserver_synapse_rendu_endpoints_scindes(self):
+        template = (
+            "server_name: {{SERVER_NAME}}\n"
+            "public_baseurl: {{MATRIX_ORIGIN}}/\n"
+            "issuer: {{SSO_ORIGIN}}/realms/lastarter\n"
+            'secret: "{{SECRET:synapse_oidc_secret}}"\n'
+        )
+        vault = {"synapse_oidc_secret": "s3cret-syn"}
+        rendered = render_synapse_homeserver(template, ANSWERS, vault)
+        self.assertIn("server_name: localhost", rendered)
+        self.assertIn("public_baseurl: http://matrix.localhost:8083/", rendered)
+        self.assertIn("issuer: http://localhost:8083/realms/lastarter", rendered)
+        self.assertIn('secret: "s3cret-syn"', rendered)
+        self.assertNotIn("{{", rendered)
+
+    def test_element_config_rendu_theme_et_homeserver(self):
+        template = (
+            '{\n  "brand": "{{BRAND}}",\n  "default_theme": "custom-{{THEME_NAME}}",\n'
+            '  "default_server_config": {"m.homeserver": {"base_url": "{{MATRIX_ORIGIN}}",'
+            ' "server_name": "{{SERVER_NAME}}"}},\n'
+            '  "setting_defaults": {"custom_themes": [{{CUSTOM_THEME}}]}\n}\n'
+        )
+        rendered = render_element_config(template, ANSWERS, self.bricks["element-web"])
+        parsed = json.loads(rendered)
+        self.assertEqual(parsed["brand"], "LaStarter")
+        self.assertEqual(parsed["default_theme"], "custom-LaStarter Light")
+        self.assertEqual(
+            parsed["default_server_config"]["m.homeserver"]["base_url"],
+            "http://matrix.localhost:8083",
+        )
+        theme = parsed["setting_defaults"]["custom_themes"][0]
+        self.assertEqual(theme["accent-color"], "#4F46E5")
+        self.assertNotIn("name", theme)  # extrait vers THEME_NAME
+
+    def test_cle_signature_synapse_format_b64(self):
+        import base64
+
+        names = self.bricks["synapse"].extra_secrets
+        self.assertIn("synapse_signing_key:b64", names)
+        # Un secret b64 généré : 44 caractères, décodable en 32 octets.
+        from lastarter_cli.cmd.init import generate_secrets
+
+        order, _ = resolve_selection(["synapse"], self.bricks)
+        vault = generate_secrets([self.bricks[n] for n in order], None)
+        self.assertEqual(len(vault["synapse_signing_key"]), 44)
+        self.assertEqual(len(base64.b64decode(vault["synapse_signing_key"])), 32)
+
+    def test_edge_sans_api_target_pour_element_web(self):
+        names, _ = resolve_selection(["element-web"], self.bricks)
+        selected = [self.bricks[n] for n in names]
+        edge = render_edge(selected, ANSWERS)
+        self.assertIn("server_name chat.localhost;", edge)
+        self.assertIn("proxy_pass http://element_web:80;", edge)
+        block = edge.split("server_name chat.localhost;")[1].split("}")[0]
+        self.assertNotIn("location /api/", block)  # app statique : pas de /api/
 
 
 class ComposeCommandTests(unittest.TestCase):

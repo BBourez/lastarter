@@ -1,0 +1,67 @@
+# LaStarter — Synapse homeserver.yaml (rendu par lastarter-cli, jamais édité à la main).
+# Jetons : {{SSO_ORIGIN}} (apex public), {{MATRIX_ORIGIN}} (route matrix publique),
+# {{SERVER_NAME}} (apex sans schéma), {{SECRET:…}} (coffre). Endpoints OIDC scindés :
+# le navigateur passe par la passerelle, synapse parle à keycloak en in-network.
+pid_file: /data/homeserver.pid
+signing_key_path: /data/keys/signing.key
+server_name: {{SERVER_NAME}}
+public_baseurl: {{MATRIX_ORIGIN}}/
+report_stats: false
+
+listeners:
+  - port: 8008
+    tls: false
+    type: http
+    x_forwarded: true
+    bind_addresses: ['0.0.0.0']
+    resources:
+      - names: [client]
+        compress: false
+
+database:
+  name: psycopg2
+  args:
+    user: synapse
+    password: "{{SECRET:synapse_db_password}}"
+    database: synapse
+    host: synapse_postgresql
+    port: 5432
+    cp_min: 5
+    cp_max: 10
+
+media_store_path: /data/media
+max_upload_size: 100M
+
+# B2B privé : pas d'enregistrement libre, pas de fédération par défaut (phase 6).
+enable_registration: false
+enable_registration_without_verification: false
+trusted_key_servers: []
+suppress_key_server_warning: true
+
+registration_shared_secret: "{{SECRET:synapse_registration}}"
+macaroon_secret_key: "{{SECRET:synapse_macaroon}}"
+form_secret: "{{SECRET:synapse_form}}"
+
+password_config:
+  enabled: false   # SSO uniquement — le realm fait autorité
+
+oidc_providers:
+  - idp_id: lastarter
+    idp_name: LaStarter SSO
+    # POC http : l'issuer n'est pas sur une origine sécurisée (en production https,
+    # la validation passerait naturellement). skip_verification le documente.
+    skip_verification: true
+    discover: false
+    issuer: {{SSO_ORIGIN}}/realms/lastarter
+    authorization_endpoint: {{SSO_ORIGIN}}/realms/lastarter/protocol/openid-connect/auth
+    token_endpoint: http://keycloak:8080/realms/lastarter/protocol/openid-connect/token
+    userinfo_endpoint: http://keycloak:8080/realms/lastarter/protocol/openid-connect/userinfo
+    jwks_uri: http://keycloak:8080/realms/lastarter/protocol/openid-connect/certs
+    client_id: synapse
+    client_secret: "{{SECRET:synapse_oidc_secret}}"
+    scopes: ["openid", "email", "profile"]
+    user_mapping_provider:
+      config:
+        localpart_template: "{{ user.preferred_username }}"
+        display_name_template: "{{ user.name }}"
+    backchannel_logout_enabled: true

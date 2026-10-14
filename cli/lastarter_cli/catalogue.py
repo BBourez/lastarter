@@ -165,14 +165,26 @@ def find_catalogue(start: Path) -> Path | None:
     return None
 
 
-def secret_names(brick: Brick) -> list[str]:
-    """Secrets référencés par une brique : env (`{secret:NAME}`) + extra_secrets (realm as-code)."""
-    names: set[str] = set(brick.extra_secrets)
+def iter_secret_specs(brick: Brick) -> list[tuple[str, str]]:
+    """Spécifications de secrets d'une brique : (nom, format).
+
+    Sources : env (`{secret:NAME}`), extra_secrets (syntaxe « name » ou « name:b64 »
+    — b64 = base64 standard de 32 octets, ex. clé ed25519 de signature Matrix).
+    """
+    specs: dict[str, str] = {}
+    for entry in brick.extra_secrets:
+        name, _, fmt = entry.partition(":")
+        specs[name] = fmt or "urlsafe"
     for value in brick.env.values():
         value = str(value)
         if SECRET_PATTERN in value:
             after = value.split(SECRET_PATTERN, 1)[1]
             name = after.split("}", 1)[0]
             if name:
-                names.add(name)
-    return sorted(names)
+                specs.setdefault(name, "urlsafe")
+    return sorted(specs.items())
+
+
+def secret_names(brick: Brick) -> list[str]:
+    """Noms des secrets référencés par une brique (env `{secret:NAME}` + extra_secrets)."""
+    return [name for name, _fmt in iter_secret_specs(brick)]

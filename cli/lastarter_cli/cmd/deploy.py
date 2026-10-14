@@ -1,4 +1,4 @@
-"""`lastarter deploy` — assemblage et lancement docker-compose d'un déploiement client.
+﻿"""`lastarter deploy` — assemblage et lancement docker-compose d'un déploiement client.
 
 Phase 2 : cible mono-VM (compose). Gates avant tout effet réseau :
 docker présent, déploiement initialisé, secrets présents, chaque brique sélectionnée
@@ -170,7 +170,7 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
         lines += [
             f"    location {path} {{",
             "        proxy_pass http://keycloak:8080;",
-            "        proxy_set_header Host $host;",
+            "        proxy_set_header Host $http_host;",
             "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
             "        proxy_set_header X-Forwarded-Proto $scheme;",
             "    }",
@@ -186,6 +186,7 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
 
     for brick in apps:
         label = brick.compose.get("route_label", brick.name)
+        api_target = brick.compose.get("api_target")
         lines += [
             f"# {brick.title}",
             "server {",
@@ -194,20 +195,25 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             "    server_tokens off;",
             "    client_max_body_size 150m;",
             "",
-            "    location /api/ {",
-            f"        proxy_pass http://{brick.compose['api_target']};",
-            "        proxy_set_header Host $host;",
-            "        proxy_set_header X-Real-IP $remote_addr;",
-            "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
-            "        proxy_set_header X-Forwarded-Proto $scheme;",
-            "        proxy_http_version 1.1;",
-            "        proxy_set_header Upgrade $http_upgrade;",
-            '        proxy_set_header Connection "upgrade";',
-            "    }",
-            "",
+        ]
+        if api_target:
+            lines += [
+                "    location /api/ {",
+                f"        proxy_pass http://{api_target};",
+                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header X-Real-IP $remote_addr;",
+                "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
+                "        proxy_set_header X-Forwarded-Proto $scheme;",
+                "        proxy_http_version 1.1;",
+                "        proxy_set_header Upgrade $http_upgrade;",
+                '        proxy_set_header Connection "upgrade";',
+                "    }",
+                "",
+            ]
+        lines += [
             "    location / {",
             f"        proxy_pass http://{brick.compose['frontend_target']};",
-            "        proxy_set_header Host $host;",
+            "        proxy_set_header Host $http_host;",
             "    }",
             "}",
             "",
@@ -223,7 +229,7 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 f"    server_name {extra['label']}.{bare};",
                 "    location / {",
                 f"        proxy_pass http://{extra['target']};",
-                "        proxy_set_header Host $host;",
+                "        proxy_set_header Host $http_host;",
                 "        proxy_http_version 1.1;",
                 "        proxy_set_header Upgrade $http_upgrade;",
                 '        proxy_set_header Connection "upgrade";',
@@ -274,6 +280,46 @@ def validate_compose_targets(selected: list[str], bricks: dict[str, Brick], comp
                 f"la brique « {name} » n'a pas de cible compose (phase future) — "
                 "retirer du déploiement ou utiliser `lastarter init`"
             )
+
+
+def render_synapse_homeserver(template: str, answers: dict, vault: dict[str, str]) -> str:
+    """Rend homeserver.yaml : endpoints OIDC scindés + secrets du coffre."""
+    domain = answers["domain"]
+    bare = domain.split(":")[0]
+    port = domain.split(":")[1] if ":" in domain else ""
+    scheme = _scheme(domain)
+    matrix_origin = f"{scheme}://matrix.{bare}" + (f":{port}" if port else "")
+
+    def secret(match: re.Match) -> str:
+        name = match.group(1)
+        if name not in vault:
+            raise DeployError(f"secret manquant dans secrets.env : {name}")
+        return vault[name]
+
+    rendered = template.replace("{{SSO_ORIGIN}}", f"{scheme}://{domain}")
+    rendered = rendered.replace("{{MATRIX_ORIGIN}}", matrix_origin)
+    rendered = rendered.replace("{{SERVER_NAME}}", bare)
+    return REALM_SECRET_TOKEN.sub(secret, rendered)
+
+
+def render_element_config(template: str, answers: dict, brick: Brick) -> str:
+    """Rend config.json element-web : marque + homeserver + thème personnalisé."""
+    domain = answers["domain"]
+    bare = domain.split(":")[0]
+    port = domain.split(":")[1] if ":" in domain else ""
+    scheme = _scheme(domain)
+    matrix_origin = f"{scheme}://matrix.{bare}" + (f":{port}" if port else "")
+    chat_origin = f"{scheme}://chat.{bare}" + (f":{port}" if port else "")
+    theme = dict(brick.branding_custom_theme)
+    theme_name = theme.pop("name", "LaStarter")
+
+    rendered = template.replace("{{BRAND}}", answers.get("brand_name", "LaStarter"))
+    rendered = rendered.replace("{{THEME_NAME}}", theme_name)
+    rendered = rendered.replace("{{MATRIX_ORIGIN}}", matrix_origin)
+    rendered = rendered.replace("{{CHAT_ORIGIN}}", chat_origin)
+    rendered = rendered.replace("{{SERVER_NAME}}", bare)
+    rendered = rendered.replace("{{CUSTOM_THEME}}", json.dumps(theme))
+    return rendered
 
 
 # ---------------------------------------------------------------------------
@@ -408,12 +454,53 @@ def run_deploy(opts) -> int:
         realm_path.write_text(realm_rendered, encoding="utf-8")
         compose_env["REALM_JSON_PATH"] = _portable(realm_path)
 
+    # Synapse : homeserver.yaml + clé de signature rendus as-code.
+    synapse_needs_recreate = False
+    homeserver_hash = ""
+    if "synapse" in selected:
+        homeserver_template = repo_root / "identity" / "homeserver-synapse.yaml"
+        if not homeserver_template.is_file():
+            raise DeployError("identity/homeserver-synapse.yaml manquant")
+        homeserver_rendered = render_synapse_homeserver(
+            homeserver_template.read_text(encoding="utf-8"), answers, vault
+        )
+        homeserver_path = runtime_dir / "synapse-homeserver.yaml"
+        homeserver_path.write_text(homeserver_rendered, encoding="utf-8")
+        # Comme la passerelle : un bind mount changé ne redémarre pas synapse.
+        import hashlib
+
+        homeserver_hash = hashlib.sha256(homeserver_rendered.encode()).hexdigest()
+        applied = runtime_dir / ".synapse-homeserver.applied"
+        synapse_needs_recreate = not applied.is_file() or (
+            applied.read_text(encoding="utf-8").strip() != homeserver_hash
+        )
+        signing_path = runtime_dir / "synapse-signing.key"
+        signing_path.write_text(
+            f"ed25519 0 {vault['synapse_signing_key']}\n", encoding="utf-8"
+        )
+        compose_env["SYNAPSE_HOMESERVER_PATH"] = _portable(homeserver_path)
+        compose_env["SYNAPSE_SIGNING_KEY_PATH"] = _portable(signing_path)
+
+    # element-web : config.json (marque + homeserver + thème) rendu as-code.
+    if "element-web" in selected:
+        element_template = repo_root / "identity" / "element-config.json"
+        if not element_template.is_file():
+            raise DeployError("identity/element-config.json manquant")
+        element_path = runtime_dir / "element-config.json"
+        element_path.write_text(
+            render_element_config(
+                element_template.read_text(encoding="utf-8"), answers, bricks["element-web"]
+            ),
+            encoding="utf-8",
+        )
+        compose_env["ELEMENT_CONFIG_PATH"] = _portable(element_path)
+
     # Passerelle : conf nginx générée depuis les briques sélectionnées.
     # Un bind mount ne déclenche ni recreation ni reload : on suit le hash et
     # on force la recreation du gateway quand la conf change.
     edge_path = runtime_dir / "edge.conf"
     edge_conf = render_edge(selected_bricks, answers)
-    edge_hash_path = runtime_dir / ".edge.sha256"
+    edge_hash_path = runtime_dir / ".edge.applied"
     previous_edge_hash = (
         edge_hash_path.read_text(encoding="utf-8").strip() if edge_hash_path.is_file() else ""
     )
@@ -421,7 +508,6 @@ def run_deploy(opts) -> int:
 
     edge_hash = hashlib.sha256(edge_conf.encode()).hexdigest()
     edge_path.write_text(edge_conf, encoding="utf-8")
-    edge_hash_path.write_text(edge_hash + "\n", encoding="utf-8")
     compose_env["EDGE_CONF_PATH"] = _portable(edge_path)
 
     compose_env["LASTARTER_CLIENT"] = slug
@@ -459,7 +545,46 @@ def run_deploy(opts) -> int:
         if result.returncode != 0:
             raise DeployError("échec du démarrage de l'infrastructure (voir logs ci-dessus)")
 
-    # 2. Migrations (one-off, une par brique qui en déclare).
+    # 1bis. Passerelle : recréer AVANT la pile finale si la conf a changé
+    # (bind mount ≠ recreation, et les nouvelles routes doivent exister pour
+    # les healthchecks ; une passerelle en avance sur ses backends est saine,
+    # l'inverse ne l'est pas).
+    if edge_hash != previous_edge_hash:
+        result = run(base + ["up", "-d", "--force-recreate", "--no-deps", "gateway"])
+        if result.returncode != 0:
+            raise DeployError("échec de la recreation de la passerelle")
+        # Marqueur écrit seulement après succès : un déploiement interrompu
+        # rejouera la recreation au run suivant.
+        edge_hash_path.write_text(edge_hash + "\n", encoding="utf-8")
+
+    # 1ter. Synapse : recréer si le homeserver.yaml rendu a changé (bind mount).
+    if synapse_needs_recreate:
+        result = run(base + ["up", "-d", "--force-recreate", "--no-deps", "synapse_synapse"])
+        if result.returncode != 0:
+            raise DeployError("échec de la recreation de synapse")
+        (runtime_dir / ".synapse-homeserver.applied").write_text(
+            homeserver_hash + "\n", encoding="utf-8"
+        )
+
+    # 2. Préparation one-off (ex. chown de volumes pour des images non-root).
+    for name in selected:
+        brick = bricks[name]
+        prepare = brick.compose.get("prepare_command")
+        service = brick.compose.get("prepare_service")
+        if not (prepare and service):
+            continue
+        result = run(
+            base + [
+                "run", "--rm",
+                "--user", brick.compose.get("prepare_user", "0:0"),
+                "--entrypoint", "sh",
+                service, "-c", prepare,
+            ]
+        )
+        if result.returncode != 0:
+            raise DeployError(f"préparation échouée pour {name}")
+
+    # 3. Migrations (one-off, une par brique qui en déclare).
     for name in selected:
         brick = bricks[name]
         service = brick.compose.get("migrate_service")
@@ -474,12 +599,6 @@ def run_deploy(opts) -> int:
     result = run(base + ["up", "-d", "--wait", "--remove-orphans"])
     if result.returncode != 0:
         raise DeployError("échec du démarrage (voir logs ci-dessus)")
-
-    # 3bis. Passerelle : recréer si la conf générée a changé (bind mount ≠ recreation).
-    if edge_hash != previous_edge_hash:
-        result = run(base + ["up", "-d", "--force-recreate", "--no-deps", "--wait", "gateway"])
-        if result.returncode != 0:
-            raise DeployError("échec de la recreation de la passerelle")
 
     # 4. Clients OIDC : l'API admin fait autorité après le premier import du realm
     #    (--import-realm ne re-importe pas un realm existant).

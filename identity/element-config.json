@@ -1,0 +1,20 @@
+{
+  "brand": "{{BRAND}}",
+  "default_theme": "custom-{{THEME_NAME}}",
+  "default_server_config": {
+    "m.homeserver": {
+      "base_url": "{{MATRIX_ORIGIN}}",
+      "server_name": "{{SERVER_NAME}}"
+    }
+  },
+  "disable_custom_urls": true,
+  "disable_guests": true,
+  "disable_3pid_login": true,
+  "disable_login_language_selector": false,
+  "setting_defaults": {
+    "custom_themes": [{{CUSTOM_THEME}}]
+  },
+  "branding": {
+    "auth_header_logo_url": "{{CHAT_ORIGIN}}/themes/element/img/logos/element-logo.svg"
+  }
+}

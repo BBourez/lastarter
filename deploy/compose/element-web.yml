@@ -1,0 +1,9 @@
+# Brique element-web — client chat (vectorim/element-web:v1.11.102).
+# config.json rendu par le CLI (marque + thème + homeserver) et monté /app/config.json.
+
+services:
+  element_web:
+    image: vectorim/element-web:v1.11.102
+    volumes:
+      - ${ELEMENT_CONFIG_PATH}:/app/config.json:ro
+    networks: [lastarter]

@@ -118,11 +118,24 @@ def parse_secrets_env(path: Path) -> dict[str, str]:
 
 
 def generate_secrets(ordered: list[Brick], existing: dict | None) -> dict[str, str]:
-    """Génère les secrets manquants ; reprend tels quels ceux déjà connus (invariant)."""
+    """Génère les secrets manquants ; reprend tels quels ceux déjà connus (invariant).
+
+    Formats : urlsafe (token_urlsafe(32)) ou b64 (base64 standard de 32 octets —
+    ex. clé de signature ed25519 Matrix, dont le seed EST la clé privée).
+    """
+    import base64
+
+    from ..catalogue import iter_secret_specs
+
     vault: dict[str, str] = dict((existing or {}).get("secrets", {}))
     for brick in ordered:
-        for name in secret_names(brick):
-            if name not in vault:
+        for name, fmt in iter_secret_specs(brick):
+            if name in vault:
+                continue
+            raw = pysecrets.token_bytes(32)
+            if fmt == "b64":
+                vault[name] = base64.b64encode(raw).decode()  # 44 caractères standard
+            else:
                 vault[name] = pysecrets.token_urlsafe(32)
     return vault
 
