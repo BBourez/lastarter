@@ -8,6 +8,7 @@ __pycache__/
 # Secrets générés par le CLI — à chiffrer (SOPS / ansible-vault) avant tout commit
 deployments/*/secrets.env
 deployments/*/secrets/
+deployments/*/.runtime/
 
 # Données locales de dev (POC compose)
 deploy/compose/**/data/

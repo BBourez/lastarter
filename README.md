@@ -42,10 +42,14 @@ python -m lastarter_cli init                 # questionnaire interactif
 # variante scriptable :
 python -m lastarter_cli init --client "ACME" --domain acme.example.com \
     --bricks keycloak,drive --non-interactive --output ../deployments
+# POC local (domaine localhost:8083) :
+python -m lastarter_cli deploy --client demo-coop --pull
+python -m lastarter_cli ps --client demo-coop
 ```
 
 Le résultat est un dossier `deployments/acme/` contenant le manifeste client, les
 brouillons d'environnement, les secrets générés (à chiffrer) et les mentions sources.
+`deploy` orchestre docker-compose : infra (healthchecks) → migrations → pile complète.
 
 ## Feuille de route
 

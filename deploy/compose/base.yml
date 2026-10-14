@@ -1,0 +1,8 @@
+# LaStarter — socle compose commun à toutes les briques.
+# Assemblé par `lastarter deploy` : docker compose --env-file <runtime>/compose.env
+#   -f base.yml -f <brique>.yml … -p <client>
+
+networks:
+  lastarter:
+    name: lastarter-${LASTARTER_CLIENT}
+    driver: bridge

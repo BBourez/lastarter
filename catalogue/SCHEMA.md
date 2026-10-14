@@ -28,10 +28,21 @@ BRAND_NAME = "…"                      # par branding/<client>.toml)
 [env]                                 # variables d'environnement principales (brouillon
 KEY = "valeur | {domain} | {secret}"  # .env généré à l'init ; {domain} substitué)
 
-[compose]                             # informationnel en phase 1 ; génération phase 2
+[compose]                             # orchestration + informationnel
 profile = "drive"                     # profil docker-compose de la brique
+infra_services = ["postgresql", …]    # services à démarrer AVANT la migration
+migrate_service = "app"               # service exécutant la migration (optionnel)
+migrate_command = "python manage.py…" # commande de migration (optionnel)
 services = ["app", "frontend", "…"]   # services internes (postgres, redis… inclus)
 extras = ["collabora", "onlyoffice"]  # services optionnels activables
+
+# Jetons disponibles dans [env] / [branding.env] :
+#   {domain}     — domaine client (sans schéma)
+#   {origin}     — schéma + domaine (http en local, https sinon)
+#   {domain_s3}  — domaine où le S3 média est exposé (POC : host:port rustfs)
+#   {brand_name} — marque affichée
+#   {secret:KEY} — secret du coffre (jeton conservé dans les drafts committables,
+#                  substitué uniquement dans .runtime/ au déploiement)
 
 [notes]
 warnings = "…"                        # points d'attention pour l'installateur

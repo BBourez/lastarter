@@ -7,7 +7,9 @@ import sys
 from pathlib import Path
 
 from . import __version__
+from .cmd import deploy as cmd_deploy
 from .cmd import init as cmd_init
+from .cmd.deploy import DeployError
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -29,6 +31,14 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--output", help="Dossier racine des déploiements (défaut : <repo>/deployments)")
 
     sub.add_parser("list", help="Lister les briques du catalogue")
+
+    deploy = sub.add_parser("deploy", help="Déployer un client (docker compose, gates puis up --wait)")
+    deploy.add_argument("--client", required=True, help="Slug du déploiement (ex. demo-coop)")
+    deploy.add_argument("--pull", action="store_true", help="docker compose pull avant le déploiement")
+    deploy.add_argument("--down", action="store_true", help="Arrêter le déploiement (volumes conservés)")
+
+    ps = sub.add_parser("ps", help="État des conteneurs d'un déploiement")
+    ps.add_argument("--client", required=True, help="Slug du déploiement")
     return parser
 
 
@@ -70,10 +80,18 @@ def main(argv: list[str] | None = None) -> int:
             pass
     parser = build_parser()
     opts = parser.parse_args(argv)
-    if opts.command == "init":
-        return cmd_init.run_init(opts)
-    if opts.command == "list":
-        return run_list()
+    try:
+        if opts.command == "init":
+            return cmd_init.run_init(opts)
+        if opts.command == "deploy":
+            return cmd_deploy.run_deploy(opts)
+        if opts.command == "ps":
+            return cmd_deploy.run_ps(opts)
+        if opts.command == "list":
+            return run_list()
+    except (DeployError, KeyError) as exc:
+        print(f"erreur : {exc}", file=sys.stderr)
+        return 1
     parser.print_help()
     return 0
 

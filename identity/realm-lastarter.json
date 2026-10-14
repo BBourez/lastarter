@@ -1,0 +1,63 @@
+{
+  "realm": "lastarter",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "registrationEmailAsUsername": false,
+  "rememberMe": true,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 30,
+  "roles": {
+    "realm": [
+      { "name": "user", "composite": false },
+      { "name": "admin", "composite": false }
+    ]
+  },
+  "defaultRoles": ["user", "offline_access", "uma_authorization"],
+  "users": [
+    {
+      "username": "demo",
+      "email": "demo@lastarter.local",
+      "firstName": "Demo",
+      "lastName": "LaStarter",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        { "type": "password", "value": "{{SECRET:demo_user_password}}", "temporary": false }
+      ],
+      "realmRoles": ["user"]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "drive",
+      "description": "LaStarter Drive (OIDC)",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "{{SECRET:oidc_client_secret}}",
+      "redirectUris": ["{{ORIGIN}}/*"],
+      "webOrigins": ["{{ORIGIN}}"],
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "publicClient": false,
+      "frontchannelLogout": true,
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true,
+      "attributes": {
+        "user.info.response.signature.alg": "RS256",
+        "post.logout.redirect.uris": "{{ORIGIN}}/*",
+        "backchannel.logout.session.required": "true"
+      },
+      "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "email"],
+      "optionalClientScopes": ["address", "phone", "offline_access"]
+    }
+  ]
+}

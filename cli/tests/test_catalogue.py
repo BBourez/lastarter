@@ -67,11 +67,17 @@ class CatalogueTests(unittest.TestCase):
     def test_secret_names_extracted_from_env(self):
         self.assertEqual(
             set(secret_names(self.bricks["drive"])),
-            {"django_secret_key", "s3_secret_key", "oidc_client_secret"},
+            {
+                "django_secret_key",
+                "django_superuser_password",
+                "drive_db_password",
+                "s3_secret_key",
+                "oidc_client_secret",
+            },
         )
         self.assertEqual(
             set(secret_names(self.bricks["keycloak"])),
-            {"kc_admin_password", "kc_db_password"},
+            {"kc_admin_password", "kc_db_password", "demo_user_password"},
         )
 
 

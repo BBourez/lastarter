@@ -309,12 +309,24 @@ def run_init(opts) -> int:
     secrets_header = (
         "# SECRETS GENERES PAR lastarter-cli — NE JAMAIS COMMITER.\n"
         "# A chiffrer (SOPS / ansible-vault) avant tout partage. Phase 3 : backend secrets.\n"
-        "# Regénérer ici casserait les déploiements : ce fichier n'est jamais réécrit silencieusement.\n"
+        "# Invariant : les valeurs existantes ne sont JAMAIS modifiées ; les secrets\n"
+        "# nouveaux (cataloge enrichi) sont ajoutés en fin de fichier (append-only).\n"
     )
     secrets_path = target / "secrets.env"
-    if not secrets_path.is_file():  # invariant : jamais régénérés
+    if not secrets_path.is_file():
         body = "\n".join(f"{k}={v}" for k, v in sorted(vault.items()))
         secrets_path.write_text(secrets_header + body + "\n", encoding="utf-8")
+    else:
+        # Croissance append-only : aucun secret existant n'est réécrit/régénéré.
+        existing_keys = {
+            line.partition("=")[0].strip()
+            for line in secrets_path.read_text(encoding="utf-8").splitlines()
+            if "=" in line and not line.lstrip().startswith("#")
+        }
+        new_lines = [f"{k}={v}" for k, v in sorted(vault.items()) if k not in existing_keys]
+        if new_lines:
+            with secrets_path.open("a", encoding="utf-8") as handle:
+                handle.write("\n".join(new_lines) + "\n")
 
     print(f"\nDéploiement généré : {target}")
     print(f"Briques : {', '.join(ordered_names)}")

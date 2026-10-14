@@ -8,7 +8,7 @@ référencée ici (cf. docs/licences.md du dépôt LaStarter).
 | Brique | Licence | Version épinglée | Source |
 |---|---|---|---|
 | Keycloak — identité et SSO | Apache-2.0 | 26.3.2 | https://github.com/keycloak/keycloak |
-| Drive — fichiers collaboratifs | MIT | checkout examples-inspiration/drive (à épingler par tag en phase 2) | https://github.com/suitenumerique/drive |
+| Drive — fichiers collaboratifs | MIT | v0.24.0 | https://github.com/suitenumerique/drive |
 
 Marques : « La Suite », « Element », « Tchap » et logos associés appartiennent à
 leurs titulaires et n'apparaissent pas dans les interfaces livrées (branding

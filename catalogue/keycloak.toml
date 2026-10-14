@@ -12,6 +12,7 @@ upstream_image = "quay.io/keycloak/keycloak:26.3.2"
 upstream_pin = "26.3.2"
 core = true
 requires = []
+extra_secrets = ["demo_user_password"]   # utilisateur de démo du realm as-code
 
 [oidc]
 # Le realm `lastarter` est provisionné par identity/ (phase 2) ; les clients
@@ -31,16 +32,17 @@ KC_DB_URL_DATABASE = "keycloak"
 KC_DB_USERNAME = "keycloak"
 KC_DB_PASSWORD = "{secret:kc_db_password}"
 KC_DB_SCHEMA = "public"
-KC_HOSTNAME = "{domain}"
-KC_PROXY = "edge"
+KC_HOSTNAME = "{origin}"
 KC_HEALTH_ENABLED = "true"
 KC_METRICS_ENABLED = "true"
 
 [compose]
 profile = "keycloak"
+# Orchestration pilotée par le CLI (cf. SCHEMA.md) :
+infra_services = ["kc_postgresql"]
 services = [
-  "keycloak",          # quay.io/keycloak/keycloak:26.3.2, --import-realm
-  "kc_postgresql",     # postgres:14 (DB dédiée au realm)
+  "keycloak",          # quay.io/keycloak/keycloak:26.3.2, start-dev --import-realm
+  "kc_postgresql",     # postgres:14.3 (DB dédiée au realm)
 ]
 extras = []
 

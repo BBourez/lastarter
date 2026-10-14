@@ -23,6 +23,7 @@ class Brick:
     core: bool = False
     requires: list[str] = field(default_factory=list)
     maturity: str = "stable"  # stable | planned
+    extra_secrets: list[str] = field(default_factory=list)  # ex. realm as-code
     oidc: dict = field(default_factory=dict)
     branding_env: dict = field(default_factory=dict)
     branding_custom_theme: dict = field(default_factory=dict)
@@ -66,6 +67,7 @@ def _load_brick(path: Path) -> tuple[Brick | None, str | None]:
         core=bool(brick_data.get("core", False)),
         requires=[str(r) for r in brick_data.get("requires", [])],
         maturity=maturity,
+        extra_secrets=[str(s) for s in brick_data.get("extra_secrets", [])],
         oidc=dict(data.get("oidc", {})),
         branding_env=dict(data.get("branding", {}).get("env", {})),
         branding_custom_theme=dict(data.get("branding", {}).get("custom_theme", {})),
@@ -164,8 +166,8 @@ def find_catalogue(start: Path) -> Path | None:
 
 
 def secret_names(brick: Brick) -> list[str]:
-    """Noms des secrets référencés dans les env d'une brique (`{secret:NAME}`)."""
-    names: set[str] = set()
+    """Secrets référencés par une brique : env (`{secret:NAME}`) + extra_secrets (realm as-code)."""
+    names: set[str] = set(brick.extra_secrets)
     for value in brick.env.values():
         value = str(value)
         if SECRET_PATTERN in value:

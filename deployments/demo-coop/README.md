@@ -1,6 +1,6 @@
 # Déploiement « Demo Coop »
 
-- Domaine : demo.coop.example.com
+- Domaine : localhost:8083
 - Marque : LaStarter
 - Briques : keycloak, drive
 

@@ -4,9 +4,9 @@
 [client]
 name = "Demo Coop"
 slug = "demo-coop"
-domain = "demo.coop.example.com"
+domain = "localhost:8083"
 brand_name = "LaStarter"
-created = "2026-10-14T01:10:22+00:00"
+created = "2026-10-14T01:21:24+00:00"
 cli_version = "0.1.0"
 
 [bricks.keycloak]
@@ -17,6 +17,6 @@ upstream = "https://github.com/keycloak/keycloak"
 
 [bricks.drive]
 title = "Drive — fichiers collaboratifs"
-pin = "checkout examples-inspiration/drive (à épingler par tag en phase 2)"
+pin = "v0.24.0"
 license = "MIT"
 upstream = "https://github.com/suitenumerique/drive"

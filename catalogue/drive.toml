@@ -1,6 +1,6 @@
 # Brique : Drive — stockage et édition collaborative de fichiers.
-# Ancré sur le compose amont (examples-inspiration/drive/compose.yaml) et
-# env.d/development/common (noms de variables vérifiés).
+# Env production canonique : vérifié sur docs/examples/helm/drive.values.yaml amont.
+# Images publiées : lasuite/drive-backend / drive-frontend (Docker Hub, multi-arch).
 
 [brick]
 name = "drive"
@@ -9,7 +9,7 @@ category = "collaboration"
 description = "Stockage, partage granulaire, prévisualisation et édition en ligne (WOPI : Collabora/OnlyOffice)."
 license = "MIT"
 upstream_repo = "https://github.com/suitenumerique/drive"
-upstream_pin = "checkout examples-inspiration/drive (à épingler par tag en phase 2)"
+upstream_pin = "v0.24.0"
 requires = ["keycloak"]
 
 [oidc]
@@ -17,46 +17,80 @@ client_id = "drive"
 scopes = "openid email"
 
 [branding.env]
-# Marque blanche sans patch de code — variables vérifiées dans env.d/development/common.
+# Marque blanche sans patch de code — variables vérifiées dans env.d + helm values amont.
 FRONTEND_THEME = "dsfr-light"
 DJANGO_EMAIL_BRAND_NAME = "{brand_name}"
-DJANGO_EMAIL_LOGO_IMG = "https://{domain}/assets/logo.png"
-DJANGO_EMAIL_URL_APP = "https://{domain}"
+DJANGO_EMAIL_LOGO_IMG = "{origin}/assets/logo.png"
+DJANGO_EMAIL_URL_APP = "{origin}"
 FRONTEND_HELP_MENU_CONFIG = "{}"
 FRONTEND_FEEDBACK_BUTTON_SHOW = "False"
 
 [env]
+DJANGO_CONFIGURATION = "Feature"
 DJANGO_ALLOWED_HOSTS = "{domain}"
+DJANGO_CSRF_TRUSTED_ORIGINS = "{origin}"
 DJANGO_SECRET_KEY = "{secret:django_secret_key}"
 DJANGO_SETTINGS_MODULE = "drive.settings"
+DJANGO_SUPERUSER_PASSWORD = "{secret:django_superuser_password}"
+USER_RECONCILIATION_FORM_URL = "{origin}"
+LOGGING_LEVEL_LOGGERS_ROOT = "INFO"
+LOGGING_LEVEL_LOGGERS_APP = "INFO"
+
+# Base de données applicative (postgres:16 interne à la brique)
+DB_HOST = "postgresql"
+DB_NAME = "drive"
+DB_USER = "drive"
+DB_PASSWORD = "{secret:drive_db_password}"
+DB_PORT = "5432"
+
+# Cache / files de tâches (redis:5 interne)
+REDIS_URL = "redis://redis:6379/0"
+DJANGO_CELERY_BROKER_URL = "redis://redis:6379/0"
+
+# Stockage objet (rustfs S3 interne ; POC : média servi directement par rustfs)
+AWS_S3_ENDPOINT_URL = "http://rustfs:9000"
 AWS_S3_ACCESS_KEY_ID = "drive"
 AWS_S3_SECRET_ACCESS_KEY = "{secret:s3_secret_key}"
 AWS_S3_REGION_NAME = "eu-east-1"
-AWS_S3_ENDPOINT_URL = "http://rustfs:9000"
-AWS_S3_DOMAIN_REPLACE = "https://{domain}"
-OIDC_OP_AUTHORIZATION_ENDPOINT = "https://{domain}/realms/lastarter/protocol/openid-connect/auth"
-OIDC_OP_TOKEN_ENDPOINT = "https://{domain}/realms/lastarter/protocol/openid-connect/token"
-OIDC_OP_USER_ENDPOINT = "https://{domain}/realms/lastarter/protocol/openid-connect/userinfo"
+AWS_S3_SIGNATURE_VERSION = "s3v4"
+AWS_S3_DOMAIN_REPLACE = "http://{domain_s3}"
+AWS_STORAGE_BUCKET_NAME = "drive-media-storage"
+MEDIA_BASE_URL = "{origin}"
+
+# SSO Keycloak — realm unique `lastarter`
 OIDC_OP_JWKS_ENDPOINT = "http://keycloak:8080/realms/lastarter/protocol/openid-connect/certs"
+OIDC_OP_AUTHORIZATION_ENDPOINT = "{origin}/realms/lastarter/protocol/openid-connect/auth"
+OIDC_OP_TOKEN_ENDPOINT = "{origin}/realms/lastarter/protocol/openid-connect/token"
+OIDC_OP_USER_ENDPOINT = "{origin}/realms/lastarter/protocol/openid-connect/userinfo"
+OIDC_OP_LOGOUT_ENDPOINT = "{origin}/realms/lastarter/protocol/openid-connect/logout"
 OIDC_RP_CLIENT_ID = "drive"
 OIDC_RP_CLIENT_SECRET = "{secret:oidc_client_secret}"
 OIDC_RP_SIGN_ALGO = "RS256"
 OIDC_RP_SCOPES = "openid email"
-LOGIN_REDIRECT_URL = "https://{domain}"
-LOGOUT_REDIRECT_URL = "https://{domain}"
-WOPI_CLIENTS = "collabora"
+OIDC_USER_FIELD_TO_SHORTNAME = "given_name"
+OIDC_USER_FIELDS_TO_FULLNAME = "given_name,usual_name"
+LOGIN_REDIRECT_URL = "{origin}"
+LOGIN_REDIRECT_URL_FAILURE = "{origin}"
+LOGOUT_REDIRECT_URL = "{origin}"
+
+# Éditeurs WOPI : aucun par défaut (activer collabora OU onlyoffice en phase 3)
+WOPI_CLIENTS = ""
 
 [compose]
 profile = "drive"
+# Orchestration pilotée par le CLI (cf. SCHEMA.md) :
+infra_services = ["postgresql", "redis", "rustfs", "createbuckets"]
+migrate_service = "app"
+migrate_command = "python manage.py migrate --no-input"
 services = [
-  "app",             # backend Django (build amont)
-  "frontend",        # Next.js (build amont)
+  "app",             # lasuite/drive-backend — gunicorn
+  "frontend",        # lasuite/drive-frontend — export statique nginx (mono-domaine)
   "celery",          # worker (même image que app)
   "postgresql",      # postgres:16, DB applicative
   "redis",           # redis:5
   "rustfs",          # rustfs/rustfs:1.0.0 — S3 compatible (média)
   "createbuckets",   # job aws-cli : crée le bucket média versionné
-  "nginx",           # reverse proxy front+api+keycloak (modèle amont)
+  "nginx",           # edge mono-domaine : / → front, /api → app, /realms → keycloak
 ]
 extras = [
   "collabora",       # éditeur WOPI (collabora/code:26.04.2.2.1)
@@ -65,4 +99,4 @@ extras = [
 ]
 
 [notes]
-warnings = "Editeur WOPI : activer collabora OU onlyoffice (pas les deux par défaut). Le bucket média est créé par le job createbuckets au premier démarrage."
+warnings = "POC : le média est servi directement par rustfs (AWS_S3_DOMAIN_REPLACE) — durcissement media-auth prévu phase 3. Editeur WOPI : activer collabora OU onlyoffice, jamais les deux."
