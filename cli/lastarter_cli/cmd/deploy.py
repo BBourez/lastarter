@@ -526,6 +526,7 @@ APP_EMOJI = {
     "drive": "📁",
     "meet": "🎥",
     "element-web": "💬",
+    "element-call": "📞",
     "transfers": "📨",
     "messages": "✉️",
 }

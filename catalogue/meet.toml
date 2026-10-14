@@ -96,6 +96,8 @@ migrate_command = "python manage.py migrate --no-input"
 route_label = "meet"
 frontend_target = "meet_frontend:8080"
 api_target = "meet_app:8000"
+portal_visible = "false"   # caché du portail : element-call est l'interface d'appels
+                           # (meet reste déployé pour le LiveKit SFU mutualisé)
 extra_servers = [
   { label = "livekit", target = "meet_livekit:7880" },      # websocket SFU (wss)
   { label = "meet-media", target = "meet_garage:9000" },    # S3 média via passerelle

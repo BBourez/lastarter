@@ -197,7 +197,7 @@ class RuntimeRenderTests(unittest.TestCase):
         self.assertIn("id.localhost:8443", config["account_url"])
         by_name = {a["name"]: a for a in config["apps"]}
         self.assertIn("Drive", by_name)  # titre avant le tiret
-        self.assertIn("Meet", by_name)
+        self.assertNotIn("Meet", by_name)  # caché du portail : element-call le remplace
         self.assertIn("Chat", by_name)
         self.assertNotIn("Synapse", " ".join(by_name))  # backend : pas de tuile
         self.assertEqual(by_name["Drive"]["emoji"], "📁")
