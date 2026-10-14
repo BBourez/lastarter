@@ -207,6 +207,26 @@ class RuntimeRenderTests(unittest.TestCase):
         self.assertIn("location /realms/ {", edge)
 
 
+    def test_edge_acces_vpn_genere_allow_deny(self):
+        names, _ = resolve_selection(["drive"], self.bricks)
+        selected = [self.bricks[n] for n in names]
+        # Sans champ access : pas de restriction.
+        edge = render_edge(selected, ANSWERS)
+        self.assertNotIn("deny all;", edge)
+        # Avec access = "vpn" : allow réseaux privés + deny all.
+        # NB : resolve_selection ajoute les fondations en tête — cibler par nom.
+        vpn_brick = next(b for b in selected if b.name == "drive")
+        vpn_brick.compose["access"] = "vpn"
+        try:
+            edge_vpn = render_edge(selected, ANSWERS)
+            self.assertIn("allow 10.0.0.0/8", edge_vpn)
+            self.assertIn("allow 100.64.0.0/10", edge_vpn)  # WireGuard/CGNAT
+            self.assertIn("deny all;", edge_vpn)
+            self.assertIn("Accès restreint : VPN/LAN uniquement (drive)", edge_vpn)
+        finally:
+            vpn_brick.compose.pop("access", None)
+
+
 class ComposeCommandTests(unittest.TestCase):
     def test_f_devant_chaque_fichier(self):
         files = [Path("base.yml"), Path("keycloak.yml"), Path("drive.yml")]

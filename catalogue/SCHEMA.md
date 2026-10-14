@@ -36,7 +36,8 @@ migrate_command = "python manage.py…" # commande de migration (optionnel)
 route_label = "drive"                 # sous-domaine : <label>.<domaine>
 frontend_target = "drive_frontend:3000"  # cible de la passerelle pour /
 api_target = "drive_app:8000"            # cible de la passerelle pour /api/
-s3_public_port = "9000"               # port hôte du S3 média (POC ; durcissement phase 6)
+access = "public"                     # public (défaut) | vpn (LAN + WireGuard/CGNAT
+                                      # + loopback uniquement — derrière un VPN)
 extra_servers = [                     # serveurs additionnels (ex. SFU websocket)
   { label = "livekit", target = "meet_livekit:7880" }
 ]

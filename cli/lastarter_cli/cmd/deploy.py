@@ -223,8 +223,17 @@ def ensure_dev_certs(runtime_dir: Path, san_names: list[str]) -> tuple[Path, Pat
     return ca, crt, key, True
 
 
+VPN_ALLOW = "10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 127.0.0.1"
+
+
 def render_edge(bricks: list[Brick], answers: dict) -> str:
-    """Génère la conf nginx de la passerelle : apex → SSO, <label>.<domain> → app."""
+    """Génère la conf nginx de la passerelle : apex → SSO, <label>.<domain> → app.
+
+    Contrôle d'accès par brique : access = "vpn" restreint l'app aux réseaux
+    privés (LAN + WireGuard/CGNAT + loopback) ; "public" (défaut) sans limite.
+    L'identité (id.<domaine>) reste toujours accessible dès qu'une app publique
+    existe — le SSO doit joignable pour se connecter.
+    """
     domain = answers["domain"]
     bare = domain.split(":")[0]  # server_name nginx : jamais de port
     lines: list[str] = [
@@ -319,6 +328,13 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 "        proxy_set_header Upgrade $http_upgrade;",
                 '        proxy_set_header Connection "upgrade";',
                 "    }",
+                "",
+            ]
+        if brick.compose.get("access") == "vpn":
+            lines += [
+                f"    # Accès restreint : VPN/LAN uniquement ({brick.name}).",
+                f"    allow {VPN_ALLOW.replace(' ', '; allow ')};",
+                "    deny all;",
                 "",
             ]
         lines += [

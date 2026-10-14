@@ -57,8 +57,8 @@ brouillons d'environnement, les secrets générés (à chiffrer) et les mentions
 |---|---|---|
 | 1 | Fondations : scaffold, catalogue (keycloak, drive), maquette CLI `init` | ✅ |
 | 2 | POC vertical : compose keycloak+drive, realm as-code, branding, `deploy` | ✅ validé E2E |
-| 3 | Multi-apps : passerelle sous-domaines, brique **meet** (livekit/garage), clients OIDC via API admin | ✅ validé E2E — transfers en brouillon, messages à suivre |
-| 4 | Chat : **synapse** (homeserver as-code) + **element-web** (recoloré par config), SSO complet | ✅ validé E2E — 20 conteneurs, 4 briques |
+| 3 | Multi-apps : passerelle sous-domaines, **meet** (livekit/garage), clients OIDC via API admin | ✅ + **transfers** (edge Caddy, digest GHCR) validé E2E — messages restant |
+| 4 | Chat : **synapse** (homeserver as-code) + **element-web** (recoloré par config), SSO complet | ✅ validé E2E |
 | 5a | **Portail** : launchpad statique sur l'apex, tuiles générées par brique | ✅ validé E2E |
 | 5b | Helm umbrella (k8s) | ⏳ |
 | 6 | Industrialisation : Renovate, smoke tests, SBOM, gate licence | |
