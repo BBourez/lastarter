@@ -1,109 +1,284 @@
-/* LaStarter — habillage du thème de login Keycloak (parent: keycloak).
- * Design : palette Compound (Element) — même look que le reste de la suite.
- * Le thème LaStarter (/__lastarter/theme.css) est aussi servi sur id.<domaine>,
- * mais Keycloak ne le charge pas via sub_filter (HTML servi directement) :
- * cette feuille embarque donc les valeurs Compound en dur, alignées sur
- * themes/element-light.toml.
+/* LaStarter — login Keycloak split-screen (style Element Call).
+ * Gauche : dégradé vert-noir avec marque. Droite : formulaire Compound.
+ * Ce CSS surcharge tout le thème parent keycloak (PatternFly).
  */
 
-:root {
-  /* Palette Compound light — alignée sur themes/element-light.toml. */
-  --ls-accent: #0bc491;        /* green-700 — couleur signature Element */
-  --ls-accent-hover: #009b78;  /* green-800 */
-  --ls-accent-pressed: #007a61;/* green-900 */
-  --ls-accent-subtle: #e3f7ed; /* green-300 */
-  --ls-text-primary: #1b1d22;  /* gray-1400 */
-  --ls-text-secondary: #656d77;/* gray-900 */
-  --ls-bg-canvas: #ffffff;
-  --ls-bg-subtle: #f0f2f5;     /* gray-300 */
-
-  /* PatternFly : mapper sur la palette Compound. */
-  --pf-v5-global--primary-color--100: var(--ls-accent);
-  --pf-v5-global--primary-color--200: var(--ls-accent-hover);
-  --pf-global--primary-color--100: var(--ls-accent);
-  --pf-global--link--Color: var(--ls-accent);
-  --pf-v5-global--FontFamily-sans-serif: "Inter", "Segoe UI", system-ui, sans-serif;
-  --pf-global--FontFamily-sans-serif: "Inter", "Segoe UI", system-ui, sans-serif;
+/* ================================================================
+ * RESET : cacher le layout PatternFly par défaut
+ * ================================================================ */
+.pf-v5-c-login,
+.pf-c-login,
+.login-pf body,
+#kc-header,
+#kc-logo,
+.pf-v5-c-login__main-body .pf-v5-c-form,
+card-pf {
+    /* On garde les éléments mais on les re-layout via notre structure. */
 }
 
-/* Fond : canvas clair avec un halo accent subtil (style Element). */
+/* ================================================================
+ * SPLIT-SCREEN : structure principale
+ * ================================================================ */
 body.login-pf,
 body {
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, var(--ls-accent-subtle) 0%, transparent 70%),
-    var(--ls-bg-canvas);
-  min-height: 100vh;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-family: Inter, "Segoe UI", system-ui, sans-serif !important;
+    background: #ffffff !important;
+    min-height: 100vh;
 }
 
-/* Carte de connexion : bordure fine + ombre douce (Compound). */
-.card-pf,
-.pf-c-login__main,
-.pf-v5-c-login__main {
-  border-radius: 8px; /* --cpd-radius Compound */
-  box-shadow: 0 1.2px 2.4px 0 rgba(0, 0, 0, 0.15); /* --small-drop-shadow */
-  border: 1px solid #e1e6ec; /* gray-400 */
+/* Le conteneur PatternFly devient un flex 2 colonnes */
+.pf-v5-c-login,
+.pf-c-login {
+    display: flex !important;
+    min-height: 100vh;
+    background: #ffffff !important;
 }
 
-/* En-tête du realm : sobre, sans majuscules forcées. */
-#kc-header-wrapper,
-h1#kc-page-title,
-.pf-c-title {
-  text-transform: none;
-  letter-spacing: -0.01em;
-  color: var(--ls-text-primary);
+.pf-v5-c-login__container,
+.pf-c-login__container {
+    display: flex !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex-direction: row !important;
 }
 
-/* Bouton principal : accent vert Compound, radius 8px. */
-button.pf-m-primary,
-.btn-primary,
-.pf-c-button.pf-m-primary,
-.pf-v5-c-button.pf-m-primary {
-  background-color: var(--ls-accent);
-  border-color: var(--ls-accent);
-  border-radius: 8px;
-  color: #ffffff;
-  font-weight: 500; /* --cpd-font-weight-medium */
+/* ================================================================
+ * PANNEAU GAUCHE : dégradé vert-noir Element Call
+ * ================================================================ */
+.pf-v5-c-login__main,
+.pf-c-login__main {
+    order: 2 !important; /* Formulaire à droite */
+    flex: 0 0 45% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    padding: 48px 64px !important;
+    background: #ffffff !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
 }
 
-button.pf-m-primary:hover,
-.btn-primary:hover,
-.pf-c-button.pf-m-primary:hover,
-.pf-v5-c-button.pf-m-primary:hover {
-  background-color: var(--ls-accent-hover);
-  border-color: var(--ls-accent-hover);
+/* Le panneau gauche : on l'injecte via ::before sur le body ou le container */
+.pf-v5-c-login__container::before,
+.pf-c-login__container::before {
+    content: "";
+    order: 1;
+    flex: 0 0 55%;
+    background: linear-gradient(135deg, #0d3d2e 0%, #062b20 40%, #002311 100%) !important;
+    display: flex;
 }
 
-button.pf-m-primary:active,
-.btn-primary:active {
-  background-color: var(--ls-accent-pressed);
-  border-color: var(--ls-accent-pressed);
+/* Texte de marque sur le panneau gauche (via ::after pour le texte) */
+.pf-v5-c-login__container::after,
+.pf-c-login__container::after {
+    content: "";
+    order: 0;
+    display: none;
 }
 
-/* Champs : radius Compound. */
-input[type="text"],
-input[type="password"],
-input[type="email"],
+/* ================================================================
+ * EN-TÊTE : titre du realm (visible dans le panneau droit)
+ * ================================================================ */
+#kc-header {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 0 32px !important;
+    background: transparent !important;
+    text-indent: 0 !important;
+}
+
+#kc-header-wrapper {
+    font-size: 1.75rem !important;
+    font-weight: 600 !important;
+    color: #1b1d22 !important;
+    letter-spacing: -0.02em !important;
+    text-transform: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+}
+
+h1#kc-page-title {
+    display: none; /* Le header-wrapper suffit */
+}
+
+/* ================================================================
+ * FORMULAIRE (panneau droit) : champs style Compound
+ * ================================================================ */
+.ls-field,
+.pf-v5-c-form__group,
+.pf-c-form__group {
+    margin-bottom: 20px;
+}
+
+.ls-field label,
+.pf-v5-c-form__label {
+    display: block !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    color: #1b1d22 !important;
+    margin-bottom: 6px !important;
+    text-transform: none !important;
+}
+
+.ls-field input,
+#kc-form-login input[type="text"],
+#kc-form-login input[type="password"],
+.pf-v5-c-form-control,
 .pf-c-form-control,
-.pf-v5-c-form-control {
-  border-radius: 8px;
-  border-color: #cdd3da; /* gray-500 */
+input#username,
+input#password {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    min-height: 40px !important;
+    padding: 8px 14px !important;
+    font-size: 0.9375rem !important;
+    font-family: Inter, system-ui, sans-serif !important;
+    color: #1b1d22 !important;
+    background: #ffffff !important;
+    border: 1px solid #bdc4cc !important;
+    border-radius: 8px !important;
+    transition: border-color 0.1s, box-shadow 0.1s;
 }
 
-input[type="text"]:focus,
-input[type="password"]:focus,
-input[type="email"]:focus,
-.pf-c-form-control:focus,
-.pf-v5-c-form-control:focus {
-  border-color: var(--ls-accent);
-  box-shadow: 0 0 0 2px var(--ls-accent-subtle);
+.ls-field input:focus,
+#kc-form-login input:focus,
+.pf-v5-c-form-control:focus,
+input#username:focus,
+input#password:focus {
+    outline: none !important;
+    border-color: #007a61 !important;
+    box-shadow: 0 0 0 2px #e3f7ed !important;
 }
 
-/* Liens : accent sans cri. */
-a,
-.pf-c-login__main-footer-links-item-link {
-  color: var(--ls-accent);
+.ls-error {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.8125rem;
+    color: #d51928;
 }
 
-a:hover {
-  color: var(--ls-accent-hover);
+/* ================================================================
+ * BOUTON : pilule Compound (gris foncé)
+ * ================================================================ */
+.ls-btn-primary,
+#kc-form-login button[type="submit"],
+button.pf-m-primary,
+.pf-v5-c-button.pf-m-primary {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    min-height: 40px !important;
+    padding: 6px 24px !important;
+    font-size: 0.9375rem !important;
+    font-weight: 500 !important;
+    font-family: Inter, system-ui, sans-serif !important;
+    background: #1b1d22 !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 9999px !important;
+    cursor: pointer;
+    transition: background-color 0.1s;
+}
+
+.ls-btn-primary:hover,
+#kc-form-login button[type="submit"]:hover,
+button.pf-m-primary:hover {
+    background: #3c4045 !important;
+}
+
+.ls-btn-primary:active,
+#kc-form-login button[type="submit"]:active {
+    background: #4c5158 !important;
+}
+
+/* ================================================================
+ * CHECKBOX remember me
+ * ================================================================ */
+.ls-checkbox label {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.875rem !important;
+    font-weight: 400 !important;
+    cursor: pointer;
+}
+
+.ls-checkbox input[type="checkbox"] {
+    accent-color: #0bc491 !important;
+    width: 16px;
+    height: 16px;
+}
+
+/* ================================================================
+ * LIENS : forgot password / register
+ * ================================================================ */
+.ls-links {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-size: 0.875rem;
+}
+
+.ls-links a,
+#kc-form-options a,
+.pf-v5-c-login__main-footer-links-item-link {
+    color: #007a61 !important;
+    text-decoration: none !important;
+    font-size: 0.875rem !important;
+}
+
+.ls-links a:hover {
+    text-decoration: underline !important;
+}
+
+/* ================================================================
+ * SUPPRESSION : le reste du chrome PatternFly
+ * ================================================================ */
+.pf-v5-c-login__main-footer,
+.pf-c-login__main-footer,
+.pf-v5-c-login__footer,
+.pf-c-login__footer,
+#kc-info,
+#kc-info-wrapper {
+    display: none !important;
+}
+
+.pf-v5-c-login__main-header,
+.pf-c-login__main-header {
+    background: transparent !important;
+    padding: 0 !important;
+    margin-bottom: 24px;
+}
+
+/* Message d'erreur/succès Keycloak */
+#kc-error-message,
+#kc-info-message {
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: #ffefec;
+    color: #d51928;
+    font-size: 0.875rem;
+    margin-bottom: 20px;
+}
+
+/* ================================================================
+ * RESPONSIVE : mobile = une seule colonne (formulaire seulement)
+ * ================================================================ */
+@media (max-width: 768px) {
+    .pf-v5-c-login__container::before,
+    .pf-c-login__container::before {
+        display: none !important;
+    }
+
+    .pf-v5-c-login__main,
+    .pf-c-login__main {
+        flex: 1 !important;
+        padding: 32px 24px !important;
+    }
 }

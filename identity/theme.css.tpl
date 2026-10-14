@@ -317,13 +317,13 @@ a:not([class*="btn"]):hover {
     color: var(--cpd-color-bg-accent-hovered);
 }
 
-/* ---------- CARTES / PANNEAUX ---------- */
+/* ---------- CARTES / PANNEAUX : bordure fine, SANS ombre ---------- */
 [class*="card"],
 [class*="modal-content"],
 [class*="dialog"]:not([class*="dialog-overlay"]) {
     border-radius: var(--cpd-radius-medium) !important;
     border: 1px solid var(--cpd-color-border-interactive-secondary);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.06) !important;
+    box-shadow: none !important;
 }
 
 /* ---------- SIDEBAR / NAVIGATION — style Element Web ---------- */
@@ -346,8 +346,11 @@ nav[class*="sidebar"],
     background-color: var(--cpd-color-bg-subtle-primary) !important;
 }
 
-[class*="active"],
-[aria-current="page"] {
+/* Item actif : UNIQUEMENT dans les nav/tablist (pas les conteneurs actifs). */
+nav a[class*="active"],
+[role="tablist"] [aria-selected="true"],
+[role="tab"][aria-selected="true"],
+nav [aria-current="page"] {
     background-color: var(--cpd-color-bg-accent-subtle) !important;
     color: var(--cpd-color-text-action-accent) !important;
 }
@@ -425,30 +428,40 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 
 /* ================================================================
- * MESSAGES : barre de recherche 100% arrondie (pilule)
+ * MESSAGES : barre de recherche 100% arrondie (pilule Compound Search)
+ * Compound Search spec : radius 9999px, height 36px, border 1px gray-400.
+ * Cible le PARENT (conteneur) et l'input.
  * ================================================================ */
 input[type="search"],
+.c__search-filter,
 [class*="search-bar"],
 [class*="SearchBar"],
-[class*="searchBar"],
-input[placeholder*="Rechercher"],
-input[placeholder*="rechercher"],
-input[placeholder*="Search"] {
+[class*="searchBar"] {
     border-radius: var(--cpd-radius-pill-effect) !important;
+    min-height: 36px;
     padding-left: 16px !important;
 }
 
+.c__search-filter input,
+.c__search-filter [class*="input"] {
+    border-radius: var(--cpd-radius-pill-effect) !important;
+    border: none !important;
+    background: transparent !important;
+}
+
 /* ================================================================
- * DRIVE : bouton créer dossier en VERT Element (accent)
+ * DRIVE : bouton upload/créer dossier en VERT (accent Element)
+ * ATTENTION : cibler UNIQUEMENT les <button>, pas les conteneurs
+ * (la dropzone de Transfers a une classe "upload" → ne doit PAS être verte).
  * ================================================================ */
-[class*="create-folder"],
-[class*="CreateFolder"],
-[class*="add-folder"],
-[class*="new-folder"],
+button[class*="upload"],
+button[class*="create-folder"],
+button[class*="CreateFolder"],
+button[class*="add-folder"],
+button[class*="new-folder"],
 button[aria-label*="dossier"],
 button[aria-label*="Dossier"],
-[class*="btn-add"],
-[class*="upload"] {
+button[class*="btn-add"] {
     background-color: var(--cpd-color-green-700) !important;
     color: #ffffff !important;
     border: none !important;
@@ -512,12 +525,14 @@ button.c__button {
     color: var(--cpd-color-text-primary) !important;
 }
 
-/* Dropdowns Cunningham */
+/* Dropdowns Cunningham : spec Compound FloatingMenu, SANS ombre.
+ * radius 12px, fond blanc, bordure 1px grise. */
 .c__dropdown-menu,
 [class*="dropdown-menu"] {
-    border-radius: var(--cpd-radius-medium) !important;
+    border-radius: 12px !important;
     border: 1px solid var(--cpd-color-border-interactive-secondary) !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+    background: var(--cpd-color-bg-canvas-default) !important;
+    box-shadow: none !important;
 }
 
 /* Items de menu Cunningham */
@@ -561,4 +576,92 @@ button.c__button {
 /* Fond des menus déroulants Projects */
 [class*="Core_menuBackdrop"] {
     background: rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ================================================================
+ * ZÉRO OMBRE — suppression globale sur TOUS les composants courants
+ * ================================================================ */
+button,
+[class*="card"],
+[class*="menu"],
+[class*="dropdown"],
+[class*="popover"],
+[class*="modal"]:not([class*="modal-overlay"]),
+[class*="tooltip"],
+[class*="panel"]:not([class*="panel-header"]),
+[class*="sheet"],
+.c__button,
+.c__dropdown-menu {
+    box-shadow: none !important;
+}
+
+/* ================================================================
+ * MESSAGES : logo top-left sans fond + boutons À propos/Paramètres
+ * ================================================================ */
+[class*="logo"],
+[class*="brand-logo"],
+[class*="app-logo"] {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+[class*="about"],
+[class*="settings"]:not([class*="settings-content"]),
+[class*="parametres"],
+[class*="a-propos"] {
+    box-shadow: none !important;
+    border-radius: var(--cpd-radius-medium) !important;
+}
+
+/* ================================================================
+ * PROJECTS : supprimer boutons support/chapdocs/centre d'app
+ * ================================================================ */
+[class*="support"],
+[class*="chapdocs"],
+[class*="help-center"],
+[class*="HelpCenter"],
+[class*="app-center"],
+a[href*="support"],
+a[href*="docs."] {
+    display: none !important;
+}
+
+/* ================================================================
+ * DRIVE : zone de contenu fond blanc + filtres non coupés
+ * ================================================================ */
+[class*="explorer"] [class*="content"],
+[class*="my-files"],
+[class*="MyFiles"] {
+    background: var(--cpd-color-bg-canvas-default) !important;
+}
+
+/* Filtres : ne pas couper avec overflow/border-radius */
+[class*="filter"],
+[class*="Filter"],
+[class*="toolbar"],
+[class*="Toolbar"] {
+    overflow: visible !important;
+}
+
+/* ================================================================
+ * SIDEBARS : harmonisation Element Web (fond gris, items hover)
+ * ================================================================ */
+aside,
+nav[class*="sidebar"],
+[class*="Sidebar"]:not([class*="item"]):not([class*="content"]),
+[class*="LeftMenu"]:not([class*="item"]):not([class*="text"]) {
+    background: var(--cpd-color-bg-subtle-secondary) !important;
+    border-right: 1px solid var(--cpd-color-border-interactive-secondary);
+}
+
+[class*="LeftMenu_boards"],
+[class*="LeftMenu_projects"] {
+    background: transparent !important;
+}
+
+[class*="sidebar"] a:hover,
+[class*="LeftMenu"] button:hover,
+[class*="nav-item"]:hover {
+    background: var(--cpd-color-bg-subtle-primary) !important;
+    border-radius: var(--cpd-radius-medium);
 }
