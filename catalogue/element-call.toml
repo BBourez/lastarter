@@ -40,8 +40,9 @@ profile = "chat"
 infra_services = []   # pas d'infra dédiée : LiveKit mutualisé avec meet
 migrate_service = ""
 recreate_service = "element_call"
-route_label = "call"            # call.<domaine> → SPA appels
+route_label = "call"            # call.<domaine> → SPA appels (widget uniquement)
 frontend_target = "element_call:8080"
+portal_visible = "false"        # widget-only : Meet est la visio standalone du portail
 # pas d'api_target : SPA statique ; l'API rtc/livekit passe par synapse (MSC4512).
 extra_servers = []   # livekit.<domaine> déjà routé par meet (SFU partagé)
 services = [

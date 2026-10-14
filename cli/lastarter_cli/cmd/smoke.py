@@ -110,6 +110,10 @@ def run_smoke(opts) -> int:
         label = brick.compose.get("route_label", name)
         origin = app_origin(domain, label)
         if brick.compose.get("portal_visible", "true") == "false":
+            if name == "element-call":
+                # SPA widget (pas un backend Matrix) : juste vérifier qu'il répond.
+                _check(results, f"{name} (SPA /)", origin, 200, None, ca_file)
+                continue
             # Backend (ex. synapse) : API + chaîne SSO (redirect vers l'IdP).
             _check(results, f"{name} (API)", f"{origin}/_matrix/client/versions", 200, '"versions"', ca_file)
             _check(
