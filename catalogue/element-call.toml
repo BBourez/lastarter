@@ -1,57 +1,58 @@
-# Brique : Element Call — appels chiffrés dans le chat (MatrixRTC + LiveKit).
-# Stack complète et autonome : SPA + lk-jwt-service + LiveKit SFU + Redis.
-# Aucune dépendance envers meet — LiveKit dédié à cette brique.
+# Brique : Element Call — visioconférence standalone (remplace meet).
+# SPA + LiveKit SFU + lk-jwt-service : tout est autonome.
+# Mode standalone : accès direct pour créer/rejoindre des appels.
+# Mode widget : intégré dans les salons du chat (element-web).
 
 [brick]
 name = "element-call"
-title = "Appels — dans le chat"
-category = "communication"
-description = "Appels chiffrés dans les salons du chat (widget). Pour la visio standalone, utilisez Meet."
+title = "Meet — visioconférence"
+category = "collaboration"
+description = "Réunions en ligne chiffrées : créez un appel, partagez le lien, rejoignez depuis le navigateur."
 license = "AGPL-3.0-only"
 upstream_repo = "https://github.com/element-hq/element-call"
 upstream_image = "ghcr.io/element-hq/element-call"
 upstream_pin = "latest"
-requires = ["synapse", "meet"]   # meet fournit le LiveKit SFU partagé
+requires = ["synapse"]
 
 [oidc]
-# Pas de client OIDC direct : les jetons Matrix viennent du SSO synapse.
 client_id = ""
 
 [branding.env]
-# Le SPA lit sa config des paramètres du widget (brand transmis par element-web).
 
 [env]
-# --- LiveKit SFU dédié (config rendue par le CLI dans files/livekit-call.yaml) ---
-# POC : clés dev de l'amont (durcissement phase 6 : coffre + rendu de config).
+# --- LiveKit SFU dédié ---
 LIVEKIT_KEY = "devkey"
 LIVEKIT_SECRET = "secret"
 
-# --- lk-jwt-service (appservice Synapse, jetons LiveKit) ---
+# --- lk-jwt-service (appservice Synapse) ---
 LIVEKIT_AS_TOKEN = "{secret:lk_as_token}"
 LIVEKIT_HS_TOKEN = "{secret:lk_hs_token}"
 LIVEKIT_JWT_BIND = "0.0.0.0:6080"
-LIVEKIT_URL = "{ws}://livekit.{domain}"   # LiveKit partagé avec meet (SFU commun)
-LIVEKIT_FULL_ACCESS_HOMESERVERS = "*"
+LIVEKIT_URL = "{ws}://livekit.{domain}"
 LIVEKIT_HS_SERVER_NAME = "{domain_bare}"
 LIVEKIT_CS_API_URL_OVERRIDES = "{domain_bare}=http://synapse_synapse:8008"
+LIVEKIT_FULL_ACCESS_HOMESERVERS = "*"
 
 [compose]
 profile = "chat"
-infra_services = []   # pas d'infra dédiée : LiveKit mutualisé avec meet
+infra_services = ["call_livekit", "call_redis"]
 migrate_service = ""
 recreate_service = "element_call"
-route_label = "call"            # call.<domaine> → SPA appels (widget uniquement)
+route_label = "meet"            # meet.<domaine> → visio standalone element-call
 frontend_target = "element_call:8080"
-portal_visible = "false"        # widget-only : Meet est la visio standalone du portail
-# pas d'api_target : SPA statique ; l'API rtc/livekit passe par synapse (MSC4512).
-extra_servers = []   # livekit.<domaine> déjà routé par meet (SFU partagé)
+api_target = ""
+extra_servers = [
+  { label = "livekit", target = "call_livekit:7880" },
+]
 services = [
-  "element_call",      # ghcr.io/element-hq/element-call (SPA + /widget)
-  "lk-jwt-service",    # ghcr.io/element-hq/lk-jwt-service:0.8.0 (appservice)
+  "element_call",      # SPA standalone + widget
+  "lk-jwt-service",    # appservice Synapse MSC4512
+  "call_livekit",      # SFU LiveKit dédié
+  "call_redis",        # Redis pour LiveKit
 ]
 extras = []
 
 extra_secrets = ["lk_as_token", "lk_hs_token"]
 
 [notes]
-warnings = "LiveKit dédié avec clés POC devkey/secret (durcissement phase 6 : coffre + rendu de la config). Le SPA est servi non modifié (AGPL, mention source)."
+warnings = "LiveKit POC : clés devkey/secret (phase 6 : coffre). MSC3266/4143/4222 requis dans Synapse (activés dans le homeserver template)."

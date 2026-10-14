@@ -370,8 +370,36 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             "    }",
             "",
         ]
-        # Element Call : accessible directement (standalone + widget).
-        # Pas de redirection — meet.<domaine> est la visio standalone séparée.
+        # Element Call : routes MatrixRTC sur le domaine matrix (docs self_hosting).
+        if brick.name == "synapse":
+            lines += [
+                "    # Element Call : MatrixRTC Authorization + SFU websocket",
+                "    location /livekit/jwt/ {",
+                "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                "        set $backend_jwt lk-jwt-service:6080;",
+                "        proxy_pass http://$backend_jwt;",
+                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header X-Forwarded-Proto https;",
+                "        proxy_http_version 1.1;",
+                "        proxy_set_header Upgrade $http_upgrade;",
+                '        proxy_set_header Connection "upgrade";',
+                "    }",
+                "",
+                "    location /livekit/sfu/ {",
+                "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                "        set $backend_sfu call_livekit:7880;",
+                "        proxy_pass http://$backend_sfu;",
+                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header X-Forwarded-Proto https;",
+                "        proxy_send_timeout 120;",
+                "        proxy_read_timeout 120;",
+                "        proxy_buffering off;",
+                "        proxy_http_version 1.1;",
+                "        proxy_set_header Upgrade $http_upgrade;",
+                '        proxy_set_header Connection "upgrade";',
+                "    }",
+                "",
+            ]
         lines += [
             "    location / {",
             "        resolver 127.0.0.11 valid=10s ipv6=off;",

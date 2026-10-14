@@ -1,5 +1,4 @@
 # LiveKit dédié à element-call — POC (mono-nœud, TURN désactivé).
-# Clés dev de l'amont : doivent correspondre à LIVEKIT_KEY/SECRET du catalogue.
 log_level: info
 redis:
   address: call_redis:6379

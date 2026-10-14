@@ -1,5 +1,4 @@
-# Brique element-call — appels chiffrés autonomes (SPA + appservice + LiveKit + Redis).
-# Aucune dépendance envers meet : LiveKit dédié.
+# Brique element-call — visioconférence standalone (SPA + SFU + appservice).
 
 services:
   # Redis pour le SFU LiveKit.
@@ -7,8 +6,7 @@ services:
     image: redis:5
     networks: [lastarter]
 
-  # SFU LiveKit dédié à element-call (pas partagé avec meet).
-  # Pas de port hôte : tout passe par la passerelle (wss://livekit.<domaine>).
+  # SFU LiveKit dédié (pas de port hôte : tout via passerelle wss).
   call_livekit:
     image: livekit/livekit-server:v1.13.6
     command: ["--config", "/config.yaml"]
@@ -19,8 +17,8 @@ services:
         condition: service_started
     networks: [lastarter]
 
-  # Service de jetons LiveKit : appservice Synapse (registration rendu par le CLI).
-  # NB : nom avec TIRETS (pas d'underscore — Synapse rejette les hostnames IDNA invalides).
+  # Service de jetons LiveKit : appservice Synapse.
+  # NB : nom avec TIRETS (Synapse rejette les underscores DNS).
   lk-jwt-service:
     image: ghcr.io/element-hq/lk-jwt-service:0.8.0
     env_file: ["${RUNTIME_DIR}/element-call.env"]
@@ -28,7 +26,7 @@ services:
       disable: true
     networks: [lastarter]
 
-  # SPA Element Call : statique (nginx:8080), sert aussi la route /widget.
+  # SPA Element Call : standalone + widget.
   element_call:
     image: ghcr.io/element-hq/element-call:latest
     volumes:

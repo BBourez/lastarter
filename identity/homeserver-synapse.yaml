@@ -54,6 +54,27 @@ form_secret: "{{SECRET:synapse_form}}"
 password_config:
   enabled: false   # SSO uniquement — le realm fait autorité
 
+# --- Element Call : MSC requis pour MatrixRTC + delayed events ---
+experimental_features:
+  msc3266_enabled: true    # Room Summary API (knocking fédéré)
+  msc4143_enabled: true    # MatrixRTC (transports endpoint MSC4519)
+  msc4222_enabled: true    # sync v2 state_after
+
+max_event_delay_duration: 24h
+
+rc_message:
+  per_second: 0.5
+  burst_count: 30
+
+rc_delayed_event_mgmt:
+  per_second: 1
+  burst_count: 20
+
+matrix_rtc:
+  transports:
+    - type: livekit
+      livekit_service_url: {{MATRIX_ORIGIN}}/livekit/jwt
+
 oidc_providers:
   - idp_id: lastarter
     idp_name: LaStarter SSO
