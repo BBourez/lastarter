@@ -346,6 +346,7 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 f"        set $backend_static {api_target};",
                 "        proxy_pass http://$backend_static;",
                 "        proxy_set_header Host $http_host;",
+                "        proxy_set_header X-Forwarded-Proto https;",  # évite la boucle 301 SECURE_SSL_REDIRECT
                 "    }",
                 "",
             ]
