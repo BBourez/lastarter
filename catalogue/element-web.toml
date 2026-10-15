@@ -9,7 +9,7 @@ category = "communication"
 description = "Messagerie Matrix chiffrée de bout en bout, salons et espaces — UI Element native aux couleurs LaStarter."
 license = "AGPL-3.0 OR GPL-3.0 OR Element-Commercial"   # multilicence : LaStarter choisit AGPL-3.0
 upstream_repo = "https://github.com/element-hq/element-web"
-upstream_pin = "v1.11.102"
+upstream_pin = "v1.12.31"
 requires = ["synapse"]
 
 [oidc]
