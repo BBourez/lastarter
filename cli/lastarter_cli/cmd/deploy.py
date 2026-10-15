@@ -369,7 +369,10 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             "    client_max_body_size 150m;",
             "",
         ]
-        lines += _theme_nginx_block()
+        # Element Web / Element Call : DÉJÀ en Compound natif — NE PAS injecter
+        # le thème (il entrerait en conflit avec leurs styles propres).
+        if brick.name not in ("element-web", "element-call"):
+            lines += _theme_nginx_block()
         if api_target:
             lines += [
                 "    location /api/ {",

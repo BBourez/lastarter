@@ -44,7 +44,7 @@
                                 </#if>
                             </div>
                             <div id="kc-form-buttons" class="ls-submit">
-                                <input type="hidden" id="id-hidden-input" name="credentialId" <#if auth??.selectedCredential?has_content>value="${auth.selectedCredential}"</#if>/>
+                                <input type="hidden" id="id-hidden-input" name="credentialId" <#if auth?? && auth.selectedCredential?has_content>value="${auth.selectedCredential}"</#if>/>
                                 <button type="submit" class="ls-btn-primary">${msg("doLogIn")}</button>
                             </div>
                         </div>
