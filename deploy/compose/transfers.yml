@@ -28,7 +28,12 @@ services:
       interval: 3s
       timeout: 20s
       retries: 100
-    networks: [lastarter]
+    networks:
+      lastarter:
+        aliases:
+          # boto3/botocore REJETTE les underscores dans les hostnames :
+          # alias avec tirets pour l'endpoint S3 (AWS_S3_ENDPOINT_URL).
+          - transfers-rustfs
 
   # SMTP POC (interne, non exposé) — remplacé par le SMTP du client en prod.
   transfers_maildev:

@@ -500,6 +500,7 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
         if brick.name == "synapse":
             lines += [
                 "    # Element Call : MatrixRTC Authorization + SFU websocket",
+                "    # CORS requis : element-call (meet.<domaine>) appelle matrix.<domaine>.",
                 "    location /livekit/jwt/ {",
                 "        resolver 127.0.0.11 valid=10s ipv6=off;",
                 "        set $backend_jwt lk-jwt-service:6080;",
@@ -510,6 +511,11 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 "        proxy_http_version 1.1;",
                 "        proxy_set_header Upgrade $http_upgrade;",
                 '        proxy_set_header Connection "upgrade";',
+                # CORS : element-call est sur meet.<domaine> ≠ matrix.<domaine>.
+                '        add_header Access-Control-Allow-Origin * always;',
+                '        add_header Access-Control-Allow-Methods "GET, POST, OPTIONS, PUT, DELETE" always;',
+                '        add_header Access-Control-Allow-Headers "Authorization, Content-Type, X-Requested-With" always;',
+                "        if ($request_method = OPTIONS) { return 204; }",
                 "    }",
                 "",
                 "    location /livekit/sfu/ {",

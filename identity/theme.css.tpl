@@ -575,3 +575,107 @@ button[aria-label*="dossier"], button[class*="btn-add"] {
 
 /* Overlay des modals Projects */
 [class*="Core_menuBackdrop"] { background: rgba(0, 0, 0, 0.3) !important; }
+
+/* ================================================================
+ * DRIVE : parents de boutons « Importer » / « Nouveau » — PAS de fond
+ * ni padding énorme sur les conteneurs, juste le bouton.
+ * ================================================================ */
+[class*="upload"] > *,
+[class*="new-file"] > *,
+[class*="create"] > * {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    box-shadow: none !important;
+}
+
+/* Le PARENT du bouton Importer/Nouveau : transparent, pas de fond weird */
+[class*="toolbar"] [class*="action"],
+[class*="toolbar"] [class*="button-container"],
+[class*="header"] [class*="actions"],
+[class*="topbar"] [class*="buttons"] {
+    background: transparent !important;
+    padding: 0 !important;
+    border: none !important;
+    min-height: auto !important;
+}
+
+/* Dropdown « Nouveau » : style Compound (12px, blanc, bordure, sans ombre) */
+[class*="dropdown"] [class*="menu"],
+[class*="popover"] [class*="content"],
+[class*="tooltip-container"] {
+    border-radius: 12px !important;
+    background: var(--cpd-color-bg-canvas-default) !important;
+    border: 1px solid var(--cpd-color-border-interactive-secondary) !important;
+    box-shadow: none !important;
+    padding: 4px !important;
+}
+
+[class*="dropdown"] [class*="item"],
+[class*="menu"] [class*="item"] {
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    background: transparent !important;
+}
+
+[class*="dropdown"] [class*="item"]:hover {
+    background: var(--cpd-color-bg-subtle-secondary) !important;
+}
+
+/* Sidebar Drive : Favoris/mes fichiers — pas de fond intérieur différent */
+[class*="sidebar"] [class*="section"],
+[class*="sidebar"] [class*="category"],
+[class*="sidebar"] [class*="group"] {
+    background: transparent !important;
+}
+
+/* ================================================================
+ * PROJECTS : modal création projet — inputs superposés (bug z-index)
+ * ================================================================ */
+[class*="modal"] [class*="input"],
+[class*="dialog"] [class*="input"],
+[class*="modal"] input,
+[class*="dialog"] input {
+    position: relative !important;
+    z-index: auto !important;
+    margin-bottom: 12px !important;
+    clear: both !important;
+}
+
+[class*="modal"] [class*="field"],
+[class*="dialog"] [class*="field"] {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 16px !important;
+}
+
+/* ================================================================
+ * KEYCLOAK : case « Se souvenir de moi » — taille normale
+ * ================================================================ */
+.ls-checkbox input[type="checkbox"],
+#rememberMe {
+    width: 16px !important;
+    height: 16px !important;
+    min-height: 16px !important;
+    padding: 0 !important;
+    border-radius: 4px !important;
+}
+
+.ls-checkbox label {
+    font-size: 0.875rem !important;
+    min-height: auto !important;
+}
+
+/* ================================================================
+ * DRIVE : sélecteur « Partagé avec / Modifié » — pas de fond weird
+ * ================================================================ */
+[class*="filter"] [class*="select"],
+[class*="filter"] [class*="dropdown-trigger"],
+[class*="sort"] [class*="trigger"] {
+    background: var(--cpd-color-bg-canvas-default) !important;
+    border: 1px solid var(--cpd-color-border-interactive-secondary) !important;
+    border-radius: var(--cpd-radius-pill-effect) !important;
+    min-height: 36px !important;
+    padding: 4px 16px !important;
+}
