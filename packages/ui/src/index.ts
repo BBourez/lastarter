@@ -38,3 +38,15 @@ export { Separator } from "./components/Separator/Separator";
 
 export { Sidebar } from "./components/Sidebar/Sidebar";
 export type { SidebarProps } from "./components/Sidebar/Sidebar";
+
+export { Modal } from "./components/Modal/Modal";
+export type { ModalProps } from "./components/Modal/Modal";
+
+export { Menu } from "./components/Menu/Menu";
+export type { MenuProps, MenuItem } from "./components/Menu/Menu";
+
+export { Switch } from "./components/Switch/Switch";
+export type { SwitchProps } from "./components/Switch/Switch";
+
+export { Alert } from "./components/Alert/Alert";
+export type { AlertProps, AlertVariant } from "./components/Alert/Alert";
