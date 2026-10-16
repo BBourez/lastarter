@@ -1,0 +1,49 @@
+{{- /*
+LaStarter : Ingress pour toutes les apps
+*/ -}}
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}
+  annotations:
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    - hosts:
+        - {{ .Values.domain }}
+        - id.{{ .Values.domain }}
+        {{- if .Values.transfers.enabled }}
+        - transfers.{{ .Values.domain }}
+        {{- end }}
+        {{- if .Values.projects.enabled }}
+        - projects.{{ .Values.domain }}
+        {{- end }}
+      secretName: {{ .Values.gateway.tlsSecret | default (printf "%s-tls" .Release.Name) }}
+  {{- end }}
+  rules:
+    - host: id.{{ .Values.domain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-keycloak
+                port:
+                  number: 8080
+    {{- if .Values.portal.enabled }}
+    - host: {{ .Values.domain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-portal
+                port:
+                  number: 80
+    {{- end }}
+{{- end }}

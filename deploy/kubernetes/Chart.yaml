@@ -1,0 +1,15 @@
+apiVersion: v2
+name: lastarter
+description: LaStarter : suite collaborative souveraine B2B avec design system Element
+type: application
+version: 2.0.0
+appVersion: "2.0.0"
+keywords:
+  - collaboration
+  - b2b
+  - sovereign
+  - element
+  - compound
+maintainers:
+  - name: LaStarter
+    email: contact@lastarter.app
