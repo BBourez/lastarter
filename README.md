@@ -1,6 +1,25 @@
 # LaStarter
 
+![CI](https://github.com/BBourez/lastarter/actions/workflows/ci.yml/badge.svg)
+![Tests](https://img.shields.io/badge/tests-76%20passed-brightgreen)
+![Lint](https://img.shields.io/badge/lint-0%20errors-brightgreen)
+![Typecheck](https://img.shields.io/badge/typecheck-4%2F4%20strict-brightgreen)
+
 Suite collaborative souveraine B2B avec design system Element (Compound).
+
+## Etat du projet
+
+| Indicateur | Valeur |
+|---|---|
+| Composants UI | 17 (Button, Sidebar, Modal, Tabs, Toast, Typography...) |
+| Hooks personnalises | 5 (useToggle, useClickOutside, useDebouncedValue...) |
+| Tests | 76 verts (63 UI + 13 API) + 3 e2e Playwright |
+| Typecheck | 4/4 packages strict OK |
+| Lint | 0 erreur (Biome) |
+| CI | GitHub Actions 100% verte |
+| Docs | 7 fichiers (ARCHITECTURE, DESIGN_SYSTEM, DEPLOYMENT...) |
+| Helm | 7 templates Kubernetes |
+| Licence | Proprietaire |
 
 ## Architecture
 
