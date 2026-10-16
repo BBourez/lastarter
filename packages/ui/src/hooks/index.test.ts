@@ -3,9 +3,9 @@
  * Copyright 2026 LaStarter. SPDX-License-Identifier: Proprietary.
  */
 
-import { describe, it, expect } from "vitest";
-import { renderHook, act } from "@testing-library/react";
-import { useToggle, useDebouncedValue, useDocumentTitle, useMediaQuery } from "./index";
+import { act, renderHook } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { useDebouncedValue, useDocumentTitle, useMediaQuery, useToggle } from "./index";
 
 describe("useToggle", () => {
     it("initialise a false par defaut", () => {

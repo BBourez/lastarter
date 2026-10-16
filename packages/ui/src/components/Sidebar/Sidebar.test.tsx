@@ -3,8 +3,8 @@
  * Copyright 2026 LaStarter. SPDX-License-Identifier: Proprietary.
  */
 
-import { describe, it, expect } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { Sidebar } from "./Sidebar";
 
 const mockUser = {
@@ -31,35 +31,17 @@ const mockSections = [
 
 describe("Sidebar", () => {
     it("rend le nom de l'utilisateur", () => {
-        render(
-            <Sidebar
-                spaces={mockSpaces}
-                sections={mockSections}
-                user={mockUser}
-            />,
-        );
+        render(<Sidebar spaces={mockSpaces} sections={mockSections} user={mockUser} />);
         expect(screen.getByText("Jean Dupont")).toBeInTheDocument();
     });
 
     it("rend l'email de l'utilisateur", () => {
-        render(
-            <Sidebar
-                spaces={mockSpaces}
-                sections={mockSections}
-                user={mockUser}
-            />,
-        );
+        render(<Sidebar spaces={mockSpaces} sections={mockSections} user={mockUser} />);
         expect(screen.getByText("jean@acme.com")).toBeInTheDocument();
     });
 
     it("rend tous les espaces", () => {
-        render(
-            <Sidebar
-                spaces={mockSpaces}
-                sections={mockSections}
-                user={mockUser}
-            />,
-        );
+        render(<Sidebar spaces={mockSpaces} sections={mockSections} user={mockUser} />);
         expect(screen.getByTitle("Transferts")).toBeInTheDocument();
         expect(screen.getByTitle("Projets")).toBeInTheDocument();
     });
@@ -91,13 +73,7 @@ describe("Sidebar", () => {
     });
 
     it("rend les items de navigation", () => {
-        render(
-            <Sidebar
-                spaces={mockSpaces}
-                sections={mockSections}
-                user={mockUser}
-            />,
-        );
+        render(<Sidebar spaces={mockSpaces} sections={mockSections} user={mockUser} />);
         expect(screen.getByText("Mes fichiers")).toBeInTheDocument();
         expect(screen.getByText("Favoris")).toBeInTheDocument();
     });

@@ -5,21 +5,14 @@
  * Copyright 2026 LaStarter. SPDX-License-Identifier: Proprietary.
  */
 
+import { apiGet, createApiClient, createQueryClient } from "@lastarter/api";
+import type { Board, Card, Project } from "@lastarter/api";
+import { requireAuth } from "@lastarter/config";
+import { detectLocale, initI18n, useTranslation } from "@lastarter/i18n";
+import { Badge, Button, type NavSection, Sidebar, type Space, type User } from "@lastarter/ui";
+import { QueryClientProvider, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
-import { QueryClientProvider, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-    Sidebar,
-    Button,
-    Badge,
-    type Space,
-    type NavSection,
-    type User,
-} from "@lastarter/ui";
-import { initI18n, useTranslation, detectLocale } from "@lastarter/i18n";
-import { createQueryClient, createApiClient, apiGet } from "@lastarter/api";
-import { requireAuth } from "@lastarter/config";
-import type { Project, Board, Card } from "@lastarter/api";
 
 /* Client HTTP pour Projects (backend Sails.js). */
 const client = createApiClient({
@@ -100,7 +93,13 @@ function KanbanBoard({ board }: { board: Board }) {
                             >
                                 <div style={{ fontWeight: 500 }}>{card.title}</div>
                                 {card.due_date && (
-                                    <div style={{ fontSize: 12, color: "var(--ls-color-text-secondary)", marginTop: 4 }}>
+                                    <div
+                                        style={{
+                                            fontSize: 12,
+                                            color: "var(--ls-color-text-secondary)",
+                                            marginTop: 4,
+                                        }}
+                                    >
                                         Echeance : {new Date(card.due_date).toLocaleDateString()}
                                     </div>
                                 )}
@@ -176,18 +175,30 @@ function ProjectsApp() {
                     setActiveProject(s.id);
                     setActiveBoard(undefined);
                 }}
-                onSpaceCreate={() => { /* TODO : modal creation projet */ }}
+                onSpaceCreate={() => {
+                    /* TODO : modal creation projet */
+                }}
                 sections={sections}
                 user={user}
                 searchPlaceholder={t("common.search")}
-                onSettingsClick={() => { /* TODO : page settings */ }}
+                onSettingsClick={() => {
+                    /* TODO : page settings */
+                }}
             />
             <main style={{ flex: 1, overflowY: "auto", background: "var(--ls-color-bg)" }}>
                 {currentBoard ? (
                     <KanbanBoard board={currentBoard} />
                 ) : (
-                    <div style={{ padding: 48, textAlign: "center", color: "var(--ls-color-text-secondary)" }}>
-                        {projectsQuery.isLoading ? "Chargement..." : "Selectionnez ou creez un projet"}
+                    <div
+                        style={{
+                            padding: 48,
+                            textAlign: "center",
+                            color: "var(--ls-color-text-secondary)",
+                        }}
+                    >
+                        {projectsQuery.isLoading
+                            ? "Chargement..."
+                            : "Selectionnez ou creez un projet"}
                     </div>
                 )}
             </main>

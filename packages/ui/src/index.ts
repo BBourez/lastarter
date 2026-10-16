@@ -52,4 +52,10 @@ export { Alert } from "./components/Alert/Alert";
 export type { AlertProps, AlertVariant } from "./components/Alert/Alert";
 
 /* Hooks personnalises (cf. Grafikart) */
-export { useToggle, useClickOutside, useMediaQuery, useDocumentTitle, useDebouncedValue } from "./hooks";
+export {
+    useToggle,
+    useClickOutside,
+    useMediaQuery,
+    useDocumentTitle,
+    useDebouncedValue,
+} from "./hooks";

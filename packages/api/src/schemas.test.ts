@@ -4,14 +4,14 @@
  * Copyright 2026 LaStarter. SPDX-License-Identifier: Proprietary.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-    CurrentUserSchema,
-    TransferSchema,
-    CreateTransferPayloadSchema,
-    ProjectSchema,
     CardSchema,
     CreateCardPayloadSchema,
+    CreateTransferPayloadSchema,
+    CurrentUserSchema,
+    ProjectSchema,
+    TransferSchema,
 } from "./schemas";
 
 describe("CurrentUserSchema", () => {
@@ -63,21 +63,15 @@ describe("TransferSchema", () => {
     });
 
     it("rejette un status invalide", () => {
-        expect(() =>
-            TransferSchema.parse({ ...validTransfer, status: "invalid" }),
-        ).toThrow();
+        expect(() => TransferSchema.parse({ ...validTransfer, status: "invalid" })).toThrow();
     });
 
     it("rejette un UUID invalide", () => {
-        expect(() =>
-            TransferSchema.parse({ ...validTransfer, id: "pas-un-uuid" }),
-        ).toThrow();
+        expect(() => TransferSchema.parse({ ...validTransfer, id: "pas-un-uuid" })).toThrow();
     });
 
     it("rejette un download_count negatif", () => {
-        expect(() =>
-            TransferSchema.parse({ ...validTransfer, download_count: -1 }),
-        ).toThrow();
+        expect(() => TransferSchema.parse({ ...validTransfer, download_count: -1 })).toThrow();
     });
 });
 
@@ -167,8 +161,6 @@ describe("CreateCardPayloadSchema", () => {
     });
 
     it("rejette un payload sans titre", () => {
-        expect(() =>
-            CreateCardPayloadSchema.parse({ list_id: "list-1", title: "" }),
-        ).toThrow();
+        expect(() => CreateCardPayloadSchema.parse({ list_id: "list-1", title: "" })).toThrow();
     });
 });

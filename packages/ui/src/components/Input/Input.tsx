@@ -3,7 +3,8 @@
  * Copyright 2026 LaStarter. Base sur Compound (Element).
  */
 
-import React, { forwardRef } from "react";
+import type React from "react";
+import { forwardRef } from "react";
 import styles from "./Input.module.css";
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -20,7 +21,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     return (
         <label style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             {label && (
-                <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--ls-color-text)" }}>{label}</span>
+                <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--ls-color-text)" }}>
+                    {label}
+                </span>
             )}
             <input
                 ref={ref}
@@ -28,7 +31,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
                 aria-invalid={error ? "true" : undefined}
                 {...rest}
             />
-            {error && <span style={{ fontSize: "12px", color: "var(--ls-color-danger)" }}>{error}</span>}
+            {error && (
+                <span style={{ fontSize: "12px", color: "var(--ls-color-danger)" }}>{error}</span>
+            )}
         </label>
     );
 });

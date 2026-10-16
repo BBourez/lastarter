@@ -1,22 +1,22 @@
 {
-    "name":  "@lastarter/api",
-    "version":  "2.0.0",
-    "private":  true,
-    "description":  "LaStarter API : client HTTP partage (Ky + TanStack Query) + types metier.",
-    "type":  "module",
-    "main":  "./src/index.ts",
-    "scripts":  {
-                    "build":  "tsc --noEmit",
-                    "test":  "vitest run",
-                    "lint":  "biome check src/"
-                },
-    "dependencies":  {
-                         "@tanstack/react-query":  "^5.60.0",
-                         "ky":  "^1.7.0",
-                         "zod":  "^3.24.0"
-                     },
-    "devDependencies":  {
-                            "typescript":  "^5.7.0",
-                            "vitest":  "^2.1.0"
-                        }
+    "name": "@lastarter/api",
+    "version": "2.0.0",
+    "private": true,
+    "description": "LaStarter API : client HTTP partage (Ky + TanStack Query) + types metier.",
+    "type": "module",
+    "main": "./src/index.ts",
+    "scripts": {
+        "build": "tsc --noEmit",
+        "test": "vitest run",
+        "lint": "biome check src/"
+    },
+    "dependencies": {
+        "@tanstack/react-query": "^5.60.0",
+        "ky": "^1.7.0",
+        "zod": "^3.24.0"
+    },
+    "devDependencies": {
+        "typescript": "^5.7.0",
+        "vitest": "^2.1.0"
+    }
 }

@@ -4,18 +4,29 @@
  * Copyright 2026 LaStarter. Base sur Element Web LeftPanel + SpacePanel.
  */
 
-import React from "react";
 import classNames from "classnames";
-import styles from "./Sidebar.module.css";
-import { Avatar } from "../Avatar/Avatar";
+import React from "react";
+import type { NavSection, Space, User } from "../../types";
 import { getInitials } from "../../utils";
-import type { Space, NavSection, User } from "../../types";
+import { Avatar } from "../Avatar/Avatar";
+import styles from "./Sidebar.module.css";
 
 /* Icone recherche SVG */
 function SearchIcon() {
     return (
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M7 12A5 5 0 1 0 7 2a5 5 0 0 0 0 10Zm4.5-1L14 13.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <path
+                d="M7 12A5 5 0 1 0 7 2a5 5 0 0 0 0 10Zm4.5-1L14 13.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+            />
         </svg>
     );
 }
@@ -23,9 +34,20 @@ function SearchIcon() {
 /* Icone parametres SVG */
 function SettingsIcon() {
     return (
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg
+            width="18"
+            height="18"
+            viewBox="0 0 18 18"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+        >
             <circle cx="9" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.8 3.8l1.4 1.4M12.8 12.8l1.4 1.4M14.2 3.8l-1.4 1.4M5.2 12.8l-1.4 1.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <path
+                d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.8 3.8l1.4 1.4M12.8 12.8l1.4 1.4M14.2 3.8l-1.4 1.4M5.2 12.8l-1.4 1.4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+            />
         </svg>
     );
 }
@@ -104,7 +126,11 @@ export function Sidebar({
             {/* 2eme colonne : LeftPanel (260px) */}
             <aside className={styles.leftPanel}>
                 {onSearchClick && (
-                    <button type="button" className={styles.leftPanelSearch} onClick={onSearchClick}>
+                    <button
+                        type="button"
+                        className={styles.leftPanelSearch}
+                        onClick={onSearchClick}
+                    >
                         <SearchIcon />
                         <span>{searchPlaceholder}</span>
                     </button>
@@ -113,19 +139,30 @@ export function Sidebar({
                 <nav className={styles.leftPanelNav} aria-label="Navigation">
                     {sections.map((section) => (
                         <React.Fragment key={section.id}>
-                            {section.title && <div className={styles.leftPanelSection}>{section.title}</div>}
+                            {section.title && (
+                                <div className={styles.leftPanelSection}>{section.title}</div>
+                            )}
                             {section.items.map((item) => (
                                 <button
                                     key={item.id}
                                     type="button"
                                     className={styles.leftPanelItem}
                                     data-active={item.active}
-                                    onClick={item.onClick ?? (() => item.href && (window.location.href = item.href))}
+                                    onClick={
+                                        item.onClick ??
+                                        (() => item.href && (window.location.href = item.href))
+                                    }
                                 >
-                                    {item.icon && <span className={styles.leftPanelItemIcon}>{item.icon}</span>}
+                                    {item.icon && (
+                                        <span className={styles.leftPanelItemIcon}>
+                                            {item.icon}
+                                        </span>
+                                    )}
                                     <span className={styles.leftPanelItemLabel}>{item.label}</span>
                                     {item.unreadCount !== undefined && item.unreadCount > 0 && (
-                                        <span className={styles.leftPanelItemBadge}>{item.unreadCount}</span>
+                                        <span className={styles.leftPanelItemBadge}>
+                                            {item.unreadCount}
+                                        </span>
                                     )}
                                 </button>
                             ))}

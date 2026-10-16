@@ -2,8 +2,7 @@
 // L'URL d'auth vient de l'attribut data-auth du <script> qui charge ce fichier
 // (rendu par le CLI : /api/v1.0/authenticate/ pour Django, /login pour Projects).
 // Anti-boucle : sessionStorage flag (une seule tentative par onglet).
-(function () {
-    "use strict";
+(() => {
     if (sessionStorage.getItem("ls_auth_redirect")) return;
     var script = document.currentScript || document.querySelector("script[data-auth]");
     if (!script) return;

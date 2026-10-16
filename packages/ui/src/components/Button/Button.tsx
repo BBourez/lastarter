@@ -4,9 +4,10 @@
  */
 
 import classNames from "classnames";
-import React, { type ComponentType, type PropsWithChildren, forwardRef } from "react";
-import styles from "./Button.module.css";
+import type React from "react";
+import { type ComponentType, type PropsWithChildren, forwardRef } from "react";
 import type { ButtonKind, ComponentSize } from "../../types";
+import styles from "./Button.module.css";
 
 export interface ButtonProps extends PropsWithChildren {
     kind?: ButtonKind;
@@ -22,7 +23,20 @@ export interface ButtonProps extends PropsWithChildren {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-    { kind = "primary", size = "md", children, className, iconOnly, Icon, destructive = false, disabled, href, type = "button", onClick, ...rest },
+    {
+        kind = "primary",
+        size = "md",
+        children,
+        className,
+        iconOnly,
+        Icon,
+        destructive = false,
+        disabled,
+        href,
+        type = "button",
+        onClick,
+        ...rest
+    },
     ref,
 ) {
     const classes = classNames(styles.button, className, {
@@ -38,7 +52,33 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         </>
     );
     if (href) {
-        return <a ref={ref as never} href={href} className={classes} data-size={size} data-kind={kind} tabIndex={0} {...rest}>{content}</a>;
+        return (
+            <a
+                ref={ref as never}
+                href={href}
+                className={classes}
+                data-size={size}
+                data-kind={kind}
+                tabIndex={0}
+                {...rest}
+            >
+                {content}
+            </a>
+        );
     }
-    return <button ref={ref} type={type} className={classes} data-size={size} data-kind={kind} tabIndex={0} disabled={disabled} onClick={onClick} {...rest}>{content}</button>;
+    return (
+        <button
+            ref={ref}
+            type={type}
+            className={classes}
+            data-size={size}
+            data-kind={kind}
+            tabIndex={0}
+            disabled={disabled}
+            onClick={onClick}
+            {...rest}
+        >
+            {content}
+        </button>
+    );
 });

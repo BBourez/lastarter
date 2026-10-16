@@ -3,7 +3,9 @@
  * Palette : /__lastarter/theme.css (tokens Compound officiels).
  */
 
-* { box-sizing: border-box; }
+* {
+    box-sizing: border-box;
+}
 
 body {
     margin: 0;
@@ -232,8 +234,16 @@ body {
  * RESPONSIVE
  * ================================================================ */
 @media (max-width: 640px) {
-    .topbar-nav { display: none; }
-    .hero-title { font-size: 1.5rem; }
-    .main { padding: 32px 16px; }
-    .apps { grid-template-columns: 1fr; }
+    .topbar-nav {
+        display: none;
+    }
+    .hero-title {
+        font-size: 1.5rem;
+    }
+    .main {
+        padding: 32px 16px;
+    }
+    .apps {
+        grid-template-columns: 1fr;
+    }
 }

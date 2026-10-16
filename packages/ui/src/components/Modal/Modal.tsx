@@ -3,7 +3,8 @@
  * Copyright 2026 LaStarter. SPDX-License-Identifier: Proprietary.
  */
 
-import React, { useEffect, useCallback } from "react";
+import type React from "react";
+import { useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import styles from "./Modal.module.css";
 
@@ -51,9 +52,19 @@ export function Modal({
                 {title && (
                     <div className={styles.header}>
                         <h2 className={styles.title}>{title}</h2>
-                        <button type="button" className={styles.close} onClick={onClose} aria-label="Fermer">
+                        <button
+                            type="button"
+                            className={styles.close}
+                            onClick={onClose}
+                            aria-label="Fermer"
+                        >
                             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                                <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                <path
+                                    d="M1 1L13 13M13 1L1 13"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                />
                             </svg>
                         </button>
                     </div>

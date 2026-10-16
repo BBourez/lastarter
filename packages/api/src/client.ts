@@ -67,6 +67,10 @@ export async function apiPut<T, B = unknown>(
 }
 
 /** DELETE generique type. */
-export async function apiDelete<T>(client: KyInstance, path: string, options?: Options): Promise<T> {
+export async function apiDelete<T>(
+    client: KyInstance,
+    path: string,
+    options?: Options,
+): Promise<T> {
     return client.delete(path, options).json<T>();
 }

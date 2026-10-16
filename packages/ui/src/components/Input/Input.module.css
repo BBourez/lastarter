@@ -15,8 +15,22 @@
     outline: none;
 }
 
-.input:focus { border-color: var(--ls-color-border-focus); box-shadow: 0 0 0 2px var(--ls-color-primary-subtle); }
-.input::placeholder { color: var(--ls-color-text-secondary); }
-.input:disabled { background: var(--ls-color-bg-subtle); color: var(--ls-color-text-disabled); cursor: not-allowed; }
-.input[aria-invalid="true"] { border-color: var(--ls-color-danger); }
-.input[aria-invalid="true"]:focus { box-shadow: 0 0 0 2px var(--ls-color-danger); box-shadow: 0 0 0 2px rgba(209, 25, 40, 0.15); }
+.input:focus {
+    border-color: var(--ls-color-border-focus);
+    box-shadow: 0 0 0 2px var(--ls-color-primary-subtle);
+}
+.input::placeholder {
+    color: var(--ls-color-text-secondary);
+}
+.input:disabled {
+    background: var(--ls-color-bg-subtle);
+    color: var(--ls-color-text-disabled);
+    cursor: not-allowed;
+}
+.input[aria-invalid="true"] {
+    border-color: var(--ls-color-danger);
+}
+.input[aria-invalid="true"]:focus {
+    box-shadow: 0 0 0 2px var(--ls-color-danger);
+    box-shadow: 0 0 0 2px rgba(209, 25, 40, 0.15);
+}

@@ -5,22 +5,28 @@
  * Copyright 2026 LaStarter. SPDX-License-Identifier: Proprietary.
  */
 
-import React, { useState } from "react";
-import { createRoot } from "react-dom/client";
-import { QueryClientProvider } from "@tanstack/react-query";
-import {
-    Sidebar,
-    Button,
-    Input,
-    Badge,
-    type Space,
-    type NavSection,
-    type User,
-} from "@lastarter/ui";
-import { initI18n, useTranslation, detectLocale } from "@lastarter/i18n";
 import { createQueryClient, formatFileSize } from "@lastarter/api";
 import { requireAuth } from "@lastarter/config";
-import { useSentTransfers, useReceivedTransfers, useCurrentUser, useCreateTransfer } from "./hooks/useTransfers";
+import { detectLocale, initI18n, useTranslation } from "@lastarter/i18n";
+import {
+    Badge,
+    Button,
+    Input,
+    type NavSection,
+    Sidebar,
+    type Space,
+    type User,
+} from "@lastarter/ui";
+import { QueryClientProvider } from "@tanstack/react-query";
+import type React from "react";
+import { useState } from "react";
+import { createRoot } from "react-dom/client";
+import {
+    useCreateTransfer,
+    useCurrentUser,
+    useReceivedTransfers,
+    useSentTransfers,
+} from "./hooks/useTransfers";
 
 /* ==================== PAGE : NOUVEAU TRANSFERT ==================== */
 
@@ -36,7 +42,10 @@ function NewTransferPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (files.length === 0) return;
-        const emailList = emails.split(",").map((s) => s.trim()).filter(Boolean);
+        const emailList = emails
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
         if (emailList.length === 0) return;
         try {
             await createTransfer.mutateAsync({
@@ -56,7 +65,14 @@ function NewTransferPage() {
 
     if (success) {
         return (
-            <div style={{ maxWidth: 480, margin: "0 auto", padding: "48px 24px", textAlign: "center" }}>
+            <div
+                style={{
+                    maxWidth: 480,
+                    margin: "0 auto",
+                    padding: "48px 24px",
+                    textAlign: "center",
+                }}
+            >
                 <h2>Transfert envoye</h2>
                 <p style={{ color: "var(--ls-color-text-secondary)", marginTop: 8 }}>
                     Vos destinataires recevront un email avec le lien de telechargement.
@@ -69,7 +85,17 @@ function NewTransferPage() {
     }
 
     return (
-        <form onSubmit={handleSubmit} style={{ maxWidth: 480, margin: "0 auto", padding: "48px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
+        <form
+            onSubmit={handleSubmit}
+            style={{
+                maxWidth: 480,
+                margin: "0 auto",
+                padding: "48px 24px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 20,
+            }}
+        >
             <h2>{t("nav.transfersNew")}</h2>
 
             <Input
@@ -98,7 +124,15 @@ function NewTransferPage() {
             />
 
             <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6, color: "var(--ls-color-text)" }}>
+                <label
+                    style={{
+                        display: "block",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        marginBottom: 6,
+                        color: "var(--ls-color-text)",
+                    }}
+                >
                     Fichiers
                 </label>
                 <input
@@ -110,7 +144,10 @@ function NewTransferPage() {
                 {files.length > 0 && (
                     <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
                         {files.map((f) => (
-                            <span key={f.name} style={{ fontSize: 13, color: "var(--ls-color-text-secondary)" }}>
+                            <span
+                                key={f.name}
+                                style={{ fontSize: 13, color: "var(--ls-color-text-secondary)" }}
+                            >
                                 {f.name} ({formatFileSize(f.size)})
                             </span>
                         ))}
@@ -118,7 +155,11 @@ function NewTransferPage() {
                 )}
             </div>
 
-            <Button type="submit" kind="accent" disabled={createTransfer.isPending || files.length === 0}>
+            <Button
+                type="submit"
+                kind="accent"
+                disabled={createTransfer.isPending || files.length === 0}
+            >
                 {createTransfer.isPending ? "Envoi en cours..." : "Envoyer"}
             </Button>
         </form>
@@ -139,20 +180,29 @@ function TransferListPage({ mode }: { mode: "sent" | "received" }) {
         <div style={{ padding: "48px 24px" }}>
             <h2>{mode === "sent" ? "Transferts envoyes" : "Transferts recus"}</h2>
             {transfers.length === 0 ? (
-                <p style={{ color: "var(--ls-color-text-secondary)", marginTop: 16 }}>Aucun transfert</p>
+                <p style={{ color: "var(--ls-color-text-secondary)", marginTop: 16 }}>
+                    Aucun transfert
+                </p>
             ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
                     {transfers.map((t) => (
-                        <div key={t.id} style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 12,
-                            padding: "12px 16px",
-                            borderRadius: "var(--ls-radius-md)",
-                            border: "1px solid var(--ls-color-border)",
-                        }}>
-                            <Badge variant={t.status === "sent" ? "success" : "warning"}>{t.status}</Badge>
-                            <span style={{ flex: 1, fontWeight: 500 }}>{t.subject || "Sans objet"}</span>
+                        <div
+                            key={t.id}
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 12,
+                                padding: "12px 16px",
+                                borderRadius: "var(--ls-radius-md)",
+                                border: "1px solid var(--ls-color-border)",
+                            }}
+                        >
+                            <Badge variant={t.status === "sent" ? "success" : "warning"}>
+                                {t.status}
+                            </Badge>
+                            <span style={{ flex: 1, fontWeight: 500 }}>
+                                {t.subject || "Sans objet"}
+                            </span>
                             <span style={{ fontSize: 13, color: "var(--ls-color-text-secondary)" }}>
                                 {t.files?.length ?? 0} fichiers
                             </span>
@@ -179,17 +229,30 @@ function TransfersApp() {
         email: userQuery.data?.email ?? "",
     };
 
-    const spaces: Space[] = [
-        { id: "transfers", label: t("nav.transfers") },
-    ];
+    const spaces: Space[] = [{ id: "transfers", label: t("nav.transfers") }];
 
     const sections: NavSection[] = [
         {
             id: "main",
             items: [
-                { id: "new", label: t("nav.transfersNew"), active: page === "new", onClick: () => setPage("new") },
-                { id: "sent", label: t("nav.transfersSent"), active: page === "sent", onClick: () => setPage("sent") },
-                { id: "received", label: t("nav.transfersReceived"), active: page === "received", onClick: () => setPage("received") },
+                {
+                    id: "new",
+                    label: t("nav.transfersNew"),
+                    active: page === "new",
+                    onClick: () => setPage("new"),
+                },
+                {
+                    id: "sent",
+                    label: t("nav.transfersSent"),
+                    active: page === "sent",
+                    onClick: () => setPage("sent"),
+                },
+                {
+                    id: "received",
+                    label: t("nav.transfersReceived"),
+                    active: page === "received",
+                    onClick: () => setPage("received"),
+                },
             ],
         },
     ];

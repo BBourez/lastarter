@@ -4,11 +4,11 @@
  * Copyright 2026 LaStarter. SPDX-License-Identifier: Proprietary.
  */
 
+import { getEnv } from "@lastarter/config";
+import { detectLocale, initI18n, useTranslation } from "@lastarter/i18n";
+import { type NavSection, Sidebar, type Space, type User } from "@lastarter/ui";
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Sidebar, type Space, type NavSection, type User } from "@lastarter/ui";
-import { initI18n, useTranslation, detectLocale } from "@lastarter/i18n";
-import { getEnv } from "@lastarter/config";
 
 /* Configuration des modules actifs (generee par le CLI). */
 interface ActiveModule {
@@ -69,13 +69,26 @@ function Portal() {
                 searchPlaceholder={t("common.search")}
             />
             <main style={{ flex: 1, padding: "48px", background: "var(--ls-color-bg)" }}>
-                <h1 style={{ fontSize: "var(--ls-font-size-h2)", color: "var(--ls-color-text)", fontWeight: 600 }}>
+                <h1
+                    style={{
+                        fontSize: "var(--ls-font-size-h2)",
+                        color: "var(--ls-color-text)",
+                        fontWeight: 600,
+                    }}
+                >
                     {t("common.welcome")}
                 </h1>
                 <p style={{ color: "var(--ls-color-text-secondary)", marginTop: "8px" }}>
                     {t("common.appName")} : {env.brandName}
                 </p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px", marginTop: "32px" }}>
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                        gap: "16px",
+                        marginTop: "32px",
+                    }}
+                >
                     {MODULES.map((m) => (
                         <a
                             key={m.id}
@@ -92,18 +105,20 @@ function Portal() {
                                 transition: "border-color 0.1s, background 0.1s",
                             }}
                         >
-                            <span style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                width: "44px",
-                                height: "44px",
-                                borderRadius: "50%",
-                                background: "var(--ls-color-primary-subtle)",
-                                color: "var(--ls-color-primary-text)",
-                                fontSize: "18px",
-                                fontWeight: 600,
-                            }}>
+                            <span
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    width: "44px",
+                                    height: "44px",
+                                    borderRadius: "50%",
+                                    background: "var(--ls-color-primary-subtle)",
+                                    color: "var(--ls-color-primary-text)",
+                                    fontSize: "18px",
+                                    fontWeight: 600,
+                                }}
+                            >
                                 {m.icon}
                             </span>
                             <span style={{ fontWeight: 600, fontSize: "16px" }}>{m.label}</span>

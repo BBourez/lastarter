@@ -5,8 +5,8 @@
 
 import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
-import fr from "./locales/fr.json";
 import en from "./locales/en.json";
+import fr from "./locales/fr.json";
 
 export const DEFAULT_LOCALE = "fr";
 export const SUPPORTED_LOCALES = ["fr", "en"] as const;
@@ -36,10 +36,16 @@ export async function initI18n(locale: Locale = DEFAULT_LOCALE): Promise<typeof 
 export function detectLocale(): Locale {
     const nav = typeof navigator !== "undefined" ? navigator.language : DEFAULT_LOCALE;
     const short = nav.split("-")[0]?.toLowerCase();
-    return (SUPPORTED_LOCALES as readonly string[]).includes(short) ? (short as Locale) : DEFAULT_LOCALE;
+    return (SUPPORTED_LOCALES as readonly string[]).includes(short)
+        ? (short as Locale)
+        : DEFAULT_LOCALE;
 }
 
 /** Ajouter un namespace specifique a une app (lazy loading). */
-export function addNamespace(locale: Locale, ns: string, translations: Record<string, unknown>): void {
+export function addNamespace(
+    locale: Locale,
+    ns: string,
+    translations: Record<string, unknown>,
+): void {
     i18next.addResourceBundle(locale, ns, translations, true, true);
 }
