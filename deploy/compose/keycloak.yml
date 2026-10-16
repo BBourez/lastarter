@@ -63,6 +63,7 @@ services:
       - ${THEME_CSS_PATH}:/var/www/lastarter-theme/theme.css:ro
       - ./files/auto-login.js:/var/www/lastarter-theme/auto-login.js:ro
       - ./files/fonts:/var/www/lastarter-theme/fonts:ro
+      - ../../shells/transfers/shell.html:/var/www/lastarter-shell/transfers.html:ro
     # Alias réseau : les conteneurs résolvent id.<domaine> → passerelle.
     # Nécessaire pour les apps qui utilisent la découverte OIDC (issuer public).
     networks:

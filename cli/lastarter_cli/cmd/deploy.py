@@ -389,6 +389,33 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             # URL d'auth par brique : Django → /api/v1.0/authenticate/, Sails → /login.
             auth_url = "/login" if brick.name == "projects" else "/api/v1.0/authenticate/"
             lines += _theme_nginx_block(auth_url=auth_url)
+
+        # Shell LaStarter : la racine sert le shell (sidebar Element Web + iframe).
+        # L'app originale est servie sur /app/ avec sa sidebar masquée.
+        if brick.name == "transfers":
+            lines += [
+                "    # Shell LaStarter : sidebar Element Web à la racine.",
+                "    location = / {",
+                "        root /var/www/lastarter-shell;",
+                "        try_files /transfers.html =404;",
+                "    }",
+                "",
+                "    # App originale dans l'iframe (sidebar masquée).",
+                "    location /app/ {",
+                "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                f"        set $backend_shell {brick.compose['frontend_target']};",
+                "        proxy_pass http://$backend_shell/;",
+                '        proxy_set_header Accept-Encoding "";',
+                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header X-Forwarded-Proto https;",
+                # Masquer la sidebar/header de l'app dans l'iframe.
+                "        sub_filter '</head>' '<style>.c__left-panel,.c__header,nav[class*=\"sidebar\"],header[class*=\"topbar\"]{display:none!important}body{margin:0!important}</style></head>';",
+                "        sub_filter_once on;",
+                "        sub_filter_types text/html;",
+                "    }",
+                "",
+            ]
+
         if api_target:
             lines += [
                 "    location /api/ {",

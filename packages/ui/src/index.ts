@@ -19,3 +19,7 @@ export type {
 /* Button (copie conforme Compound Web) */
 export { Button } from "./components/Button/Button";
 export type { ButtonProps, ButtonKind, ButtonSize } from "./components/Button/Button";
+
+/* Shell : wrapper d'application avec sidebar Element Web */
+export { LaStarterShell } from "./components/Shell/LaStarterShell";
+export type { LaStarterShellProps } from "./components/Shell/LaStarterShell";
