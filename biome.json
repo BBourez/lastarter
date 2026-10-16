@@ -41,6 +41,6 @@
         }
     },
     "files": {
-        "ignore": ["node_modules", "dist", ".turbo", "identity/realm-lastarter.json"]
+        "ignore": ["node_modules", "dist", ".turbo", "identity/realm-lastarter.json", "e2e"]
     }
 }
