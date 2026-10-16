@@ -243,6 +243,8 @@ def _theme_nginx_block() -> list[str]:
     Complément : remplace les couleurs Cunningham hardcodées (~170 hex violets
     dans les bundles CSS des apps La Suite) par les équivalents Element.
     """
+    # Injection combinée : CSS du thème + auto-redirect SSO (une seule rèble sub_filter).
+    # Le JS auto-login est servi par la passerelle en fichier statique.
     return [
         "    # Thème LaStarter : CSS (palette + marque blanche) injecté dans le HTML.",
         "    location = /__lastarter/theme.css {",
@@ -250,7 +252,13 @@ def _theme_nginx_block() -> list[str]:
         "        default_type text/css;",
         '        add_header Cache-Control "no-cache";',
         "    }",
-        '    sub_filter \'</head>\' \'<link rel="stylesheet" href="/__lastarter/theme.css"></head>\';',
+        "    location = /__lastarter/auto-login.js {",
+        "        alias /var/www/lastarter-theme/auto-login.js;",
+        "        default_type application/javascript;",
+        '        add_header Cache-Control "no-cache";',
+        "    }",
+        # CSS + auto-redirect en une seule règle sub_filter sur </head>.
+        "    sub_filter '</head>' '<link rel=\"stylesheet\" href=\"/__lastarter/theme.css\"><script src=\"/__lastarter/auto-login.js\"></script></head>';",
         # sub_filter doit aussi traiter les CSS (défaut : text/html seulement).
         "    sub_filter_types text/css application/javascript;",
         # Couleurs Cunningham hardcodées → palette Element (focus, borders, text).

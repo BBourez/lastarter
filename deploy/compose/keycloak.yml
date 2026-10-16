@@ -61,6 +61,7 @@ services:
       - ${CERTS_DIR}:/etc/nginx/certs:ro
       - ./files/meet-wrapper.html:/var/www/meet-wrapper/index.html:ro
       - ${THEME_CSS_PATH}:/var/www/lastarter-theme/theme.css:ro
+      - ./files/auto-login.js:/var/www/lastarter-theme/auto-login.js:ro
     # Alias réseau : les conteneurs résolvent id.<domaine> → passerelle.
     # Nécessaire pour les apps qui utilisent la découverte OIDC (issuer public).
     networks:

@@ -842,3 +842,195 @@ nav[class*="sidebar"],
     padding: 12px !important;
     background: transparent !important;
 }
+
+/* ================================================================
+ * HARMONISATION PAR FAMILLE — classes Cunningham exactes (1414 vars)
+ * Source : audit regex des CSS de production (drive, messages,
+ * transfers, projects). Chaque famille couvre ~50-90 classes.
+ * ================================================================ */
+
+/* ---------- MODALS (c__modal — 91 classes) ---------- */
+.c__modal, .c__modal--small, .c__modal--medium, .c__modal--large,
+.c__modal--extra-large, .c__modal--full, .c__modal--tab {
+    border-radius: var(--cpd-radius-medium) !important;
+    background: var(--cpd-color-bg-canvas-default) !important;
+    border: 1px solid var(--cpd-color-border-interactive-secondary) !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+.c__modal__backdrop { background: rgba(0, 0, 0, 0.4) !important; backdrop-filter: none !important; }
+.c__modal__close {
+    min-height: 32px !important; min-width: 32px !important;
+    padding: 4px !important; border-radius: 50% !important;
+    background: transparent !important; border: none !important;
+}
+.c__modal__close:hover { background: var(--cpd-color-bg-subtle-secondary) !important; }
+.c__modal__tab-sidebar { background: var(--cpd-color-bg-subtle-secondary) !important; }
+
+/* ---------- FIELDS / INPUTS (c__field — 70 classes) ---------- */
+.c__field, .c__field--default, .c__field--compact {
+    border-radius: var(--cpd-radius-medium) !important;
+    border: 1px solid var(--cpd-color-border-interactive-primary) !important;
+    min-height: 36px !important;
+    max-height: 44px !important;
+    padding: 4px 12px !important;
+    background: var(--cpd-color-bg-canvas-default) !important;
+    font-size: 14px !important;
+}
+.c__field:focus, .c__field--success { border-color: var(--cpd-color-green-900) !important; }
+.c__field--error { border-color: var(--cpd-color-red-900) !important; }
+.c__field--disabled { background: var(--cpd-color-bg-subtle-secondary) !important; color: var(--cpd-color-text-disabled) !important; }
+.c__field--textarea { min-height: 80px !important; max-height: none !important; }
+.c__field--full-width { width: 100% !important; }
+
+/* Le PARENT d'un field : transparent (pas de double input) */
+.c__field [class*="wrapper"], .c__field [class*="container"],
+[class*="field-wrapper"], [class*="field-container"] {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    box-shadow: none !important;
+}
+
+/* ---------- DROPDOWNS (c__dropdown-menu, c__calendar__menu — 71 classes) ---------- */
+.c__dropdown-menu, .c__calendar__menu, .c__combobox__menu,
+[class*="Core_menu"]:not([class*="Backdrop"]):not([class*="Visible"]) {
+    border-radius: 12px !important;
+    background: var(--cpd-color-bg-canvas-default) !important;
+    border: 1px solid var(--cpd-color-border-interactive-secondary) !important;
+    box-shadow: none !important;
+    padding: 4px !important;
+    overflow: hidden;
+}
+.c__dropdown-menu__item, .c__calendar__menu__item, .c__combobox__menu__item,
+[class*="Core_menu"] [class*="item"],
+[class*="Core_menu"] [role="menuitem"] {
+    border-radius: var(--cpd-radius-medium) !important;
+    padding: 6px 12px !important;
+    min-height: 32px !important;
+    background: transparent !important;
+    color: var(--cpd-color-text-primary) !important;
+    font-size: 14px !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+.c__dropdown-menu__item:hover, .c__calendar__menu__item:not(--disabled):hover,
+[class*="Core_menu"] [class*="item"]:hover {
+    background: var(--cpd-color-bg-subtle-secondary) !important;
+}
+.c__calendar__menu__item--selected,
+.c__calendar__menu__item--highlight {
+    background: var(--cpd-color-bg-accent-subtle) !important;
+    color: var(--cpd-color-text-action-accent) !important;
+}
+.c__calendar__menu__item--disabled { opacity: 0.4; }
+
+/* ---------- BADGES (c__badge — 45 classes) ---------- */
+.c__badge, .c__badge--accent, .c__badge--danger, .c__badge--info,
+.c__badge--neutral, .c__badge--success, .c__badge--warning {
+    border-radius: var(--cpd-radius-pill-effect) !important;
+    padding: 2px 10px !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    min-height: auto !important;
+    line-height: 1.4 !important;
+    box-shadow: none !important;
+}
+.c__badge--accent { background: var(--cpd-color-bg-accent-subtle) !important; color: var(--cpd-color-green-900) !important; border: none !important; }
+.c__badge--danger { background: var(--cpd-color-red-300) !important; color: var(--cpd-color-red-900) !important; border: none !important; }
+.c__badge--info { background: #e9f2ff !important; color: #064ab1 !important; border: none !important; }
+.c__badge--neutral { background: var(--cpd-color-bg-subtle-secondary) !important; color: var(--cpd-color-text-primary) !important; border: none !important; }
+.c__badge--success { background: var(--cpd-color-green-300) !important; color: var(--cpd-color-green-900) !important; border: none !important; }
+.c__badge--warning { background: #ffefe4 !important; color: #bc4500 !important; border: none !important; }
+
+/* ---------- ALERTS (c__alert — 12 classes) ---------- */
+.c__alert {
+    border-radius: var(--cpd-radius-medium) !important;
+    box-shadow: none !important;
+    border: 1px solid var(--cpd-color-border-interactive-secondary) !important;
+    background: var(--cpd-color-bg-canvas-default) !important;
+}
+.c__alert__icon { min-height: 32px !important; min-width: 32px !important; }
+
+/* ---------- AVATARS (c__avatar — 8 classes) ---------- */
+.c__avatar {
+    border-radius: 50% !important;
+    box-shadow: none !important;
+    min-height: auto !important;
+    min-width: auto !important;
+}
+.c__avatar__initials {
+    border-radius: 50% !important;
+    background: var(--cpd-color-bg-accent-subtle) !important;
+    color: var(--cpd-color-green-900) !important;
+}
+
+/* ---------- FEEDBACK (c__feedback — 15 classes) ---------- */
+.c__feedback-form, .c__feedback-form__body {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+.c__feedback__modal__button {
+    min-height: 36px !important;
+    padding: 4px 16px !important;
+    border-radius: var(--cpd-radius-pill-effect) !important;
+}
+
+/* ---------- PROJECTS : boutons kanban compacts ---------- */
+[class*="Board_addCardButton"], [class*="Board_cardActionsButton"],
+[class*="Board_listHeaderButton"], [class*="Board_cardCreateButton"],
+[class*="Board_addListButton"], [class*="CardModal_optionsButton"],
+[class*="CardModal_listNameButton"], [class*="CardModal_detailsItemAddButton"] {
+    min-height: 32px !important;
+    min-width: 32px !important;
+    padding: 4px 12px !important;
+    border-radius: var(--cpd-radius-pill-effect) !important;
+    background: transparent !important;
+    color: var(--cpd-color-text-primary) !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+[class*="Board_addCardButton"]:hover, [class*="Board_listHeaderButton"]:hover {
+    background: var(--cpd-color-bg-subtle-secondary) !important;
+}
+
+/* Projects : menus Core sans backdrop opaque */
+[class*="Core_menuBackdrop"] { background: transparent !important; }
+[class*="Core_menuBackdropVisible"] { background: rgba(0, 0, 0, 0.2) !important; }
+
+/* ---------- MESSAGES : boutons éditeur/attachments compacts ---------- */
+[class*="bn-add-file-button"], [class*="bn-extend-button"],
+[class*="attachment-item-drive-upload-button"],
+[class*="attachment-item-upload-button"],
+[class*="autoreply-indicator-button"] {
+    min-height: 32px !important;
+    min-width: 32px !important;
+    padding: 4px 8px !important;
+    border-radius: var(--cpd-radius-medium) !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+[class*="bn-add-file-button"]:hover, [class*="bn-extend-button"]:hover {
+    background: var(--cpd-color-bg-subtle-secondary) !important;
+}
+[class*="attachment-item-drive-upload-button-container"],
+[class*="attachment-item-upload-button-container"] {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    min-height: auto !important;
+}
+
+/* ---------- SHARED : add-share-user (toutes apps La Suite) ---------- */
+.c__add-share-user-item, .c__add-share-user-list {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+.c__add-share-user-item--selected {
+    background: var(--cpd-color-bg-accent-subtle) !important;
+    border-radius: var(--cpd-radius-medium) !important;
+}
