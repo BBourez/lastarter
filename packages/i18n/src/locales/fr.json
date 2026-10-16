@@ -1,0 +1,54 @@
+{
+    "common": {
+        "appName": "LaStarter",
+        "search": "Rechercher",
+        "settings": "Parametres",
+        "profile": "Profil",
+        "logout": "Deconnexion",
+        "cancel": "Annuler",
+        "confirm": "Confirmer",
+        "save": "Enregistrer",
+        "delete": "Supprimer",
+        "edit": "Modifier",
+        "create": "Creer",
+        "loading": "Chargement",
+        "error": "Une erreur est survenue",
+        "retry": "Reessayer",
+        "back": "Retour",
+        "next": "Suivant",
+        "previous": "Precedent",
+        "close": "Fermer",
+        "yes": "Oui",
+        "no": "Non",
+        "welcome": "Bienvenue",
+        "connectedAs": "Connecte en tant que"
+    },
+    "sidebar": {
+        "spaces": "Espaces",
+        "addSpace": "Ajouter un espace",
+        "home": "Accueil",
+        "favorites": "Favoris",
+        "recent": "Recents"
+    },
+    "nav": {
+        "transfers": "Transferts",
+        "transfersNew": "Nouveau transfert",
+        "transfersSent": "Envoyes",
+        "transfersReceived": "Recus",
+        "projects": "Projets",
+        "projectsBoards": "Tableaux",
+        "projectsCards": "Cartes",
+        "chat": "Discussions",
+        "meet": "Reunions"
+    },
+    "auth": {
+        "login": "Se connecter",
+        "loginTitle": "Connexion a votre espace",
+        "username": "Nom d'utilisateur",
+        "password": "Mot de passe",
+        "rememberMe": "Se souvenir de moi",
+        "forgotPassword": "Mot de passe oublie",
+        "noAccount": "Pas encore de compte",
+        "register": "Creer un compte"
+    }
+}
