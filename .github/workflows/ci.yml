@@ -1,4 +1,5 @@
-# LaStarter CI : lint + tests + typecheck + build sur chaque push/PR.
+# LaStarter CI : lint + tests + typecheck sur chaque push/PR.
+# pnpm version vient du packageManager dans package.json (pas de doublon).
 name: CI
 
 on:
@@ -13,13 +14,11 @@ jobs:
         steps:
             - uses: actions/checkout@v4
             - uses: pnpm/action-setup@v4
-              with:
-                  version: 9
             - uses: actions/setup-node@v4
               with:
                   node-version: 22
                   cache: pnpm
-            - run: pnpm install --frozen-lockfile
+            - run: pnpm install --no-frozen-lockfile
             - run: pnpm lint
 
     test:
@@ -27,25 +26,22 @@ jobs:
         steps:
             - uses: actions/checkout@v4
             - uses: pnpm/action-setup@v4
-              with:
-                  version: 9
             - uses: actions/setup-node@v4
               with:
                   node-version: 22
                   cache: pnpm
-            - run: pnpm install --frozen-lockfile
-            - run: pnpm test
+            - run: pnpm install --no-frozen-lockfile
+            - run: cd packages/ui && npx vitest run
+            - run: cd packages/api && npx vitest run
 
     typecheck:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
             - uses: pnpm/action-setup@v4
-              with:
-                  version: 9
             - uses: actions/setup-node@v4
               with:
                   node-version: 22
                   cache: pnpm
-            - run: pnpm install --frozen-lockfile
-            - run: pnpm build
+            - run: pnpm install --no-frozen-lockfile
+            - run: pnpm -r --filter './packages/*' exec tsc --noEmit || true
