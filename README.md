@@ -1,13 +1,72 @@
-# LaStarter — Suite numérique B2B « marque blanche »
+# LaStarter
 
-**LaStarter** est une *distribution* : une suite de services numériques professionnels
-(drive, visio, chat chiffré, mail, transfert de fichiers…) assemblée, intégrée et
-maintenue sous une seule marque, installable à la carte chez chaque client B2B.
+Suite collaborative souveraine B2B avec design system Element (Compound).
 
-## Principes
+## Architecture
 
-1. **Distribution, pas fusion.** Les applications (drive, meet, tchap…) sont consommées
-   **non modifiées** depuis leurs dépôts amont, épinglées par version. Les mises à jour
+```
+lastarter/
+├── packages/           Librairies partagees
+│   ├── ui/             Design system (11+ composants Element Web)
+│   ├── i18n/           Multilingue (fr/en)
+│   ├── api/            Client HTTP (Ky) + TanStack Query + types metier
+│   └── config/         Environnement + SSO Keycloak
+├── apps/               Applications frontend
+│   ├── portal/         Point d'entree (liste des modules)
+│   ├── transfers/      Transfert de fichiers (backend Django)
+│   └── projects/       Gestion de projets kanban (backend Sails.js)
+├── identity/           Keycloak (SSO, realm, theme login)
+├── deploy/             Docker Compose + Kubernetes
+└── cli/                Installateur (lastarter-cli)
+```
+
+## Quick start
+
+```bash
+# Installer les dependances
+pnpm install
+
+# Developper (toutes les apps en parallele)
+pnpm dev
+
+# Build
+pnpm build
+
+# Tests
+pnpm test
+
+# Lint
+pnpm lint
+```
+
+## Design system
+
+Base sur Compound (Element Web / Element Call) :
+- Tokens : `packages/ui/src/tokens.css` (importe `@vector-im/compound-design-tokens`)
+- Composants : `packages/ui/src/components/` (Button, Input, Sidebar, Modal, Menu, etc.)
+- Police : Inter (400/500/600)
+
+Tous les tokens sont surchargeables :
+```css
+:root {
+    --ls-color-primary: #ff6b35;
+}
+```
+
+## Modules
+
+| Module | Description | Backend |
+|---|---|---|
+| transfers | Transfert de fichiers securise | Django |
+| projects | Gestion de projets kanban | Sails.js |
+| chat | Messagerie chiffree | Synapse (Matrix) |
+| meet | Reunions video | LiveKit |
+
+Chaque module peut etre active/desactive via le CLI.
+
+## Licence
+
+Proprietaire. Voir LICENSE.
    amont (correctifs de sécurité inclus) continuent d'affluer gratuitement.
 2. **L'intégration vit dans la couche orchestration** : identité unique (Keycloak/OIDC),
    portail SSO, branding par variables d'environnement, déploiement modulaire.
