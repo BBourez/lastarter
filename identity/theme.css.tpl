@@ -7,6 +7,32 @@
  * Jetons : {{token}} rendus par le CLI depuis themes/*.toml.
  */
 
+/* ================================================================
+ * FONTS — Inter (même source qu'Element Web : @fontsource/inter)
+ * Servi par la passerelle sur /__lastarter/fonts/
+ * ================================================================ */
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("/__lastarter/fonts/inter-400.woff2") format("woff2");
+}
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url("/__lastarter/fonts/inter-500.woff2") format("woff2");
+}
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url("/__lastarter/fonts/inter-600.woff2") format("woff2");
+}
+
 :root {
     /* ================================================================
      * 1. TOKENS COMPOUND — palette complète (light/dark via themes/*.toml)

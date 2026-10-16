@@ -235,16 +235,15 @@ def ensure_dev_certs(runtime_dir: Path, san_names: list[str]) -> tuple[Path, Pat
 VPN_ALLOW = "10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 127.0.0.1"
 
 
-def _theme_nginx_block() -> list[str]:
+def _theme_nginx_block(include_auto_login: bool = True) -> list[str]:
     """Bloc nginx commun : sert le thème CSS et l'injecte dans le HTML.
 
-    sub_filter remplace </head> par un <link> vers le thème — nécessite que
-    les réponses proxifiées arrivent non compressées (Accept-Encoding vide).
-    Complément : remplace les couleurs Cunningham hardcodées (~170 hex violets
-    dans les bundles CSS des apps La Suite) par les équivalents Element.
+    include_auto_login=False pour le portail (pas de redirect auth).
     """
-    # Injection combinée : CSS du thème + auto-redirect SSO (une seule rèble sub_filter).
-    # Le JS auto-login est servi par la passerelle en fichier statique.
+    if include_auto_login:
+        inject = '<link rel="stylesheet" href="/__lastarter/theme.css"><script src="/__lastarter/auto-login.js"></script></head>'
+    else:
+        inject = '<link rel="stylesheet" href="/__lastarter/theme.css"></head>'
     return [
         "    # Thème LaStarter : CSS (palette + marque blanche) injecté dans le HTML.",
         "    location = /__lastarter/theme.css {",
@@ -257,8 +256,13 @@ def _theme_nginx_block() -> list[str]:
         "        default_type application/javascript;",
         '        add_header Cache-Control "no-cache";',
         "    }",
-        # CSS + auto-redirect en une seule règle sub_filter sur </head>.
-        "    sub_filter '</head>' '<link rel=\"stylesheet\" href=\"/__lastarter/theme.css\"><script src=\"/__lastarter/auto-login.js\"></script></head>';",
+        # Fonts Inter (même source qu'Element Web : @fontsource/inter).
+        "    location /__lastarter/fonts/ {",
+        "        alias /var/www/lastarter-theme/fonts/;",
+        '        add_header Cache-Control "public, max-age=31536000";',
+        '        add_header Access-Control-Allow-Origin *;',
+        "    }",
+        f"    sub_filter '</head>' '{inject}';",
         # sub_filter doit aussi traiter les CSS (défaut : text/html seulement).
         "    sub_filter_types text/css application/javascript;",
         # Couleurs Cunningham hardcodées → palette Element (focus, borders, text).
@@ -303,7 +307,8 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
         "    client_max_body_size 150m;",
         "",
     ]
-    lines += _theme_nginx_block()
+    # Portail : PAS d'auto-login (le portail affiche les tuiles sans session).
+    lines += _theme_nginx_block(include_auto_login=False)
     lines += [
         "    # Endpoints SSO accessibles aussi sur l'apex (outillage/CLI, compat).",
     ]
@@ -346,7 +351,7 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
         "    client_max_body_size 150m;",
         "",
     ]
-    lines += _theme_nginx_block()
+    lines += _theme_nginx_block(include_auto_login=False)
     lines += [
         "    location / {",
         "        resolver 127.0.0.11 valid=10s ipv6=off;",
