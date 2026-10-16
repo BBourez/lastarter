@@ -10,19 +10,37 @@ export type { ApiClientConfig } from "./client";
 /* TanStack Query */
 export { createQueryClient } from "./query-client";
 
-/* Types metier */
+/* Schemas Zod (contrats partages, cf. Grafikart typing-e2e) */
+export {
+    PaginatedSchema,
+    ApiErrorSchema,
+    CurrentUserSchema,
+    TransferStatusSchema,
+    TransferFileSchema,
+    TransferSchema,
+    CreateTransferPayloadSchema,
+    CardSchema,
+    BoardListSchema,
+    BoardSchema,
+    ProjectSchema,
+    CreateCardPayloadSchema,
+    UpdateCardPayloadSchema,
+} from "./schemas";
+
+/* Types infers des schemas (z.infer) */
 export type {
-    Paginated,
-    ApiError,
     CurrentUser,
-    Transfer,
-    TransferFile,
     TransferStatus,
+    TransferFile,
+    Transfer,
     CreateTransferPayload,
-    Project,
-    Board,
-    BoardList,
     Card,
+    BoardList,
+    Board,
+    Project,
     CreateCardPayload,
     UpdateCardPayload,
-} from "./types";
+} from "./schemas";
+
+/* Utils */
+export { formatFileSize } from "./utils";
