@@ -1,97 +1,81 @@
 /*
- * LaStarter UI — Design tokens (customisables comme shadcn/ui).
- * Source : Compound Design Tokens (Element Web / Element Call).
- * Chaque token peut être surchargé par le déploiement client :
- *   :root { --ls-color-primary: #ff6b35; } /* orange ACME *‍/
+ * LaStarter UI : design tokens bases sur Compound (Element).
+ * Tous les tokens sont surchargeables par le client via CSS.
+ * Source officielle : @vector-im/compound-design-tokens (npm).
+ * Copyright 2026 LaStarter. SPDX-License-Identifier: Proprietary.
  */
 
+/* Importer les tokens Compound officiels en premiere (base solide). */
+@import "@vector-im/compound-design-tokens/assets/web/css/compound-design-tokens.css";
+
+/* Puis nos alias --ls-* (surchargeables, API stable pour les clients). */
 :root {
-    /* ================================================================
-     * COULEURS — palette Compound light (défaut = Element)
-     * ================================================================ */
+    /* Couleurs : alias vers les tokens Compound */
+    --ls-color-primary: var(--cpd-color-green-700);
+    --ls-color-primary-hover: var(--cpd-color-green-800);
+    --ls-color-primary-pressed: var(--cpd-color-green-900);
+    --ls-color-primary-subtle: var(--cpd-color-green-300);
+    --ls-color-primary-text: var(--cpd-color-green-900);
 
-    /* Primaire (vert Element) */
-    --ls-color-primary: #0bc491;
-    --ls-color-primary-hover: #009b78;
-    --ls-color-primary-pressed: #007a61;
-    --ls-color-primary-subtle: #e3f7ed;
-    --ls-color-primary-text: #007a61;
+    --ls-color-bg: var(--cpd-color-bg-canvas-default);
+    --ls-color-bg-subtle: var(--cpd-color-bg-subtle-secondary);
+    --ls-color-bg-subtle-hover: var(--cpd-color-bg-subtle-primary);
+    --ls-color-bg-inverted: var(--cpd-color-bg-action-primary-rest);
 
-    /* Neutres (gris Compound) */
-    --ls-color-bg: #ffffff;
-    --ls-color-bg-subtle: #f0f2f5;
-    --ls-color-bg-subtle-hover: #e1e6ec;
-    --ls-color-bg-inverted: #1b1d22;
+    --ls-color-text: var(--cpd-color-text-primary);
+    --ls-color-text-secondary: var(--cpd-color-text-secondary);
+    --ls-color-text-disabled: var(--cpd-color-text-disabled);
+    --ls-color-text-inverted: var(--cpd-color-text-on-solid-primary);
 
-    /* Texte */
-    --ls-color-text: #1b1d22;
-    --ls-color-text-secondary: #656d77;
-    --ls-color-text-disabled: #818a95;
-    --ls-color-text-inverted: #ffffff;
+    --ls-color-border: var(--cpd-color-border-interactive-secondary);
+    --ls-color-border-strong: var(--cpd-color-border-interactive-primary);
+    --ls-color-border-focus: var(--cpd-color-text-action-accent);
 
-    /* Bordures */
-    --ls-color-border: #e1e6ec;
-    --ls-color-border-strong: #bdc4cc;
-    --ls-color-border-focus: #0bc491;
+    --ls-color-success: var(--cpd-color-text-success-primary);
+    --ls-color-danger: var(--cpd-color-text-critical-primary);
+    --ls-color-warning: var(--cpd-color-text-warning-primary);
+    --ls-color-info: var(--cpd-color-text-info-primary);
 
-    /* Statuts */
-    --ls-color-success: #007a61;
-    --ls-color-success-bg: #e3f7ed;
-    --ls-color-danger: #d51928;
-    --ls-color-danger-bg: #ffefec;
-    --ls-color-warning: #bc4500;
-    --ls-color-warning-bg: #ffefe4;
-    --ls-color-info: #064ab1;
-    --ls-color-info-bg: #e9f2ff;
-
-    /* ================================================================
-     * GÉOMÉTRIE
-     * ================================================================ */
+    /* Geometrie */
     --ls-radius-pill: 9999px;
     --ls-radius-md: 8px;
     --ls-radius-sm: 4px;
     --ls-radius-menu: 12px;
 
-    /* ================================================================
-     * TYPOGRAPHIE
-     * ================================================================ */
-    --ls-font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-    --ls-font-size-xs: 0.6875rem;   /* 11px */
-    --ls-font-size-sm: 0.8125rem;   /* 13px */
-    --ls-font-size-md: 0.9375rem;   /* 15px */
-    --ls-font-size-lg: 1.0625rem;   /* 17px */
-    --ls-font-size-h3: 1.25rem;     /* 20px */
-    --ls-font-size-h2: 1.5rem;      /* 24px */
-    --ls-font-size-h1: 2rem;        /* 32px */
-    --ls-font-weight-regular: 400;
-    --ls-font-weight-medium: 500;
-    --ls-font-weight-semibold: 600;
+    /* Typographie */
+    --ls-font-family: "Inter", system-ui, sans-serif;
+    --ls-font-size-xs: var(--cpd-font-size-body-xs);
+    --ls-font-size-sm: var(--cpd-font-size-body-sm);
+    --ls-font-size-md: var(--cpd-font-size-body-md);
+    --ls-font-size-lg: var(--cpd-font-size-body-lg);
+    --ls-font-size-h3: var(--cpd-font-size-heading-sm);
+    --ls-font-size-h2: var(--cpd-font-size-heading-md);
+    --ls-font-size-h1: var(--cpd-font-size-heading-lg);
+    --ls-font-weight-regular: var(--cpd-font-weight-regular);
+    --ls-font-weight-medium: var(--cpd-font-weight-medium);
+    --ls-font-weight-semibold: var(--cpd-font-weight-semibold);
 
-    /* ================================================================
-     * ESPACEMENT (échelle 4px comme Compound)
-     * ================================================================ */
-    --ls-space-1: 4px;
-    --ls-space-2: 8px;
-    --ls-space-3: 12px;
-    --ls-space-4: 16px;
-    --ls-space-5: 20px;
-    --ls-space-6: 24px;
-    --ls-space-9: 36px;
+    /* Espacement (echelle 4px Compound) */
+    --ls-space-1: var(--cpd-space-1x);
+    --ls-space-2: var(--cpd-space-2x);
+    --ls-space-3: var(--cpd-space-3x);
+    --ls-space-4: var(--cpd-space-4x);
+    --ls-space-5: var(--cpd-space-5x);
+    --ls-space-6: var(--cpd-space-6x);
+    --ls-space-9: var(--cpd-space-9x);
 
-    /* ================================================================
-     * COMPOSANTS
-     * ================================================================ */
+    /* Composants */
     --ls-button-height: 36px;
     --ls-button-height-sm: 32px;
     --ls-button-height-lg: 48px;
     --ls-input-height: 36px;
     --ls-sidebar-width: 260px;
-    --ls-sidebar-bg: #ffffff;
-    --ls-sidebar-border: #e1e6ec;
+    --ls-sidebar-spaces-width: 68px;
 
-    /* ================================================================
-     * TRANSITIONS
-     * ================================================================ */
+    /* Transitions */
     --ls-transition-fast: 0.1s ease;
     --ls-transition-normal: 0.15s ease;
+
+    /* Ombres : AUCUNE (design decision Element, remplacees par bordures) */
+    --ls-shadow-none: none;
 }
