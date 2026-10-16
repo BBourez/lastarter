@@ -1,0 +1,144 @@
+{{- /*
+LaStarter : deployment Transfers (backend + frontend + DB)
+*/ -}}
+{{- if .Values.transfers.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-transfers-db
+  labels:
+    app: {{ .Release.Name }}-transfers-db
+spec:
+  serviceName: {{ .Release.Name }}-transfers-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-transfers-db
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-transfers-db
+    spec:
+      containers:
+        - name: postgresql
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: transfers
+            - name: POSTGRES_USER
+              value: transfers
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: transfers-db-password
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-transfers-db
+spec:
+  selector:
+    app: {{ .Release.Name }}-transfers-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-transfers-backend
+  labels:
+    app: {{ .Release.Name }}-transfers-backend
+spec:
+  replicas: {{ .Values.transfers.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-transfers-backend
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-transfers-backend
+    spec:
+      containers:
+        - name: backend
+          image: {{ .Values.transfers.backendImage }}
+          env:
+            - name: DATABASE_URL
+              value: postgresql://transfers:$(TRANSFERS_DB_PASSWORD)@{{ .Release.Name }}-transfers-db:5432/transfers
+            - name: ALLOWED_HOSTS
+              value: transfers.{{ .Values.domain }}
+          ports:
+            - containerPort: 8000
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-transfers-backend
+spec:
+  selector:
+    app: {{ .Release.Name }}-transfers-backend
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-transfers-frontend
+  labels:
+    app: {{ .Release.Name }}-transfers-frontend
+spec:
+  replicas: {{ .Values.transfers.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-transfers-frontend
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-transfers-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: {{ .Values.transfers.frontendImage }}
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-transfers-frontend
+spec:
+  selector:
+    app: {{ .Release.Name }}-transfers-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+{{- end }}
