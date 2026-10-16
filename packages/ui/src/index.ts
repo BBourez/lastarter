@@ -59,3 +59,15 @@ export {
     useDocumentTitle,
     useDebouncedValue,
 } from "./hooks";
+
+/* Store Zustand (cf. Grafikart) */
+export { useAppStore, useCurrentUser, useTheme, useLocale, useModules, useIsAuthenticated, logout, getActiveModule } from "./stores/app-store";
+export type { ThemeMode, ActiveModule } from "./stores/app-store";
+
+/* Slot (pattern asChild, cf. Grafikart) */
+export { Slot } from "./components/Slot/Slot";
+export type { AsChildProps } from "./components/Slot/Slot";
+
+/* ConfirmDialog (pattern callable, cf. Grafikart react-call) */
+export { ConfirmDialog, ConfirmDialogRoot } from "./components/ConfirmDialog/ConfirmDialog";
+export type { ConfirmDialogOptions } from "./components/ConfirmDialog/ConfirmDialog";
