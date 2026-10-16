@@ -28,7 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--client", help="Nom du client (ex. « ACME »)")
     init.add_argument("--domain", help="Domaine principal (ex. acme.example.com)")
     init.add_argument("--brand", default="LaStarter", help="Nom de marque affiché (défaut : LaStarter)")
-    init.add_argument("--bricks", help="Briques sélectionnées, séparées par des virgules (ex. drive,meet)")
+    init.add_argument("--bricks", default="", help="Briques (ex. drive,meet) ou vide/zéro = CORE seul")
     init.add_argument("--non-interactive", action="store_true", help="Mode scripté (sans questionnaire)")
     init.add_argument("--all", action="store_true", help="Inclure les briques 'planned' (phases futures)")
     init.add_argument("--output", help="Dossier racine des déploiements (défaut : <repo>/deployments)")

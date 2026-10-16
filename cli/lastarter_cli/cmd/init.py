@@ -63,10 +63,13 @@ def gather_answers(
     existing = load_answers(deployment_dir) if deployment_dir else None
 
     if non_interactive:
-        if not client or not domain or not wanted:
+        if not client or not domain or wanted is None:
             raise SystemExit(
                 "init --non-interactive requiert --client, --domain et --bricks."
             )
+        # --bricks "" → liste vide = CORE seul (keycloak + passerelle, zéro app).
+        if wanted == []:
+            wanted = []
         return {
             "client_name": client,
             "client_slug": slug,
@@ -315,7 +318,8 @@ def run_init(opts) -> int:
         opts.client,
         opts.domain,
         opts.brand,
-        [b.strip() for b in opts.bricks.split(",")] if opts.bricks else None,
+        # "" ou "none" → CORE seul (keycloak, zéro app).
+        [] if opts.bricks in ("", "none") else [b.strip() for b in opts.bricks.split(",") if b.strip()],
         opts.non_interactive,
         opts.all,
         getattr(opts, "theme", None),

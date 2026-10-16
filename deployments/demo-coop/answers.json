@@ -6,13 +6,6 @@
   "theme": "element-light",
   "brand_color": "#0bc491",
   "logo_url": "",
-  "bricks": [
-    "drive",
-    "element-web",
-    "messages",
-    "element-call",
-    "projects",
-    "transfers"
-  ],
-  "generated_at": "2026-10-16T16:20:27+00:00"
+  "bricks": [],
+  "generated_at": "2026-10-16T18:51:39+00:00"
 }

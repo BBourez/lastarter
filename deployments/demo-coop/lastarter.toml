@@ -9,7 +9,7 @@ brand_name = "LaStarter"
 theme = "element-light"
 brand_color = "#0bc491"
 logo_url = ""
-created = "2026-10-16T16:20:27+00:00"
+created = "2026-10-16T18:51:39+00:00"
 cli_version = "0.1.0"
 
 [bricks.keycloak]
@@ -17,45 +17,3 @@ title = "Keycloak — identité et SSO"
 pin = "26.3.2"
 license = "Apache-2.0"
 upstream = "https://github.com/keycloak/keycloak"
-
-[bricks.drive]
-title = "Drive — fichiers collaboratifs"
-pin = "v0.24.0"
-license = "MIT"
-upstream = "https://github.com/suitenumerique/drive"
-
-[bricks.messages]
-title = "Messages — messagerie collaborative"
-pin = "latest@sha256:5d40c3cb71ae6cd9da158a32b88450be5b64b86615f99f48b82da9aafb5d70e0"
-license = "MIT"
-upstream = "https://github.com/suitenumerique/messages"
-
-[bricks.projects]
-title = "Projets — suivi collaboratif"
-pin = "latest"
-license = "AGPL-3.0-only"
-upstream = "https://github.com/suitenumerique/projects"
-
-[bricks.synapse]
-title = "Synapse — serveur Matrix"
-pin = "v1.162.0"
-license = "AGPL-3.0-only"
-upstream = "https://github.com/element-hq/synapse"
-
-[bricks.transfers]
-title = "Transfers — transfert de fichiers"
-pin = "latest@sha256:9ec307a6b629027d10bae3f118a51f659fea13fd0f24a5826c319bde61c2db18"
-license = "MIT"
-upstream = "https://github.com/suitenumerique/transfers"
-
-[bricks.element-call]
-title = "Meet — visioconférence"
-pin = "latest"
-license = "AGPL-3.0-only"
-upstream = "https://github.com/element-hq/element-call"
-
-[bricks.element-web]
-title = "Chat — messagerie chiffrée (element-web)"
-pin = "v1.12.31"
-license = "AGPL-3.0 OR GPL-3.0 OR Element-Commercial"
-upstream = "https://github.com/element-hq/element-web"
