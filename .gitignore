@@ -17,3 +17,6 @@ deploy/compose/**/data/
 # OS / éditeurs
 .DS_Store
 Thumbs.db
+node_modules/
+.turbo/
+dist/

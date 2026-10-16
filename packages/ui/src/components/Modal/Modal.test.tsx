@@ -28,7 +28,7 @@ describe("Modal", () => {
     it("appelle onClose avec la touche Escape", () => {
         const handleClose = vi.fn();
         render(<Modal open={true} onClose={handleClose}>Contenu</Modal>);
-        fireEvent.keyDown(window, { key: "Escape" });
+        fireEvent.keyDown(document, { key: "Escape" });
         expect(handleClose).toHaveBeenCalledOnce();
     });
 });

@@ -55,8 +55,8 @@ describe("useDocumentTitle", () => {
 
 describe("useMediaQuery", () => {
     it("retourne un booleen", () => {
-        const { result } = renderHook(() => useMediaQuery("(min-width: 0px)"));
+        const { result } = renderHook(() => useMediaQuery("(max-width: 768px)"));
         expect(typeof result.current).toBe("boolean");
-        expect(result.current).toBe(true);
+        expect(result.current).toBe(false); // mock matchMedia retourne false
     });
 });
