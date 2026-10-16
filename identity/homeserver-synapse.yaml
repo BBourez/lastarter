@@ -75,7 +75,13 @@ rc_delayed_event_mgmt:
 matrix_rtc:
   transports:
     - type: livekit
-      livekit_service_url: {{MATRIX_ORIGIN}}/livekit/jwt
+      # MÊME ORIGINE qu'element-call (meet.<domaine>) : sinon OPEN_ID_ERROR
+      # car l'app découvre cette URL via MSC4143 et fait un appel cross-origin.
+      livekit_service_url: {{MEET_ORIGIN}}/livekit/jwt
+
+# Chiffrement de bout en bout activé par défaut pour TOUS les nouveaux salons
+# (comme ess-helm) : les utilisateurs n'ont plus à l'activer manuellement.
+encryption_enabled_by_default_for_room_type: "all"
 
 oidc_providers:
   - idp_id: lastarter

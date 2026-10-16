@@ -679,3 +679,166 @@ button[aria-label*="dossier"], button[class*="btn-add"] {
     min-height: 36px !important;
     padding: 4px 16px !important;
 }
+
+/* ================================================================
+ * BOUTONS-ICÔNES COMPACTS : 32×32, PAS 36px+padding géant
+ * Settings, compte, info, avatar : petits boutons ronds.
+ * ================================================================ */
+button[class*="icon"]:not([class*="icon-text"]),
+button[class*="avatar"],
+button[class*="account"],
+button[class*="settings"]:not([class*="content"]),
+button[class*="info"]:not([class*="information"]),
+button[aria-label]:not([type="submit"]):not([class*="upload"]):not([class*="create"]),
+button[class*="trigger"]:not([class*="select-trigger"]) {
+    min-height: 32px !important;
+    min-width: 32px !important;
+    max-height: 40px !important;
+    width: auto !important;
+    padding: 4px 8px !important;
+    border-radius: var(--cpd-radius-medium) !important;
+    background: transparent !important;
+    color: var(--cpd-color-text-primary) !important;
+    border: none !important;
+}
+
+button[class*="icon"]:not([class*="icon-text"]):hover,
+button[class*="avatar"]:hover,
+button[class*="account"]:hover,
+button[aria-label]:not([type="submit"]):hover {
+    background: var(--cpd-color-bg-subtle-secondary) !important;
+    border-radius: 50% !important;
+}
+
+/* ================================================================
+ * SELECTS / DROPDOWN TRIGGERS : hauteur normale, PAS double input
+ * ================================================================ */
+select,
+[class*="select-trigger"],
+[class*="SelectTrigger"],
+[class*="dropdown-trigger"],
+[class*="DropdownTrigger"] {
+    min-height: 36px !important;
+    max-height: 40px !important;
+    padding: 4px 12px !important;
+    font-size: 14px !important;
+    border-radius: var(--cpd-radius-medium) !important;
+    background: var(--cpd-color-bg-canvas-default) !important;
+    border: 1px solid var(--cpd-color-border-interactive-secondary) !important;
+    appearance: auto !important;
+    width: auto !important;
+}
+
+/* ================================================================
+ * PARENTS D'INPUTS : transparents, PAS de double bordure/hauteur
+ * ================================================================ */
+[class*="input-group"],
+[class*="field-wrapper"],
+[class*="input-container"],
+[class*="InputContainer"],
+[class*="form-group"] {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+}
+
+/* Sélecteur durée de validité (transfers) : taille normale */
+[class*="duration"], [class*="validity"], [class*="expiry"] {
+    min-height: 36px !important;
+    max-height: 40px !important;
+    width: auto !important;
+    font-size: 14px !important;
+}
+
+/* ================================================================
+ * SIDEBAR ELEMENT WEB : copie conforme (_LeftPanel.pcss)
+ * Fond BLANC (pas gris), 260px, bordure droite fine, items hover.
+ * ================================================================ */
+
+/* Masquer les headers d'apps : la sidebar EST la navigation (comme Element) */
+[class*="app-header"],
+[class*="AppHeader"],
+[class*="page-header"]:not([class*="sidebar"]),
+header[class*="topbar"]:not(.topbar),
+[class*="TopBar"]:not([class*="sidebar"]) {
+    display: none !important;
+}
+
+/* Sidebar : fond blanc Element, largeur standard, structure verticale */
+aside,
+nav[class*="sidebar"],
+[class*="Sidebar"]:not([class*="item"]):not([class*="content"]):not([class*="text"]),
+[class*="LeftPanel"]:not([class*="item"]),
+[class*="LeftMenu"]:not([class*="item"]):not([class*="text"]):not([class*="Icon"]):not([class*="Title"]):not([class*="Button"]):not([class**Select"]) {
+    width: 260px !important;
+    min-width: 224px !important;
+    background: var(--cpd-color-bg-canvas-default) !important;
+    border-right: 1px solid var(--cpd-color-border-interactive-secondary);
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden;
+    padding: 0 !important;
+}
+
+/* Contenu de la sidebar : scrollable */
+[class*="sidebar"] > [class*="list"],
+[class*="LeftMenu_boards"], [class*="LeftMenu_projects"],
+[class*="sidebar"] > nav, [class*="sidebar"] > ul {
+    flex: 1 1 0 !important;
+    overflow-y: auto !important;
+    background: transparent !important;
+    padding: 8px !important;
+}
+
+/* Items de sidebar : radius 8px, hover gris, PAS de fond permanent */
+[class*="sidebar"] a,
+[class*="sidebar"] button:not([class*="upload"]),
+[class*="LeftMenu"] button:not([class*="Icon"]):not([class*="addBoard"]),
+[class*="nav-item"] {
+    border-radius: var(--cpd-radius-medium) !important;
+    padding: 6px 12px !important;
+    min-height: 36px !important;
+    background: transparent !important;
+    color: var(--cpd-color-text-primary) !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    text-decoration: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    cursor: pointer;
+}
+
+[class*="sidebar"] a:hover,
+[class*="LeftMenu"] button:not([class*="Icon"]):hover,
+[class*="nav-item"]:hover {
+    background: var(--cpd-color-bg-subtle-primary) !important;
+}
+
+/* Search en haut de sidebar : pilule Compound */
+[class*="sidebar"] [class*="search"],
+[class*="sidebar"] input[type="search"],
+[class*="LeftMenu"] [class*="search"] input {
+    border-radius: var(--cpd-radius-pill-effect) !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 6px 14px !important;
+    margin: 8px !important;
+    border: 1px solid var(--cpd-color-border-interactive-secondary) !important;
+    background: var(--cpd-color-bg-subtle-secondary) !important;
+    font-size: 14px !important;
+}
+
+/* Zone user en bas de sidebar (si présente) */
+[class*="sidebar"] [class*="user"],
+[class*="sidebar"] [class*="profile"],
+[class*="sidebar"] > :last-child[class*="menu"] {
+    border-top: 1px solid var(--cpd-color-border-interactive-secondary);
+    padding: 12px !important;
+    background: transparent !important;
+}

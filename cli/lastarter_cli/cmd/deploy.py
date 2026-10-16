@@ -669,6 +669,9 @@ def render_synapse_homeserver(template: str, answers: dict, vault: dict[str, str
 
     rendered = template.replace("{{SSO_ORIGIN}}", _id_origin(domain))  # cohérence cookies : id.<domaine> partout
     rendered = rendered.replace("{{MATRIX_ORIGIN}}", matrix_origin)
+    # Element Call vit sur meet.<domaine> : le JWT SFU doit être même-origine.
+    meet_origin = f"{scheme}://meet.{bare}" + (f":{port}" if port else "")
+    rendered = rendered.replace("{{MEET_ORIGIN}}", meet_origin)
     rendered = rendered.replace("{{SERVER_NAME}}", bare)
     return REALM_SECRET_TOKEN.sub(secret, rendered)
 
