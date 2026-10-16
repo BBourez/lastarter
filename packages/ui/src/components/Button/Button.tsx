@@ -13,9 +13,9 @@ export interface ButtonProps extends PropsWithChildren {
     kind?: ButtonKind;
     size?: ComponentSize;
     Icon?: ComponentType<React.SVGAttributes<SVGElement>>;
-    iconOnly?: boolean;
-    destructive?: boolean;
-    disabled?: boolean;
+    iconOnly?: boolean | undefined;
+    destructive?: boolean | undefined;
+    disabled?: boolean | undefined;
     href?: string;
     type?: "button" | "submit" | "reset";
     onClick?: (e: React.MouseEvent) => void;

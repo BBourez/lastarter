@@ -36,6 +36,7 @@ function ToastItem({ toast, onDismiss }: { toast: ToastData; onDismiss: (id: str
             const timer = setTimeout(dismiss, toast.duration);
             return () => clearTimeout(timer);
         }
+        return undefined;
     }, [dismiss, toast.duration]);
 
     return (

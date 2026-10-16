@@ -36,7 +36,6 @@ jobs:
 
     typecheck:
         runs-on: ubuntu-latest
-        continue-on-error: true  # TODO : fix strict typing puis retirer
         steps:
             - uses: actions/checkout@v4
             - uses: pnpm/action-setup@v4
@@ -45,4 +44,7 @@ jobs:
                   node-version: 22
                   cache: pnpm
             - run: pnpm install --no-frozen-lockfile
-            - run: pnpm -r --filter './packages/*' exec tsc --noEmit || true
+            - run: cd packages/ui && npx tsc --noEmit
+            - run: cd packages/api && npx tsc --noEmit
+            - run: cd packages/config && npx tsc --noEmit
+            - run: cd packages/i18n && npx tsc --noEmit

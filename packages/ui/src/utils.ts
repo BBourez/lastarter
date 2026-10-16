@@ -5,8 +5,10 @@
 
 import classNames from "classnames";
 
+type ClassNamesFn = typeof classNames;
+
 /** Alias pour classnames (meme API que Element Web). */
-export const cn = classNames;
+export const cn: ClassNamesFn = classNames;
 
 /** Initiales a partir d'un nom complet (max 2). */
 export function getInitials(name: string): string {
