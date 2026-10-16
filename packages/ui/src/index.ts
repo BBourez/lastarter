@@ -61,7 +61,16 @@ export {
 } from "./hooks";
 
 /* Store Zustand (cf. Grafikart) */
-export { useAppStore, useCurrentUser, useTheme, useLocale, useModules, useIsAuthenticated, logout, getActiveModule } from "./stores/app-store";
+export {
+    useAppStore,
+    useCurrentUser,
+    useTheme,
+    useLocale,
+    useModules,
+    useIsAuthenticated,
+    logout,
+    getActiveModule,
+} from "./stores/app-store";
 export type { ThemeMode, ActiveModule } from "./stores/app-store";
 
 /* Slot (pattern asChild, cf. Grafikart) */

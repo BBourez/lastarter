@@ -6,19 +6,19 @@
 
 import {
     Children,
-    cloneElement,
-    isValidElement,
     type HTMLAttributes,
     type PropsWithChildren,
     type ReactElement,
     type ReactNode,
+    cloneElement,
+    isValidElement,
 } from "react";
 
 /** Type utilitaire pour les composants supportant asChild. */
 export type AsChildProps<BaseProps, SecondaryProps> =
     | ({ asChild: true; children: ReactNode } & BaseProps & {
-            [K in keyof SecondaryProps]: never;
-        })
+              [K in keyof SecondaryProps]: never;
+          })
     | ({ asChild?: false } & BaseProps & SecondaryProps);
 
 /** Fusionner deux classes CSS (sans twMerge pour rester zero-dep). */

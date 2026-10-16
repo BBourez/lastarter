@@ -150,7 +150,11 @@ export function Sidebar({
                                     data-active={item.active}
                                     onClick={
                                         item.onClick ??
-                                        (() => item.href && (window.location.href = item.href))
+                                        (() => {
+                                            if (item.href) {
+                                                window.location.href = item.href;
+                                            }
+                                        })
                                     }
                                 >
                                     {item.icon && (

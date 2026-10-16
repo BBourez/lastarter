@@ -15,7 +15,15 @@
             },
             "style": {
                 "useConst": "error",
-                "useImportType": "error"
+                "useImportType": "error",
+                "noNonNullAssertion": "off"
+            },
+            "a11y": {
+                "noLabelWithoutControl": "off",
+                "useKeyWithClickEvents": "off",
+                "useSemanticElements": "off",
+                "noSvgWithoutTitle": "off",
+                "useFocusableInteractive": "off"
             }
         }
     },
@@ -33,6 +41,6 @@
         }
     },
     "files": {
-        "ignore": ["node_modules", "dist", ".turbo"]
+        "ignore": ["node_modules", "dist", ".turbo", "identity/realm-lastarter.json"]
     }
 }

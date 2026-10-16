@@ -3,15 +3,17 @@
  * Copyright 2026 LaStarter. SPDX-License-Identifier: Proprietary.
  */
 
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { Slot } from "./Slot";
 
 describe("Slot", () => {
     it("transfere les className a l'enfant", () => {
         render(
             <Slot className="parent-class">
-                <a href="/test" className="child-class">Lien</a>
+                <a href="/test" className="child-class">
+                    Lien
+                </a>
             </Slot>,
         );
         const link = screen.getByRole("link");
@@ -31,7 +33,9 @@ describe("Slot", () => {
     it("le style de l'enfant gagne sur le parent", () => {
         render(
             <Slot style={{ color: "red", fontSize: "14px" }}>
-                <button type="button" style={{ color: "blue" }}>Test</button>
+                <button type="button" style={{ color: "blue" }}>
+                    Test
+                </button>
             </Slot>,
         );
         const button = screen.getByRole("button");

@@ -3,9 +3,9 @@
  * Copyright 2026 LaStarter. SPDX-License-Identifier: Proprietary.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
-import { useAppStore, useCurrentUser, useIsAuthenticated, logout } from "./app-store";
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "vitest";
+import { logout, useAppStore, useCurrentUser, useIsAuthenticated } from "./app-store";
 
 describe("useAppStore", () => {
     beforeEach(() => {
