@@ -1,0 +1,50 @@
+/* LaStarter Tabs : underline pilule Compound, navigable au clavier. */
+
+.tabs {
+    display: flex;
+    gap: var(--ls-space-2);
+    border-bottom: 1px solid var(--ls-color-border);
+    padding: 0;
+    margin: 0;
+}
+
+.tab {
+    display: flex;
+    align-items: center;
+    gap: var(--ls-space-2);
+    padding: var(--ls-space-3) var(--ls-space-4);
+    border: none;
+    background: transparent;
+    color: var(--ls-color-text-secondary);
+    font-family: var(--ls-font-family);
+    font-size: var(--ls-font-size-sm);
+    font-weight: var(--ls-font-weight-medium);
+    cursor: pointer;
+    position: relative;
+    transition: color var(--ls-transition-fast);
+    margin-bottom: -1px;
+    border-bottom: 2px solid transparent;
+}
+
+.tab:hover {
+    color: var(--ls-color-text);
+}
+
+.tab[data-active="true"] {
+    color: var(--ls-color-text);
+    border-bottom: 2px solid var(--ls-color-text);
+    border-bottom-left-radius: var(--ls-radius-pill) var(--ls-radius-pill) 0 0;
+    border-bottom-right-radius: var(--ls-radius-pill) var(--ls-radius-pill) 0 0;
+}
+
+.tab[data-disabled="true"] {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.tab:focus-visible {
+    outline: 2px solid var(--ls-color-primary);
+    outline-offset: -2px;
+    border-radius: var(--ls-radius-sm);
+}

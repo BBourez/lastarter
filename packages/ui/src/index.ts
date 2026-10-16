@@ -80,3 +80,15 @@ export type { AsChildProps } from "./components/Slot/Slot";
 /* ConfirmDialog (pattern callable, cf. Grafikart react-call) */
 export { ConfirmDialog, ConfirmDialogRoot } from "./components/ConfirmDialog/ConfirmDialog";
 export type { ConfirmDialogOptions } from "./components/ConfirmDialog/ConfirmDialog";
+
+/* Tabs */
+export { Tabs } from "./components/Tabs/Tabs";
+export type { TabsProps, TabItem } from "./components/Tabs/Tabs";
+
+/* Toast (createPortal, notifications empilables) */
+export { Toast } from "./components/Toast/Toast";
+export type { ToastProps, ToastData } from "./components/Toast/Toast";
+
+/* Typography */
+export { Typography } from "./components/Typography/Typography";
+export type { TypographyProps, TypographyVariant } from "./components/Typography/Typography";
