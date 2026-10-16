@@ -1,0 +1,237 @@
+/*
+ * LaStarter UI — Sidebar (copie conforme Element Web LeftPanel).
+ * Fond blanc, 260px, bordure droite, user menu en bas.
+ */
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    width: var(--ls-sidebar-width);
+    min-width: 224px;
+    height: 100vh;
+    background: var(--ls-sidebar-bg);
+    border-right: 1px solid var(--ls-sidebar-border);
+    font-family: var(--ls-font-family);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+/* ---------- Search en haut (pilule) ---------- */
+.sidebar__search {
+    margin: var(--ls-space-2) var(--ls-space-2) var(--ls-space-1);
+    display: flex;
+    align-items: center;
+    gap: var(--ls-space-2);
+    height: var(--ls-button-height);
+    padding: 0 var(--ls-space-3);
+    border-radius: var(--ls-radius-pill);
+    border: 1px solid var(--ls-color-border);
+    background: var(--ls-color-bg-subtle);
+    color: var(--ls-color-text-secondary);
+    font-size: var(--ls-font-size-sm);
+    cursor: pointer;
+    transition: border-color var(--ls-transition-fast);
+}
+
+.sidebar__search:hover {
+    border-color: var(--ls-color-text-secondary);
+}
+
+.sidebar__search svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.sidebar__search span {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---------- Navigation (items scrollables) ---------- */
+.sidebar__nav {
+    flex: 1 1 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: var(--ls-space-1) var(--ls-space-2);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* ---------- Item de navigation ---------- */
+.sidebar__item {
+    display: flex;
+    align-items: center;
+    gap: var(--ls-space-3);
+    min-height: var(--ls-button-height);
+    padding: 0 var(--ls-space-3);
+    border-radius: var(--ls-radius-md);
+    color: var(--ls-color-text);
+    font-size: var(--ls-font-size-sm);
+    font-weight: var(--ls-font-weight-medium);
+    text-decoration: none;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    transition: background-color var(--ls-transition-fast);
+    user-select: none;
+}
+
+.sidebar__item:hover {
+    background: var(--ls-color-bg-subtle);
+}
+
+.sidebar__item--active {
+    background: var(--ls-color-primary-subtle);
+    color: var(--ls-color-primary-text);
+}
+
+.sidebar__item-icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.125rem;
+}
+
+.sidebar__item-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidebar__item-badge {
+    font-size: var(--ls-font-size-xs);
+    background: var(--ls-color-bg-subtle-hover);
+    border-radius: var(--ls-radius-pill);
+    padding: 1px 8px;
+    min-width: 20px;
+    text-align: center;
+}
+
+/* ---------- Section (titre de groupe) ---------- */
+.sidebar__section {
+    padding: var(--ls-space-3) var(--ls-space-3) var(--ls-space-1);
+    font-size: var(--ls-font-size-xs);
+    font-weight: var(--ls-font-weight-medium);
+    color: var(--ls-color-text-secondary);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* ---------- User menu en bas (copie Element Web) ---------- */
+.sidebar__user {
+    border-top: 1px solid var(--ls-sidebar-border);
+    padding: var(--ls-space-2);
+    flex-shrink: 0;
+}
+
+.sidebar__user-button {
+    display: flex;
+    align-items: center;
+    gap: var(--ls-space-3);
+    width: 100%;
+    padding: var(--ls-space-2);
+    border-radius: var(--ls-radius-md);
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: background-color var(--ls-transition-fast);
+    text-align: left;
+}
+
+.sidebar__user-button:hover {
+    background: var(--ls-color-bg-subtle);
+}
+
+.sidebar__user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--ls-color-primary-subtle);
+    color: var(--ls-color-primary-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--ls-font-size-sm);
+    font-weight: var(--ls-font-weight-semibold);
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.sidebar__user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.sidebar__user-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.sidebar__user-name {
+    display: block;
+    font-size: var(--ls-font-size-sm);
+    font-weight: var(--ls-font-weight-semibold);
+    color: var(--ls-color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidebar__user-email {
+    display: block;
+    font-size: var(--ls-font-size-xs);
+    color: var(--ls-color-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidebar__user-settings {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--ls-color-text-secondary);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color var(--ls-transition-fast), color var(--ls-transition-fast);
+}
+
+.sidebar__user-settings:hover {
+    background: var(--ls-color-bg-subtle-hover);
+    color: var(--ls-color-text);
+}
+
+/* ---------- Scrollbar fine ---------- */
+.sidebar__nav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar__nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar__nav::-webkit-scrollbar-thumb {
+    background: var(--ls-color-border);
+    border-radius: var(--ls-radius-pill);
+}
+
+/* ---------- Responsive : sidebar cachée en mobile ---------- */
+@media (max-width: 768px) {
+    .sidebar {
+        display: none;
+    }
+}

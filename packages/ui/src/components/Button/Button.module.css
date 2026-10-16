@@ -1,0 +1,120 @@
+/*
+ * LaStarter UI — Button (copie conforme Compound Web).
+ * Pilule 9999px, primary gris foncé, secondary blanc bordé.
+ */
+
+.button {
+    border-radius: var(--ls-radius-pill);
+    cursor: pointer;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ls-space-2);
+    box-sizing: border-box;
+    font-family: var(--ls-font-family);
+    font-size: var(--ls-font-size-md);
+    font-weight: var(--ls-font-weight-semibold);
+    border: none;
+    transition: background-color var(--ls-transition-fast), border-color var(--ls-transition-fast), color var(--ls-transition-fast);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+a.button {
+    inline-size: max-content;
+}
+
+/* ---------- SIZES ---------- */
+
+.button[data-size="sm"] {
+    min-height: var(--ls-button-height-sm);
+    padding: 2px 14px;
+    font-size: var(--ls-font-size-sm);
+}
+
+.button[data-size="md"] {
+    min-height: var(--ls-button-height);
+    padding: 4px 20px;
+}
+
+.button[data-size="lg"] {
+    min-height: var(--ls-button-height-lg);
+    padding: var(--ls-space-2) var(--ls-space-6);
+    font-size: var(--ls-font-size-lg);
+}
+
+/* ---------- KINDS ---------- */
+
+/* Primary : gris très foncé plein (Element n'utilise PAS le vert ici) */
+.button[data-kind="primary"] {
+    background: var(--ls-color-bg-inverted);
+    color: var(--ls-color-text-inverted);
+}
+
+.button[data-kind="primary"]:hover {
+    background: #3c4045;
+}
+
+.button[data-kind="primary"]:active {
+    background: #4c5158;
+}
+
+/* Accent : vert Element */
+.button[data-kind="accent"] {
+    background: var(--ls-color-primary);
+    color: var(--ls-color-text-inverted);
+}
+
+.button[data-kind="accent"]:hover {
+    background: var(--ls-color-primary-hover);
+}
+
+.button[data-kind="accent"]:active {
+    background: var(--ls-color-primary-pressed);
+}
+
+/* Secondary : blanc, bordure grise */
+.button[data-kind="secondary"] {
+    background: var(--ls-color-bg);
+    color: var(--ls-color-text);
+    border: 1px solid var(--ls-color-border);
+}
+
+.button[data-kind="secondary"]:hover {
+    border-color: var(--ls-color-text-secondary);
+    background: var(--ls-color-bg-subtle);
+}
+
+.button[data-kind="secondary"]:active {
+    background: var(--ls-color-bg-subtle-hover);
+}
+
+/* Tertiary : transparent, souligné */
+.button[data-kind="tertiary"] {
+    background: transparent;
+    color: var(--ls-color-text);
+    text-decoration: underline;
+    padding-inline: var(--ls-space-2);
+}
+
+/* Destructive : rouge */
+.button[data-kind="destructive"] {
+    background: var(--ls-color-danger);
+    color: #ffffff;
+}
+
+.button[data-kind="destructive"]:hover {
+    background: #bc0f22;
+}
+
+/* ---------- DISABLED ---------- */
+
+.button[aria-disabled="true"],
+.button:disabled {
+    cursor: not-allowed;
+    pointer-events: all;
+    background: var(--ls-color-bg-subtle) !important;
+    color: var(--ls-color-text-disabled) !important;
+    border: none !important;
+}

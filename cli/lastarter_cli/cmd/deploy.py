@@ -235,13 +235,14 @@ def ensure_dev_certs(runtime_dir: Path, san_names: list[str]) -> tuple[Path, Pat
 VPN_ALLOW = "10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 127.0.0.1"
 
 
-def _theme_nginx_block(include_auto_login: bool = True) -> list[str]:
+def _theme_nginx_block(include_auto_login: bool = True, auth_url: str = "/api/v1.0/authenticate/") -> list[str]:
     """Bloc nginx commun : sert le thème CSS et l'injecte dans le HTML.
 
-    include_auto_login=False pour le portail (pas de redirect auth).
+    include_auto_login=False pour le portail/login (pas de redirect auth).
+    auth_url : URL de redirection selon la brique (Django vs Sails.js).
     """
     if include_auto_login:
-        inject = '<link rel="stylesheet" href="/__lastarter/theme.css"><script src="/__lastarter/auto-login.js"></script></head>'
+        inject = f'<link rel="stylesheet" href="/__lastarter/theme.css"><script src="/__lastarter/auto-login.js" data-auth="{auth_url}"></script></head>'
     else:
         inject = '<link rel="stylesheet" href="/__lastarter/theme.css"></head>'
     return [
@@ -251,11 +252,11 @@ def _theme_nginx_block(include_auto_login: bool = True) -> list[str]:
         "        default_type text/css;",
         '        add_header Cache-Control "no-cache";',
         "    }",
-        "    location = /__lastarter/auto-login.js {",
-        "        alias /var/www/lastarter-theme/auto-login.js;",
-        "        default_type application/javascript;",
-        '        add_header Cache-Control "no-cache";',
-        "    }",
+        f"    location = /__lastarter/auto-login.js {{",
+        f"        alias /var/www/lastarter-theme/auto-login.js;",
+        f"        default_type application/javascript;",
+        f'        add_header Cache-Control "no-cache";',
+        f"    }}",
         # Fonts Inter (même source qu'Element Web : @fontsource/inter).
         "    location /__lastarter/fonts/ {",
         "        alias /var/www/lastarter-theme/fonts/;",
@@ -385,7 +386,9 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
         # Element Web / Element Call : DÉJÀ en Compound natif — NE PAS injecter
         # le thème (il entrerait en conflit avec leurs styles propres).
         if brick.name not in ("element-web", "element-call"):
-            lines += _theme_nginx_block()
+            # URL d'auth par brique : Django → /api/v1.0/authenticate/, Sails → /login.
+            auth_url = "/login" if brick.name == "projects" else "/api/v1.0/authenticate/"
+            lines += _theme_nginx_block(auth_url=auth_url)
         if api_target:
             lines += [
                 "    location /api/ {",
