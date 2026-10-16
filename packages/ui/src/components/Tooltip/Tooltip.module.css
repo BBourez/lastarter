@@ -1,0 +1,12 @@
+.tooltip {
+    background: var(--ls-color-bg-inverted);
+    color: var(--ls-color-text-inverted);
+    border-radius: var(--ls-radius-sm);
+    padding: 6px 12px;
+    font-size: var(--ls-font-size-xs);
+    font-weight: var(--ls-font-weight-medium);
+    position: absolute;
+    z-index: 1000;
+    pointer-events: none;
+    white-space: nowrap;
+    box-shadow: none;

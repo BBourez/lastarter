@@ -1,25 +1,40 @@
 /*
- * LaStarter UI — exports publics.
- * Copyright 2026 LaStarter. SPDX-License-Identifier: AGPL-3.0-only.
+ * LaStarter UI : exports publics.
+ * Copyright 2026 LaStarter. SPDX-License-Identifier: Proprietary.
  */
 
-/* Tokens + fonts (à importer une fois dans l'app hôte) */
+/* Tokens (importer une fois dans l'app hote) */
 import "./tokens.css";
-import "./fonts.css";
 
-/* Sidebar (copie conforme Element Web) */
-export { Sidebar } from "./components/Sidebar/Sidebar";
+/* Types */
 export type {
-    SidebarProps,
-    SidebarUser,
-    SidebarItem,
-    SidebarSection,
-} from "./components/Sidebar/Sidebar";
+    User,
+    Space,
+    NavItem,
+    NavSection,
+    ButtonKind,
+    ComponentSize,
+    Direction,
+    AsyncState,
+} from "./types";
 
-/* Button (copie conforme Compound Web) */
+/* Utils */
+export { cn, getInitials, formatFileSize, debounce, isDefined } from "./utils";
+
+/* Composants */
 export { Button } from "./components/Button/Button";
-export type { ButtonProps, ButtonKind, ButtonSize } from "./components/Button/Button";
+export type { ButtonProps } from "./components/Button/Button";
 
-/* Shell : wrapper d'application avec sidebar Element Web */
-export { LaStarterShell } from "./components/Shell/LaStarterShell";
-export type { LaStarterShellProps } from "./components/Shell/LaStarterShell";
+export { Input } from "./components/Input/Input";
+export type { InputProps } from "./components/Input/Input";
+
+export { Badge } from "./components/Badge/Badge";
+export type { BadgeProps, BadgeVariant } from "./components/Badge/Badge";
+
+export { Avatar } from "./components/Avatar/Avatar";
+export type { AvatarProps } from "./components/Avatar/Avatar";
+
+export { Separator } from "./components/Separator/Separator";
+
+export { Sidebar } from "./components/Sidebar/Sidebar";
+export type { SidebarProps } from "./components/Sidebar/Sidebar";
