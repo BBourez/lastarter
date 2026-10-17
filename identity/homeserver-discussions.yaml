@@ -53,11 +53,14 @@ oidc_providers:
         display_name_template: "{{ user.name }}"
         email_template: "{{ user.email }}"
 
-# Pas d'inscription locale : tout passe par le SSO.
+# Pas d'inscription locale : tout passe par le SSO. Le password reste actif
+# pour Element Call standalone (meet.<domaine> — cette version du SPA n'a pas
+# de SSO natif) : le CLI provisionne le compte demo avec le MEME mot de passe
+# que le coffre SSO. Le chat, lui, reste 100% SSO.
 enable_registration: false
 password_config:
-  enabled: false
-  localdb_enabled: false
+  enabled: true
+  localdb_enabled: true
 
 # ==================== CHIFFREMENT (E2EE) ====================
 # Clés gérées par les clients (Element Web) ; chiffrement par défaut partout.
