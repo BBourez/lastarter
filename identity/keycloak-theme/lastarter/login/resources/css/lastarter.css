@@ -42,6 +42,27 @@
     src: url("../fonts/inter-latin-700-normal.woff2") format("woff2");
 }
 
+/* ==================== ROOT (copie verbatim compound-web/dist/style.css) ==================== */
+
+:root {
+    --cpd-radius-pill-effect: 9999px;
+
+    /* Default icon and avatar size */
+    --cpd-icon-button-size: var(--cpd-space-8x);
+    --cpd-avatar-size: var(--cpd-space-16x);
+
+    /**
+     * We want to apply Inter Dynamic metrics (https://rsms.me/inter/dynmetrics/)
+     * We need to tweak the `letter-spacing` property and doing so, disables by
+     * default the optional ligatures
+     * `font-feature-settings` allows us to override this behaviour and have the
+     * correct ligatures and the proper dynamic metric spacing.
+     */
+    --cpd-font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+    --cpd-separator-spacing: var(--cpd-space-2x);
+    --cpd-separator-inset: 0;
+}
+
 /* ==================== BASE ==================== */
 
 *,
@@ -126,9 +147,6 @@
     /* Radius pilule du design system */
     border-radius: var(--cpd-radius-pill-effect);
     background: var(--cpd-color-bg-action-primary-rest);
-    color: var(--cpd-color-text-on-solid-primary);
-    /* La vraie typo titre Compound */
-    font: var(--cpd-font-heading-xl-semibold);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -305,6 +323,7 @@
     accent-color: var(--cpd-color-bg-action-primary-rest);
     width: 16px;
     height: 16px;
+    border-radius: 4px;
 }
 
 /* ==================== BOUTON (copie Button.module.css Compound) ==================== */

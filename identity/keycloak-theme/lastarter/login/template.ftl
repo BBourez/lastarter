@@ -28,21 +28,11 @@
     <body class="ls-sso-body">
         <div class="ls-sso-shell">
 
-            <!-- ============ COLONNE GAUCHE : 75% branding ============ -->
+            <!-- ============ COLONNE GAUCHE : 75% branding (sans texte) ============ -->
             <div class="ls-sso-left">
                 <div class="ls-sso-brand">
-                    <div class="ls-sso-logo" aria-hidden="true">L</div>
-                    <h1 class="ls-sso-title">LaStarter</h1>
-                    <p class="ls-sso-tagline">La suite collaborative de votre entreprise.</p>
-                    <ul class="ls-sso-features">
-                        <li>Transferts de fichiers</li>
-                        <li>Projets et tableaux</li>
-                        <li>Discussions et reunions</li>
-                    </ul>
+                    <div class="ls-sso-logo" aria-hidden="true"></div>
                 </div>
-                <footer class="ls-sso-footer">
-                    <span>LaStarter - Donnees hebergees par votre entreprise</span>
-                </footer>
             </div>
 
             <!-- ============ COLONNE DROITE : 25% formulaire ============ -->
