@@ -1,0 +1,17 @@
+# LiveKit dédié à Meet — POC (mono-nœud, TURN désactivé).
+# Rendu par le CLI dans .runtime/meet/ (montage dossier).
+log_level: info
+redis:
+  address: call_redis:6379
+keys:
+  devkey: secret
+
+webhook:
+  api_key: devkey
+  urls:
+    - http://lk-jwt-service:6080/livekit/webhook
+
+rtc:
+  udp_port: 7882
+  tcp_port: 7881
+  use_external_ip: false

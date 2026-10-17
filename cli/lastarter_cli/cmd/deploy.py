@@ -567,25 +567,26 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
         # évite les problèmes CORS/certificat cross-domain).
         if brick.name == "element-call":
             # Same-origin : proxy Matrix API sur meet.<domaine> avec le Host header
-            # de matrix.<domaine> pour éviter la canonicalisation Synapse.
-            matrix_host = f"matrix.{bare}" + (f":{domain.split(':')[1]}" if ":" in domain else "")
+            # de chat.<domaine> (public_baseurl de notre Synapse) pour éviter la
+            # canonicalisation Synapse.
+            chat_host = f"chat.{bare}" + (f":{domain.split(':')[1]}" if ":" in domain else "")
             lines += [
-                "    # Matrix API proxy (same-origin, Host: matrix pour Synapse)",
+                "    # Matrix API proxy (same-origin, Host: chat = public_baseurl).",
                 "    location /_matrix/ {",
                 "        resolver 127.0.0.11 valid=10s ipv6=off;",
-                "        set $backend_matrix synapse_synapse:8008;",
+                "        set $backend_matrix discussions_synapse:8008;",
                 "        proxy_pass http://$backend_matrix;",
-                f"        proxy_set_header Host {matrix_host};",
+                f"        proxy_set_header Host {chat_host};",
                 "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
                 "        proxy_set_header X-Forwarded-Proto https;",
                 "    }",
                 "",
-                "    # Synapse OIDC callback (same-origin SSO)",
+                "    # Synapse OIDC callback (same-origin SSO).",
                 "    location /_synapse/ {",
                 "        resolver 127.0.0.11 valid=10s ipv6=off;",
-                "        set $backend_syn synapse_synapse:8008;",
+                "        set $backend_syn discussions_synapse:8008;",
                 "        proxy_pass http://$backend_syn;",
-                f"        proxy_set_header Host {matrix_host};",
+                f"        proxy_set_header Host {chat_host};",
                 "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
                 "        proxy_set_header X-Forwarded-Proto https;",
                 "    }",
@@ -824,17 +825,20 @@ def render_element_config(template: str, answers: dict, brick: Brick) -> str:
 
 
 def render_element_call_config(template: str, answers: dict) -> str:
-    """Rend config.json element-call (mode standalone) : homeserver + LiveKit."""
+    """Rend config.json Element Call (mode standalone) : homeserver + LiveKit.
+
+    Same-origin sur meet.<domaine> : l'API Matrix passe par la passerelle
+    (Host: chat = public_baseurl du Synapse des Discussions).
+    """
     domain = answers["domain"]
     bare = domain.split(":")[0]
     port = domain.split(":")[1] if ":" in domain else ""
-    scheme = _scheme(domain)
-    # Same-origin : meet.<domaine> proxy l'API Matrix (avec Host: matrix pour Synapse).
-    call_origin = f"{scheme}://meet.{bare}" + (f":{port}" if port else "")
-    rendered = template.replace("{{CALL_ORIGIN}}", call_origin)
-    rendered = rendered.replace("{{BRAND}}", answers.get("brand_name", "LaStarter"))
-    rendered = rendered.replace("{{SERVER_NAME}}", bare)
-    return rendered
+    meet_origin = f"{_scheme(domain)}://meet.{bare}" + (f":{port}" if port else "")
+    return (
+        template.replace("{{MEET_ORIGIN}}", meet_origin)
+        .replace("{{SERVER_NAME}}", bare)
+        .replace("{{BRAND}}", answers.get("brand_name", "LaStarter"))
+    )
 
 
 def render_discussions_homeserver(template: str, answers: dict, vault: dict[str, str]) -> str:
@@ -1303,18 +1307,23 @@ def run_deploy(opts) -> int:
         )
         compose_env["ELEMENT_CONFIG_PATH"] = _portable(element_path)
 
-    # element-call : config.json standalone (homeserver + LiveKit).
+    # Meet (Element Call) : config.json + livekit.yaml rendus dans
+    # .runtime/meet/ (montage DOSSIER — les fichier uniques renvoient 0 octet
+    # sous Docker Desktop Windows).
     if "element-call" in selected:
+        meet_cfg = runtime_dir / "meet"
+        meet_cfg.mkdir(parents=True, exist_ok=True)
         ec_template = repo_root / "identity" / "element-call-config.json"
-        if ec_template.is_file():
-            ec_path = runtime_dir / "element-call-config.json"
-            ec_path.write_text(
-                render_element_call_config(
-                    ec_template.read_text(encoding="utf-8"), answers
-                ),
-                encoding="utf-8",
-            )
-            compose_env["ELEMENT_CALL_CONFIG_PATH"] = _portable(ec_path)
+        if not ec_template.is_file():
+            raise DeployError("identity/element-call-config.json manquant")
+        (meet_cfg / "config.json").write_text(
+            render_element_call_config(ec_template.read_text(encoding="utf-8"), answers),
+            encoding="utf-8",
+        )
+        livekit_tpl = repo_root / "deploy" / "compose" / "files" / "livekit-call.yaml"
+        if livekit_tpl.is_file():
+            shutil.copyfile(livekit_tpl, meet_cfg / "livekit-call.yaml")
+        compose_env["MEET_CONFIG_DIR"] = _portable(meet_cfg)
 
     # Discussions (Element Web + Synapse) : homeserver, signing key, config
     # element et log config rendus as-code — l'architecture same-origin validée.
@@ -1329,6 +1338,23 @@ def run_deploy(opts) -> int:
         hs_rendered = render_discussions_homeserver(
             homeserver_tpl.read_text(encoding="utf-8"), answers, vault
         )
+        # Meet sélectionné : activer MatrixRTC (MSC3266/4143/4222) et monter
+        # l'appservice lk-jwt-service (MSC4512) dans le homeserver.
+        if "element-call" in selected:
+            hs_rendered += (
+                "\n# ==================== MATRIXRTC (Meet sélectionné) ====================\n"
+                "# MSC3266 : member updates ; MSC4143 : sessions RTC ; MSC4222 : expiry.\n"
+                "experimental_features:\n"
+                "  msc3266_enabled: true\n"
+                "  msc4143_enabled: true\n"
+                "  msc4222_enabled: true\n"
+                "# Appservice lk-jwt-service (jetons LiveKit, MSC4512).\n"
+                "app_service_config_files:\n"
+                "  - /config/lk-jwt-service.yaml\n"
+            )
+            (discussions_cfg / "lk-jwt-service.yaml").write_text(
+                render_lk_registration(answers, vault), encoding="utf-8"
+            )
         (discussions_cfg / "homeserver.yaml").write_text(hs_rendered, encoding="utf-8")
         hs_hash = hashlib.sha256(hs_rendered.encode()).hexdigest()
         applied = runtime_dir / ".discussions-homeserver.applied"

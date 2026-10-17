@@ -9,6 +9,7 @@ référencée ici (cf. docs/licences.md du dépôt LaStarter).
 |---|---|---|---|
 | Keycloak — identité et SSO | Apache-2.0 | 26.3.2 | https://github.com/keycloak/keycloak |
 | Discussions — messagerie Matrix | AGPL-3.0-only | v1.12.31 | https://github.com/element-hq/element-web |
+| Meet — visioconférence | AGPL-3.0-only | latest | https://github.com/element-hq/element-call |
 
 Marques : « La Suite », « Element », « Tchap » et logos associés appartiennent à
 leurs titulaires et n'apparaissent pas dans les interfaces livrées (branding

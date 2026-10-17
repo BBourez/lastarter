@@ -1,0 +1,65 @@
+# Brique communication : Meet — Element Call (visioconférence LiveKit).
+# SPA standalone + SFU LiveKit + lk-jwt-service (appservice Synapse MSC4512).
+# Versions alignées sur ess-helm : lk-jwt-service 0.9.0, livekit v1.13.9.
+
+[brick]
+name = "element-call"
+title = "Meet — visioconférence"
+category = "communication"
+description = "Réunions en ligne chiffrées : créez un appel, partagez le lien, rejoignez depuis le navigateur."
+license = "AGPL-3.0-only"
+upstream_repo = "https://github.com/element-hq/element-call"
+upstream_image = "ghcr.io/element-hq/element-call"
+upstream_pin = "latest"
+core = false
+requires = ["discussions"]
+extra_secrets = [
+  "lk_as_token",   # jeton appservice Synapse (MSC4512)
+  "lk_hs_token",   # jeton homeserver réciproque
+]
+
+[oidc]
+# Pas de client dédié : l'auth passe par le SSO du homeserver (client synapse).
+
+[branding.env]
+BRAND_NAME = "{brand_name}"
+
+[env]
+# --- SFU LiveKit dédié (clés POC mono-nœud) ---
+LIVEKIT_KEY = "devkey"
+LIVEKIT_SECRET = "secret"
+
+# --- lk-jwt-service (appservice Synapse) ---
+LIVEKIT_AS_TOKEN = "{secret:lk_as_token}"
+LIVEKIT_HS_TOKEN = "{secret:lk_hs_token}"
+LIVEKIT_JWT_BIND = "0.0.0.0:6080"
+LIVEKIT_URL = "{ws}://livekit.{domain}"
+LIVEKIT_HS_SERVER_NAME = "{domain_host}"
+# Résolution interne vers le Synapse des Discussions (pas de DNS public).
+LIVEKIT_CS_API_URL_OVERRIDES = "{domain_host}=http://discussions_synapse:8008"
+LIVEKIT_FULL_ACCESS_HOMESERVERS = "*"
+
+ELEMENT_CALL_IMAGE = "ghcr.io/element-hq/element-call:latest"
+LK_JWT_IMAGE = "ghcr.io/element-hq/lk-jwt-service:0.9.0"
+LIVEKIT_IMAGE = "livekit/livekit-server:v1.13.9"
+
+[compose]
+profile = "meet"
+route_label = "meet"            # meet.<domaine> → visio standalone
+frontend_target = "element_call:8080"
+api_target = ""
+infra_services = ["call_livekit", "call_redis"]
+recreate_service = "element_call"
+extra_servers = [
+  { label = "livekit", target = "call_livekit:7880" },
+]
+services = [
+  "element_call",      # SPA standalone + widget
+  "lk-jwt-service",    # appservice Synapse MSC4512 (jetons LiveKit)
+  "call_livekit",      # SFU LiveKit dédié
+  "call_redis",        # Redis pour LiveKit
+]
+extras = []
+
+[notes]
+warnings = "LiveKit POC : clés devkey/secret mono-nœud, TURN désactivé. MSC3266/4143/4222 requis dans Synapse (injectés par le CLI dans le homeserver des Discussions quand Meet est sélectionné)."

@@ -1,0 +1,57 @@
+# Brique Meet — Element Call + LiveKit SFU + lk-jwt-service.
+# Assemblé par `lastarter deploy` (base.yml + meet.yml).
+# Versions alignées sur ess-helm (lk-jwt 0.9.0, livekit v1.13.9).
+
+services:
+  # Redis pour le SFU LiveKit.
+  call_redis:
+    image: redis:5
+    networks: [lastarter]
+    restart: unless-stopped
+
+  # SFU LiveKit dédié (pas de port hôte : tout via passerelle wss).
+  call_livekit:
+    image: ${LIVEKIT_IMAGE}
+    command: ["--config", "/config.yaml"]
+    volumes:
+      # Montage dossier (les mounts fichier unique renvoient 0 octet sous
+      # Docker Desktop Windows) : le CLI écrit livekit-call.yaml rendu.
+      - ${MEET_CONFIG_DIR}/livekit-call.yaml:/config.yaml:ro
+    depends_on:
+      call_redis:
+        condition: service_started
+    networks: [lastarter]
+    restart: unless-stopped
+
+  # Service de jetons LiveKit : appservice Synapse (MSC4512).
+  # NB : nom avec TIRETS (Synapse rejette les underscores DNS).
+  lk-jwt-service:
+    image: ${LK_JWT_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-lk-jwt-service
+    env_file: ["${RUNTIME_DIR}/element-call.env"]
+    networks: [lastarter]
+    restart: unless-stopped
+
+  # SPA Element Call : standalone (meet.<domaine>) + widget dans le chat.
+  element_call:
+    image: ${ELEMENT_CALL_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-element-call
+    user: root
+    # config.json copié en root depuis le montage dossier (robuste Windows),
+    # puis nginx démarre (image officielle, port 8080).
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        cp /config-call/config.json /app/config.json
+        exec /docker-entrypoint.sh nginx -g "daemon off;"
+    volumes:
+      - ${MEET_CONFIG_DIR}:/config-call:ro
+    networks: [lastarter]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 10s
