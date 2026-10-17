@@ -92,3 +92,12 @@ export type { ToastProps, ToastData } from "./components/Toast/Toast";
 /* Typography */
 export { Typography } from "./components/Typography/Typography";
 export type { TypographyProps, TypographyVariant } from "./components/Typography/Typography";
+
+/* ElementShell : layout Element Web avec les VRAIS composants Compound */
+export { ElementShell, DEFAULT_SPACES } from "./components/ElementShell/ElementShell";
+export type {
+    ElementShellProps,
+    ElementShellUser,
+    ShellSpace,
+    ShellModule,
+} from "./components/ElementShell/ElementShell";

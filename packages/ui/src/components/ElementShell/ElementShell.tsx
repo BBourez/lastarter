@@ -1,7 +1,6 @@
 /*
- * LaStarter AppShell : structure identique a Element Web.
- * SpacePanel (68px) + LeftPanel (room list + user menu).
- * Utilise les VRAIS composants Compound (@vector-im/compound-web).
+ * LaStarter UI : ElementShell avec les VRAIS composants Compound.
+ * Structure identique a Element Web : SpacePanel (68px) + LeftPanel (280px) + Main.
  * Copyright 2026 LaStarter. SPDX-License-Identifier: Proprietary.
  */
 
@@ -9,15 +8,11 @@ import React, { useState } from "react";
 import {
     Avatar,
     Badge,
-    Body,
-    Button,
-    IconButton,
     Search,
     Separator,
-    TextButton,
     Tooltip,
 } from "@vector-im/compound-web";
-import "./portal.css";
+import "./element-shell.css";
 
 /* ==================== ICONES (SVG inline, style Element) ==================== */
 
@@ -77,7 +72,7 @@ const LogoutIcon = (props: React.SVGAttributes<SVGElement>) => (
 
 /* ==================== TYPES ==================== */
 
-interface SpaceItem {
+export interface ShellSpace {
     id: string;
     label: string;
     Icon: React.ComponentType<React.SVGAttributes<SVGElement>>;
@@ -85,91 +80,105 @@ interface SpaceItem {
     badge?: number;
 }
 
-interface ModuleItem {
+export interface ShellModule {
     id: string;
     label: string;
     url: string;
     badge?: number;
 }
 
-/* Configuration des espaces (colonne 68px, comme Element Web) */
-const SPACES: SpaceItem[] = [
-    { id: "home", label: "Accueil", Icon: HomeIcon, url: "/" },
-    { id: "drive", label: "Fichiers", Icon: FolderIcon, url: "/drive/" },
-    { id: "chat", label: "Discussions", Icon: ChatIcon, url: "/chat/", badge: 3 },
-    { id: "meet", label: "Reunions", Icon: VideoIcon, url: "/meet/" },
+export interface ElementShellUser {
+    displayName: string;
+    email: string;
+}
+
+export interface ElementShellProps {
+    /** Espaces affiches dans la colonne 68px (default : la barre standard LaStarter). */
+    spaces?: ShellSpace[];
+    /** Modules affiches dans le LeftPanel. */
+    modules: ShellModule[];
+    /** Id du module actif (surlignage). */
+    activeModuleId: string;
+    /** Utilisateur affiche en bas du LeftPanel. */
+    user?: ElementShellUser;
+    /** Contenu principal (droite). */
+    children: React.ReactNode;
+}
+
+/* ==================== ESPACES PAR DEFAUT ==================== */
+
+export const DEFAULT_SPACES: ShellSpace[] = [
+    { id: "home", label: "Accueil", Icon: HomeIcon, url: "http://localhost/" },
+    { id: "drive", label: "Fichiers", Icon: FolderIcon, url: "http://drive.localhost/" },
+    { id: "chat", label: "Discussions", Icon: ChatIcon, url: "http://chat.localhost/", badge: 3 },
+    { id: "meet", label: "Reunions", Icon: VideoIcon, url: "http://meet.localhost/" },
 ];
 
-/* Modules de l'espace actif (dans le LeftPanel) */
-const MODULES: ModuleItem[] = [
-    { id: "transfers", label: "Transferts", url: "/transfers/", badge: 2 },
-    { id: "projects", label: "Projets", url: "/projects/" },
-    { id: "chat", label: "Discussions", url: "/chat/", badge: 3 },
-    { id: "meet", label: "Reunions", url: "/meet/" },
-];
+/* ==================== SPACE PANEL (68px, copie _SpacePanel.pcss) ==================== */
 
-/* ==================== SPACE PANEL (68px, comme Element Web) ==================== */
-
-function SpacePanel({ activeId, onSelect }: { activeId: string; onSelect: (id: string) => void }) {
+function SpacePanel({ spaces, activeId }: { spaces: ShellSpace[]; activeId: string }) {
     return (
         <nav className="ls_SpacePanel" aria-label="Espaces">
             <ul>
-                {SPACES.map(({ id, label, Icon, url, badge }) => (
+                {spaces.map(({ id, label, Icon, url, badge }) => (
                     <li key={id}>
                         <Tooltip label={label} placement="right">
-                            <button
-                                type="button"
+                            <a
                                 className="ls_SpaceItem"
+                                href={url}
                                 data-active={id === activeId}
                                 aria-label={label}
-                                onClick={() => onSelect(id)}
                             >
                                 {badge ? <span className="ls_SpaceBadge">{badge}</span> : null}
                                 <Icon />
-                            </button>
+                            </a>
                         </Tooltip>
                     </li>
                 ))}
             </ul>
             <div className="ls_SpacePanel_footer">
-                <Avatar id="user" name="Demo User" size="28px" />
+                <Avatar id="user" name="LaStarter" size="28px" />
             </div>
         </nav>
     );
 }
 
-/* ==================== LEFT PANEL (colonne principale, comme Element Web) ==================== */
+/* ==================== LEFT PANEL (comme _LeftPanel.pcss) ==================== */
 
-function LeftPanel({ activeModuleId, onSelectModule }: { activeModuleId: string; onSelectModule: (id: string) => void }) {
+function LeftPanel({
+    modules,
+    activeModuleId,
+    user,
+}: {
+    modules: ShellModule[];
+    activeModuleId: string;
+    user: ElementShellUser;
+}) {
     const [userMenuOpen, setUserMenuOpen] = useState(false);
 
     return (
         <div className="ls_LeftPanel">
-            {/* Recherche (comme RoomListSearch d'Element Web) */}
             <div className="ls_LeftPanel_header">
                 <Search name="module-search" placeholder="Rechercher" />
             </div>
 
-            {/* Liste des modules (comme RoomListView) */}
             <div className="ls_ModuleList" role="list">
-                {MODULES.map((mod) => (
-                    <button
+                {modules.map((mod) => (
+                    <a
                         key={mod.id}
-                        type="button"
                         className="ls_ModuleItem"
+                        href={mod.url}
                         data-active={mod.id === activeModuleId}
                         role="listitem"
-                        onClick={() => onSelectModule(mod.id)}
                     >
                         <span className="ls_ModuleLabel">{mod.label}</span>
                         {mod.badge ? <Badge count={mod.badge} /> : null}
-                    </button>
+                    </a>
                 ))}
             </div>
 
             <Separator horizontal className="ls_UserSeparator" />
 
-            {/* Menu utilisateur en bas (comme Element Web UserMenu) */}
             <div className="ls_UserMenu">
                 <button
                     type="button"
@@ -177,10 +186,10 @@ function LeftPanel({ activeModuleId, onSelectModule }: { activeModuleId: string;
                     aria-expanded={userMenuOpen}
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                 >
-                    <Avatar id="demo" name="Demo User" size="32px" />
+                    <Avatar id="demo" name={user.displayName} size="32px" />
                     <span className="ls_UserInfo">
-                        <span className="ls_UserName">Demo User</span>
-                        <span className="ls_UserEmail">demo@lastarter.local</span>
+                        <span className="ls_UserName">{user.displayName}</span>
+                        <span className="ls_UserEmail">{user.email}</span>
                     </span>
                 </button>
 
@@ -203,40 +212,20 @@ function LeftPanel({ activeModuleId, onSelectModule }: { activeModuleId: string;
     );
 }
 
-/* ==================== CONTENU PRINCIPAL ==================== */
+/* ==================== ELEMENT SHELL ==================== */
 
-function MainContent({ activeModuleId }: { activeModuleId: string }) {
-    const activeModule = MODULES.find((m) => m.id === activeModuleId) ?? MODULES[0];
-
-    return (
-        <main className="ls_MainContent">
-            <header className="ls_PageHeader">
-                <Body as="h1" size="lg" weight="medium">
-                    {activeModule.label}
-                </Body>
-                <TextButton>Nouveau</TextButton>
-            </header>
-
-            <div className="ls_PageBody">
-                <Body size="md" className="ls_Placeholder">
-                    Module {activeModule.label} : contenu en cours d'integration.
-                </Body>
-            </div>
-        </main>
-    );
-}
-
-/* ==================== APP SHELL ==================== */
-
-export function AppShell() {
-    const [activeSpace, setActiveSpace] = useState("home");
-    const [activeModule, setActiveModule] = useState("transfers");
-
+export function ElementShell({
+    spaces = DEFAULT_SPACES,
+    modules,
+    activeModuleId,
+    user = { displayName: "Demo User", email: "demo@lastarter.local" },
+    children,
+}: ElementShellProps) {
     return (
         <div className="ls_AppShell">
-            <SpacePanel activeId={activeSpace} onSelect={setActiveSpace} />
-            <LeftPanel activeModuleId={activeModule} onSelectModule={setActiveModule} />
-            <MainContent activeModuleId={activeModule} />
+            <SpacePanel spaces={spaces} activeId="home" />
+            <LeftPanel modules={modules} activeModuleId={activeModuleId} user={user} />
+            <main className="ls_MainContent">{children}</main>
         </div>
     );
 }

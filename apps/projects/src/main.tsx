@@ -1,18 +1,24 @@
 /*
- * LaStarter Projects : gestion de projets kanban.
- * Frontend neuf avec @lastarter/ui (Sidebar double colonne Element Web).
+ * LaStarter Projects : kanban avec ElementShell (vrais composants Compound).
  * Backend Sails.js existant (API /api/).
  * Copyright 2026 LaStarter. SPDX-License-Identifier: Proprietary.
  */
 
+/* Les vrais tokens + styles Compound */
+import "@vector-im/compound-design-tokens/assets/web/css/cpd-common-base.css";
+import "@vector-im/compound-design-tokens/assets/web/css/cpd-common-semantic.css";
+import "@vector-im/compound-design-tokens/assets/web/css/cpd-font-fallbacks.css";
+import "@vector-im/compound-design-tokens/assets/web/css/cpd-theme-light-base-mq.css";
+import "@vector-im/compound-web/dist/style.css";
+
 import { apiGet, createApiClient, createQueryClient } from "@lastarter/api";
 import type { Board, Card, Project } from "@lastarter/api";
-import { requireAuth } from "@lastarter/config";
-import { detectLocale, initI18n, useTranslation } from "@lastarter/i18n";
-import { Badge, Button, type NavSection, Sidebar, type Space, type User } from "@lastarter/ui";
-import { QueryClientProvider, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ElementShell, type ShellModule } from "@lastarter/ui";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
+import { Badge, Body, Heading } from "@vector-im/compound-web";
+import "./projects.css";
 
 /* Client HTTP pour Projects (backend Sails.js). */
 const client = createApiClient({
@@ -21,6 +27,14 @@ const client = createApiClient({
         window.location.replace("/login");
     },
 });
+
+/* Modules du LeftPanel pour cette app */
+const MODULES: ShellModule[] = [
+    { id: "transfers", label: "Transferts", url: "http://transfers.localhost/" },
+    { id: "projects", label: "Projets", url: "http://projects.localhost/" },
+    { id: "chat", label: "Discussions", url: "http://chat.localhost/", badge: 3 },
+    { id: "meet", label: "Reunions", url: "http://meet.localhost/" },
+];
 
 /* ==================== HOOKS ==================== */
 
@@ -39,85 +53,42 @@ function useBoards(projectId: string | undefined) {
     });
 }
 
-function useCurrentUser() {
-    return useQuery({
-        queryKey: ["user", "me"],
-        queryFn: () => apiGet<{ email: string; full_name: string }>(client, "users/me/"),
-    });
-}
-
-/* ==================== PAGE : TABLEAU KANBAN ==================== */
+/* ==================== KANBAN ==================== */
 
 function KanbanBoard({ board }: { board: Board }) {
-    const { t } = useTranslation();
     const [draggedCard, setDraggedCard] = useState<Card | null>(null);
 
     return (
-        <div style={{ padding: "24px", height: "100%", overflowX: "auto" }}>
-            <h2 style={{ marginBottom: 20 }}>{board.name}</h2>
-            <div style={{ display: "flex", gap: 16, minHeight: "calc(100vh - 120px)" }}>
+        <div className="pr_Board">
+            <Heading size="md" weight="medium">{board.name}</Heading>
+            <div className="pr_Columns">
                 {board.lists?.map((list) => (
                     <div
                         key={list.id}
-                        style={{
-                            flex: "0 0 280px",
-                            background: "var(--ls-color-bg-subtle)",
-                            borderRadius: "var(--ls-radius-md)",
-                            padding: 12,
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 8,
-                        }}
+                        className="pr_Column"
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={() => setDraggedCard(null)}
                     >
-                        <div style={{ fontWeight: 600, fontSize: 14, padding: "4px 8px" }}>
+                        <div className="pr_ColumnHeader">
                             {list.name}
-                            <Badge variant="neutral" style={{ marginLeft: 8 }}>
-                                {list.cards?.length ?? 0}
-                            </Badge>
+                            <Badge count={list.cards?.length ?? 0} />
                         </div>
                         {list.cards?.map((card) => (
                             <div
                                 key={card.id}
+                                className="pr_Card"
                                 draggable
                                 onDragStart={() => setDraggedCard(card)}
-                                style={{
-                                    background: "var(--ls-color-bg)",
-                                    borderRadius: "var(--ls-radius-md)",
-                                    border: "1px solid var(--ls-color-border)",
-                                    padding: "10px 14px",
-                                    cursor: "grab",
-                                    fontSize: 14,
-                                }}
                             >
-                                <div style={{ fontWeight: 500 }}>{card.title}</div>
+                                <div className="pr_CardTitle">{card.title}</div>
                                 {card.due_date && (
-                                    <div
-                                        style={{
-                                            fontSize: 12,
-                                            color: "var(--ls-color-text-secondary)",
-                                            marginTop: 4,
-                                        }}
-                                    >
+                                    <div className="pr_CardDue">
                                         Echeance : {new Date(card.due_date).toLocaleDateString()}
                                     </div>
                                 )}
                             </div>
                         ))}
-                        <button
-                            type="button"
-                            style={{
-                                border: "none",
-                                background: "transparent",
-                                color: "var(--ls-color-text-secondary)",
-                                padding: "8px",
-                                borderRadius: "var(--ls-radius-md)",
-                                cursor: "pointer",
-                                fontSize: 13,
-                                textAlign: "left",
-                            }}
-                        >
+                        <button type="button" className="pr_AddCard">
                             + Ajouter une carte
                         </button>
                     </div>
@@ -130,93 +101,60 @@ function KanbanBoard({ board }: { board: Board }) {
 /* ==================== APP ==================== */
 
 function ProjectsApp() {
-    const { t } = useTranslation();
     const [activeProject, setActiveProject] = useState<string>();
     const [activeBoard, setActiveBoard] = useState<string>();
     const projectsQuery = useProjects();
     const boardsQuery = useBoards(activeProject);
-    const userQuery = useCurrentUser();
-
-    const user: User = {
-        id: "me",
-        displayName: userQuery.data?.full_name ?? "...",
-        email: userQuery.data?.email ?? "",
-    };
 
     const projects = projectsQuery.data ?? [];
     const boards = boardsQuery.data ?? [];
-
-    const spaces: Space[] = projects.map((p) => ({
-        id: p.id,
-        label: p.name,
-    }));
-
     const currentBoard = boards.find((b) => b.id === activeBoard) ?? boards[0];
 
-    const sections: NavSection[] = [
-        {
-            id: "boards",
-            title: t("nav.projectsBoards"),
-            items: boards.map((b) => ({
-                id: b.id,
-                label: b.name,
-                active: b.id === (activeBoard ?? currentBoard?.id),
-                onClick: () => setActiveBoard(b.id),
-            })),
-        },
+    /* Les tableaux du projet actif dans le LeftPanel */
+    const modules: ShellModule[] = [
+        ...projects.map((p) => ({
+            id: `project-${p.id}`,
+            label: p.name,
+            url: `?project=${p.id}`,
+        })),
+        ...boards.map((b) => ({
+            id: `board-${b.id}`,
+            label: `  ${b.name}`,
+            url: `?board=${b.id}`,
+        })),
     ];
 
     return (
-        <div style={{ display: "flex", height: "100vh" }}>
-            <Sidebar
-                spaces={spaces}
-                activeSpaceId={activeProject ?? projects[0]?.id}
-                onSpaceClick={(s) => {
-                    setActiveProject(s.id);
-                    setActiveBoard(undefined);
-                }}
-                onSpaceCreate={() => {
-                    /* TODO : modal creation projet */
-                }}
-                sections={sections}
-                user={user}
-                searchPlaceholder={t("common.search")}
-                onSettingsClick={() => {
-                    /* TODO : page settings */
-                }}
-            />
-            <main style={{ flex: 1, overflowY: "auto", background: "var(--ls-color-bg)" }}>
+        <ElementShell
+            modules={modules.length > 0 ? modules : MODULES}
+            activeModuleId={currentBoard ? `board-${currentBoard.id}` : "projects"}
+        >
+            <header className="ls_PageHeader">
+                <Body as="h1" size="lg" weight="medium">Projets</Body>
+            </header>
+            <div className="ls_PageBody">
                 {currentBoard ? (
                     <KanbanBoard board={currentBoard} />
                 ) : (
-                    <div
-                        style={{
-                            padding: 48,
-                            textAlign: "center",
-                            color: "var(--ls-color-text-secondary)",
-                        }}
-                    >
+                    <Body size="md" className="pr_Muted">
                         {projectsQuery.isLoading
                             ? "Chargement..."
                             : "Selectionnez ou creez un projet"}
-                    </div>
+                    </Body>
                 )}
-            </main>
-        </div>
+            </div>
+        </ElementShell>
     );
 }
 
 /* ==================== BOOT ==================== */
 
 const queryClient = createQueryClient();
-const locale = detectLocale();
 
-requireAuth("projects");
-
-initI18n(locale).then(() => {
-    createRoot(document.getElementById("root")!).render(
+createRoot(document.getElementById("root")!).render(
+    <React.StrictMode>
         <QueryClientProvider client={queryClient}>
             <ProjectsApp />
-        </QueryClientProvider>,
-    );
-});
+        </QueryClientProvider>
+    </React.StrictMode>,
+);
