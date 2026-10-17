@@ -1439,6 +1439,8 @@ def run_deploy(opts) -> int:
         if livekit_tpl.is_file():
             shutil.copyfile(livekit_tpl, meet_cfg / "livekit-call.yaml")
         compose_env["MEET_CONFIG_DIR"] = _portable(meet_cfg)
+        compose_env["MEET_ORIGIN"] = app_origin(answers["domain"], "meet")
+        compose_env["MEET_ISSUER"] = f"{_id_origin(answers['domain'])}/realms/lastarter"
 
     # Discussions (Element Web + Synapse) : homeserver, signing key, config
     # element et log config rendus as-code â€” l'architecture same-origin validÃ©e.
@@ -1466,6 +1468,9 @@ def run_deploy(opts) -> int:
                 "# Appservice lk-jwt-service (jetons LiveKit, MSC4512).\n"
                 "app_service_config_files:\n"
                 "  - /config/lk-jwt-service.yaml\n"
+                "# Guests : Element Call standalone (derriere le gate SSO) cree\n"
+                "# une session invite SANS mot de passe — l'auth reste le gate.\n"
+                "allow_guest_access: true\n"
             )
             (discussions_cfg / "lk-jwt-service.yaml").write_text(
                 render_lk_registration(answers, vault), encoding="utf-8"
@@ -1551,9 +1556,10 @@ def run_deploy(opts) -> int:
         to_recreate.setdefault("gateway", "certificats TLS rÃ©gÃ©nÃ©rÃ©s")
     # La CA est aussi copiÃ©e dans le dossier de config des Discussions :
     # Synapse la monte (magasin systÃ¨me) pour l'OIDC vers la passerelle TLS.
-    discussions_cfg_dir = runtime_dir / "discussions"
-    if discussions_cfg_dir.is_dir():
-        shutil.copyfile(ca_path, discussions_cfg_dir / "ca.crt")
+    for cfg_dir_name in ("discussions", "meet"):
+        cfg_dir = runtime_dir / cfg_dir_name
+        if cfg_dir.is_dir():
+            shutil.copyfile(ca_path, cfg_dir / "ca.crt")
     # ThÃ¨me de login LaStarter (drop-in Keycloak).
     theme_dir = repo_root / "identity" / "keycloak-theme"
     if theme_dir.is_dir():

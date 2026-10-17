@@ -14,12 +14,17 @@ upstream_pin = "latest"
 core = false
 requires = ["discussions"]
 extra_secrets = [
-  "lk_as_token",   # jeton appservice Synapse (MSC4512)
-  "lk_hs_token",   # jeton homeserver réciproque
+  "lk_as_token",              # jeton appservice Synapse (MSC4512)
+  "lk_hs_token",              # jeton homeserver réciproque
+  "meet_oidc_secret",         # secret du client OIDC `meet` (gate)
+  "meet_gate_cookie_secret",  # oauth2-proxy : signature des cookies (base64 32)
 ]
 
 [oidc]
-# Pas de client dédié : l'auth passe par le SSO du homeserver (client synapse).
+# Gate SSO oauth2-proxy devant le SPA (Element Call n'a pas de SSO natif) :
+# le login LaStarter s'affiche sur meet.<domaine> avant tout accès.
+client_id = "meet"
+scopes = "openid profile email"
 
 [branding.env]
 BRAND_NAME = "{brand_name}"
@@ -43,21 +48,29 @@ ELEMENT_CALL_IMAGE = "ghcr.io/element-hq/element-call:latest"
 LK_JWT_IMAGE = "ghcr.io/element-hq/lk-jwt-service:0.9.0"
 LIVEKIT_IMAGE = "livekit/livekit-server:v1.13.9"
 
+# --- Gate SSO oauth2-proxy (client OIDC `meet` du realm) ---
+OIDC_RP_CLIENT_SECRET = "{secret:meet_oidc_secret}"
+OAUTH2_PROXY_IMAGE = "quay.io/oauth2-proxy/oauth2-proxy:v7.9.0"
+OAUTH2_PROXY_COOKIE_SECRET = "{secret:meet_gate_cookie_secret}"
+
 [compose]
 profile = "meet"
 route_label = "meet"            # meet.<domaine> → visio standalone
-frontend_target = "element_call:8080"
+# Le gate SSO intercepte / : la passerelle route vers meet_gate, qui proxie
+# vers element_call APRÈS le login Keycloak.
+frontend_target = "meet_gate:4180"
 api_target = ""
 infra_services = ["call_livekit", "call_redis"]
-recreate_service = "element_call"
+recreate_service = "meet_gate"
 extra_servers = [
   { label = "livekit", target = "call_livekit:7880" },
 ]
 services = [
-  "element_call",      # SPA standalone + widget
-  "lk-jwt-service",    # appservice Synapse MSC4512 (jetons LiveKit)
-  "call_livekit",      # SFU LiveKit dédié
-  "call_redis",        # Redis pour LiveKit
+  "meet_gate",          # gate SSO oauth2-proxy (login LaStarter)
+  "element_call",       # SPA standalone + widget
+  "lk-jwt-service",     # appservice Synapse MSC4512 (jetons LiveKit)
+  "call_livekit",       # SFU LiveKit dédié
+  "call_redis",         # Redis pour LiveKit
 ]
 extras = []
 

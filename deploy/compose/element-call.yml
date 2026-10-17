@@ -32,6 +32,43 @@ services:
     networks: [lastarter]
     restart: unless-stopped
 
+  # Gate SSO : le login LaStarter (Keycloak) s'affiche avant tout accès au
+  # SPA — Element Call n'ayant pas de SSO natif. Proxy + gate en un.
+  meet_gate:
+    image: ${OAUTH2_PROXY_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-meet-gate
+    command:
+      - --provider=oidc
+      - --http-address=0.0.0.0:4180
+    extra_hosts:
+      # *.localhost ne résout que côté navigateurs : épingle via l'hôte.
+      - "id.localhost:host-gateway"
+    environment:
+      OAUTH2_PROXY_OIDC_ISSUER_URL: ${MEET_ISSUER}
+      OAUTH2_PROXY_CLIENT_ID: meet
+      OAUTH2_PROXY_CLIENT_SECRET: ${OIDC_RP_CLIENT_SECRET}
+      OAUTH2_PROXY_COOKIE_SECRET: ${OAUTH2_PROXY_COOKIE_SECRET}
+      OAUTH2_PROXY_REDIRECT_URL: ${MEET_ORIGIN}/oauth2/callback
+      OAUTH2_PROXY_UPSTREAMS: http://element_call:8080
+      OAUTH2_PROXY_EMAIL_DOMAINS: "*"
+      OAUTH2_PROXY_COOKIE_NAME: _ls_meet_gate
+      OAUTH2_PROXY_COOKIE_SECURE: "true"
+      OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
+      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "true"
+      # CA locale POC : verify du provider OIDC et de l'upstream TLS. Le
+      # skip-verify couvre le boot (l'image n'a pas de shell pour le magasin
+      # systeme) ; laconnexion reste privee (boucle locale via l'hote).
+      OAUTH2_PROXY_PROVIDER_CA_FILE: /config-element/ca.crt
+      OAUTH2_PROXY_SSL_CA_FILE: /config-element/ca.crt
+      OAUTH2_PROXY_SSL_INSECURE_SKIP_VERIFY: "true"
+    volumes:
+      - ${MEET_CONFIG_DIR}:/config-element:ro
+    networks: [lastarter]
+    restart: unless-stopped
+    depends_on:
+      element_call:
+        condition: service_healthy
+
   # SPA Element Call : standalone (meet.<domaine>) + widget dans le chat.
   element_call:
     image: ${ELEMENT_CALL_IMAGE}
