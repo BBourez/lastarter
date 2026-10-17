@@ -434,9 +434,10 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             "    client_max_body_size 150m;",
             "",
         ]
-        # Element Web / Element Call : DÉJÀ en Compound natif — NE PAS injecter
-        # le thème (il entrerait en conflit avec leurs styles propres).
-        if brick.name not in ("element-web", "element-call"):
+        # Element Web / Element Call / Discussions : DÉJÀ en Compound natif — NE PAS
+        # injecter le thème (il entrerait en conflit avec leurs styles propres),
+        # ni l'auto-login (leur SSO est natif : Synapse OIDC / Matrix).
+        if brick.name not in ("element-web", "element-call", "discussions"):
             # URL d'auth par brique : Django → /api/v1.0/authenticate/, Sails → /login.
             auth_url = "/login" if brick.name == "projects" else "/api/v1.0/authenticate/"
             lines += _theme_nginx_block(auth_url=auth_url)
