@@ -1,7 +1,10 @@
 /*
- * LaStarter SSO : layout deux colonnes.
- * Gauche 75% : branding vert Compound. Droite 25% : formulaire.
- * Tokens alignes sur le design system (cpd-color-* / Inter).
+ * LaStarter SSO : deux colonnes avec les VRAIS tokens Compound.
+ * Les styles des champs et du bouton sont copies des vrais composants :
+ * - Input  : Form/Controls/Text/Text.module.css (compound-web)
+ * - Button : Button/Button.module.css (compound-web)
+ * - Layout : pattern mx_AuthPage d'Element Web (radius --cpd-space-6x)
+ * Tokens   : @vector-im/compound-design-tokens (charges via theme.properties)
  */
 
 /* ==================== BASE ==================== */
@@ -15,15 +18,10 @@
 .ls-sso-body {
     margin: 0;
     min-height: 100vh;
-    font-family:
-        Inter,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Roboto,
-        sans-serif;
-    color: #1b1d22;
-    background: #ffffff;
+    /* La vraie pile de polices Compound */
+    font-family: var(--cpd-font-family-body), var(--cpd-font-family-fallbacks);
+    color: var(--cpd-color-text-primary);
+    background: var(--cpd-color-bg-canvas-default);
     -webkit-font-smoothing: antialiased;
 }
 
@@ -34,21 +32,27 @@
     min-height: 100vh;
 }
 
-/* ---------- Colonne gauche : 75% ---------- */
+/* ---------- Colonne gauche : 75% branding ---------- */
 
 .ls-sso-left {
     flex: 0 0 75%;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 64px 72px 40px;
-    background: linear-gradient(160deg, #046c4e 0%, #035941 55%, #024533 100%);
-    color: #ffffff;
+    padding: var(--cpd-space-16x) var(--cpd-space-18x) var(--cpd-space-10x);
+    /* Vert de marque compose depuis les vrais tokens verts Compound */
+    background: linear-gradient(
+        160deg,
+        var(--cpd-color-green-900) 0%,
+        var(--cpd-color-green-1000) 55%,
+        var(--cpd-color-green-1100) 100%
+    );
+    color: var(--cpd-color-text-on-solid-primary);
     position: relative;
     overflow: hidden;
 }
 
-/* Motif decoratif discret : cercle immense en transparence */
+/* Cercles decoratifs en transparence */
 .ls-sso-left::after {
     content: "";
     position: absolute;
@@ -57,7 +61,8 @@
     width: 560px;
     height: 560px;
     border-radius: 50%;
-    background: rgba(11, 196, 145, 0.12);
+    background: var(--cpd-color-green-500);
+    opacity: 0.14;
     pointer-events: none;
 }
 
@@ -69,7 +74,8 @@
     width: 300px;
     height: 300px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.05);
+    background: #ffffff;
+    opacity: 0.05;
     pointer-events: none;
 }
 
@@ -82,30 +88,31 @@
 .ls-sso-logo {
     width: 56px;
     height: 56px;
-    border-radius: 14px;
-    background: #0bc491;
-    color: #04352a;
-    font-size: 28px;
-    font-weight: 700;
+    /* Radius pilule du design system */
+    border-radius: var(--cpd-radius-pill-effect);
+    background: var(--cpd-color-bg-action-primary-rest);
+    color: var(--cpd-color-text-on-solid-primary);
+    /* La vraie typo titre Compound */
+    font: var(--cpd-font-heading-xl-semibold);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 28px;
+    margin-bottom: var(--cpd-space-7x);
 }
 
 .ls-sso-title {
-    margin: 0 0 12px;
-    font-size: 42px;
-    line-height: 1.15;
-    font-weight: 600;
+    margin: 0 0 var(--cpd-space-3x);
+    font: var(--cpd-font-heading-2xl-semibold);
     letter-spacing: -0.02em;
+    color: var(--cpd-color-text-on-solid-primary);
 }
 
 .ls-sso-tagline {
-    margin: 0 0 36px;
-    font-size: 18px;
+    margin: 0 0 var(--cpd-space-9x);
+    font: var(--cpd-font-body-lg-regular);
     line-height: 1.5;
-    color: rgba(255, 255, 255, 0.82);
+    color: var(--cpd-color-text-on-solid-primary);
+    opacity: 0.82;
     max-width: 520px;
 }
 
@@ -115,34 +122,36 @@
     list-style: none;
     display: flex;
     flex-wrap: wrap;
-    gap: 10px 24px;
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.72);
+    gap: var(--cpd-space-2x) var(--cpd-space-6x);
+    font: var(--cpd-font-body-sm-regular);
+    color: var(--cpd-color-text-on-solid-primary);
+    opacity: 0.72;
 }
 
 .ls-sso-features li {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--cpd-space-2x);
 }
 
 .ls-sso-features li::before {
     content: "";
     width: 6px;
     height: 6px;
-    border-radius: 50%;
-    background: #0bc491;
+    border-radius: var(--cpd-radius-pill-effect);
+    background: var(--cpd-color-bg-action-primary-rest);
     flex-shrink: 0;
 }
 
 .ls-sso-footer {
     position: relative;
     z-index: 1;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.55);
+    font: var(--cpd-font-caption-regular);
+    color: var(--cpd-color-text-on-solid-primary);
+    opacity: 0.55;
 }
 
-/* ---------- Colonne droite : 25% ---------- */
+/* ---------- Colonne droite : 25% formulaire ---------- */
 
 .ls-sso-right {
     flex: 1 1 25%;
@@ -151,21 +160,21 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 48px 36px;
-    background: #ffffff;
+    padding: var(--cpd-space-12x) var(--cpd-space-9x);
+    background: var(--cpd-color-bg-canvas-default);
 }
 
+/* La carte : radius auth d'Element Web (--cpd-space-6x) */
 .ls-sso-card {
     width: 100%;
     max-width: 340px;
 }
 
 .ls-sso-card-header h2 {
-    margin: 0 0 28px;
-    font-size: 22px;
-    font-weight: 600;
+    margin: 0 0 var(--cpd-space-7x);
+    font: var(--cpd-font-heading-lg-semibold);
     letter-spacing: -0.01em;
-    color: #1b1d22;
+    color: var(--cpd-color-text-primary);
 }
 
 .ls-sso-card-body {
@@ -173,121 +182,161 @@
     flex-direction: column;
 }
 
-/* ==================== CHAMPS ==================== */
+/* ==================== CHAMPS (copie Text.module.css Compound) ==================== */
 
 .ls-field {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin-bottom: 18px;
+    gap: var(--cpd-space-1x);
+    margin-bottom: var(--cpd-space-5x);
 }
 
 .ls-field label {
-    font-size: 14px;
-    font-weight: 500;
-    color: #1b1d22;
+    font: var(--cpd-font-body-sm-medium);
+    color: var(--cpd-color-text-primary);
 }
 
 .ls-field input {
-    padding: 10px 14px;
-    border: 1px solid #e1e6ec;
-    border-radius: 8px;
-    font-size: 15px;
+    /* --- VRAI style compound-web Text.module.css --- */
+    border: 1px solid var(--cpd-color-border-interactive-primary);
+    background: var(--cpd-color-bg-canvas-default);
+    border-radius: 0.5rem;
+    padding: var(--cpd-space-3x) var(--cpd-space-4x);
+    box-sizing: border-box;
+    font-feature-settings: "calt" 0;
+    font: var(--cpd-font-body-md-regular);
     font-family: inherit;
-    color: #1b1d22;
-    background: #ffffff;
+    color: var(--cpd-color-text-primary);
     transition:
-        border-color 0.1s ease,
-        box-shadow 0.1s ease;
+        border-color 0.1s,
+        box-shadow 0.1s;
+}
+
+@media (hover) {
+    .ls-field input:hover {
+        border-color: var(--cpd-color-border-interactive-hovered);
+        box-shadow: 0 1.2px 2.4px 0 rgb(0 0 0 / 15%);
+    }
+}
+
+.ls-field input:active {
+    border-color: var(--cpd-color-border-interactive-hovered);
 }
 
 .ls-field input:focus {
-    outline: none;
-    border-color: #0bc491;
-    box-shadow: 0 0 0 2px rgba(11, 196, 145, 0.25);
+    outline: 2px solid var(--cpd-color-border-focused);
+    border-color: transparent;
 }
 
+.ls-field input[data-invalid],
 .ls-field input[aria-invalid="true"] {
-    border-color: #d6455d;
+    border-color: var(--cpd-color-text-critical-primary);
+}
+
+.ls-field input:disabled {
+    box-shadow: none;
+    background: var(--cpd-color-bg-canvas-disabled);
+    border-color: var(--cpd-color-border-disabled);
+    color: var(--cpd-color-text-disabled);
+    cursor: not-allowed;
 }
 
 .ls-error {
-    font-size: 13px;
-    color: #d6455d;
+    font: var(--cpd-font-caption-regular);
+    color: var(--cpd-color-text-critical-primary);
 }
 
 .ls-field-actions {
-    margin-top: 6px;
+    margin-top: var(--cpd-space-2x);
 }
 
 .ls-checkbox {
-    font-size: 14px;
-    color: #656d77;
+    font: var(--cpd-font-body-sm-regular);
+    color: var(--cpd-color-text-secondary);
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 20px;
+    gap: var(--cpd-space-2x);
+    margin-bottom: var(--cpd-space-5x);
 }
 
 .ls-checkbox label {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--cpd-space-2x);
     cursor: pointer;
 }
 
 .ls-checkbox input {
-    accent-color: #0bc491;
+    accent-color: var(--cpd-color-bg-action-primary-rest);
     width: 16px;
     height: 16px;
 }
 
-/* ==================== BOUTON ==================== */
+/* ==================== BOUTON (copie Button.module.css Compound) ==================== */
 
 .ls-btn-primary {
-    display: block;
-    width: 100%;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 9999px;
-    background: #0bc491;
-    color: #04352a;
-    font-size: 15px;
-    font-weight: 600;
-    font-family: inherit;
+    /* --- VRAI style compound-web Button.module.css --- */
+    border-radius: var(--cpd-radius-pill-effect);
     cursor: pointer;
-    transition: background-color 0.1s ease;
+    appearance: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--cpd-space-2x);
+    box-sizing: border-box;
+    font: var(--cpd-font-body-md-semibold);
+    font-family: inherit;
+    transition-duration: 0.1s;
+    transition-property: color, background-color, border-color;
+
+    /* kind=primary */
+    color: var(--cpd-color-text-on-solid-primary);
+    background: var(--cpd-color-bg-action-primary-rest);
+    border-width: 0;
+
+    /* size=lg, full width */
+    padding-block: var(--cpd-space-2x);
+    padding-inline: var(--cpd-space-8x);
+    min-block-size: var(--cpd-space-12x);
+    width: 100%;
 }
 
-.ls-btn-primary:hover {
-    background: #0ad08a;
+@media (hover) {
+    .ls-btn-primary:hover {
+        background: var(--cpd-color-bg-action-primary-hovered);
+    }
+}
+
+.ls-btn-primary:active {
+    background: var(--cpd-color-bg-action-primary-pressed);
 }
 
 .ls-btn-primary:focus-visible {
-    outline: 2px solid #046c4e;
+    outline: 2px solid var(--cpd-color-border-focused);
     outline-offset: 2px;
 }
 
 .ls-btn-primary:disabled {
-    opacity: 0.6;
     cursor: not-allowed;
+    background: var(--cpd-color-bg-subtle-primary) !important;
+    color: var(--cpd-color-text-disabled) !important;
 }
 
 /* ==================== LIENS & MESSAGES ==================== */
 
 .ls-links {
-    margin-top: 24px;
+    margin-top: var(--cpd-space-6x);
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    font-size: 14px;
-    color: #656d77;
+    gap: var(--cpd-space-2x);
+    font: var(--cpd-font-body-sm-regular);
+    color: var(--cpd-color-text-secondary);
 }
 
 .ls-links a {
-    color: #045c49;
+    color: var(--cpd-color-text-link-external);
     text-decoration: none;
-    font-weight: 500;
+    font: var(--cpd-font-body-sm-medium);
 }
 
 .ls-links a:hover {
@@ -295,37 +344,37 @@
 }
 
 .ls-message {
-    padding: 12px 14px;
-    border-radius: 8px;
-    font-size: 14px;
-    margin-bottom: 20px;
+    padding: var(--cpd-space-3x) var(--cpd-space-4x);
+    border-radius: var(--cpd-radius-md);
+    font: var(--cpd-font-body-sm-regular);
+    margin-bottom: var(--cpd-space-5x);
     line-height: 1.4;
 }
 
 .ls-message-success {
-    background: #e8f7f0;
-    color: #046c4e;
+    background: var(--cpd-color-bg-success-subtle);
+    color: var(--cpd-color-text-success-primary);
 }
 
 .ls-message-error {
-    background: #fdeef0;
-    color: #a43547;
+    background: var(--cpd-color-bg-critical-subtle);
+    color: var(--cpd-color-text-critical-primary);
 }
 
 .ls-message-warning {
-    background: #fdf5e6;
-    color: #8a5a12;
+    background: var(--cpd-color-bg-warning-subtle);
+    color: var(--cpd-color-text-warning-primary);
 }
 
 .ls-message-info {
-    background: #ecf2f8;
-    color: #2f5a87;
+    background: var(--cpd-color-bg-info-subtle);
+    color: var(--cpd-color-text-info-primary);
 }
 
 .ls-sso-card-info {
-    margin-top: 24px;
-    font-size: 13px;
-    color: #656d77;
+    margin-top: var(--cpd-space-6x);
+    font: var(--cpd-font-caption-regular);
+    color: var(--cpd-color-text-secondary);
     line-height: 1.5;
 }
 
@@ -338,7 +387,7 @@
 
     .ls-sso-left {
         flex: 0 0 auto;
-        padding: 40px 32px;
+        padding: var(--cpd-space-10x) var(--cpd-space-8x);
     }
 
     .ls-sso-brand {
@@ -346,7 +395,7 @@
     }
 
     .ls-sso-title {
-        font-size: 30px;
+        font: var(--cpd-font-heading-xl-semibold);
     }
 
     .ls-sso-features {
@@ -359,6 +408,6 @@
 
     .ls-sso-right {
         max-width: none;
-        padding: 40px 24px;
+        padding: var(--cpd-space-10x) var(--cpd-space-6x);
     }
 }
