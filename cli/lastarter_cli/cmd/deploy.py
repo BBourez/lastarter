@@ -391,6 +391,10 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
         "",
     ]
     # Serveur d'identité dédié : id.<domaine> → Keycloak (toute l'auth).
+    # PAS d'injection theme.css ici : la page de login a SON theme complet
+    # (identity/keycloak-theme : deux colonnes, tokens Compound, Inter) —
+    # le CSS d'app injecté via sub_filter ajouterait des bordures/cartes
+    # par-dessus et casserait le design.
     lines += [
         "# Identité — id.<domaine> → Keycloak",
         "server {",
@@ -403,7 +407,6 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
         "    client_max_body_size 150m;",
         "",
     ]
-    lines += _theme_nginx_block(include_auto_login=False)
     lines += [
         "    location / {",
         "        resolver 127.0.0.11 valid=10s ipv6=off;",
