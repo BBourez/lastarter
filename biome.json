@@ -48,7 +48,8 @@
             ".turbo",
             "identity/realm-lastarter.json",
             "identity/keycloak-theme/lastarter/login/resources/css/cpd-*.css",
-            "identity/keycloak-theme/lastarter/login/resources/fonts/**"
+            "identity/keycloak-theme/lastarter/login/resources/fonts/**",
+            "deployments/**"
         ]
     }
 }
