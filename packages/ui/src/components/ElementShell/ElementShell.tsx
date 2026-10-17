@@ -8,9 +8,11 @@ import React, { useState } from "react";
 import {
     Avatar,
     Badge,
+    Form,
     Search,
     Separator,
     Tooltip,
+    TooltipProvider,
 } from "@vector-im/compound-web";
 import "./element-shell.css";
 
@@ -159,7 +161,9 @@ function LeftPanel({
     return (
         <div className="ls_LeftPanel">
             <div className="ls_LeftPanel_header">
-                <Search name="module-search" placeholder="Rechercher" />
+                <Form.Root>
+                    <Search name="module-search" placeholder="Rechercher" />
+                </Form.Root>
             </div>
 
             <div className="ls_ModuleList" role="list">
@@ -222,10 +226,12 @@ export function ElementShell({
     children,
 }: ElementShellProps) {
     return (
-        <div className="ls_AppShell">
-            <SpacePanel spaces={spaces} activeId="home" />
-            <LeftPanel modules={modules} activeModuleId={activeModuleId} user={user} />
-            <main className="ls_MainContent">{children}</main>
-        </div>
+        <TooltipProvider>
+            <div className="ls_AppShell">
+                <SpacePanel spaces={spaces} activeId="home" />
+                <LeftPanel modules={modules} activeModuleId={activeModuleId} user={user} />
+                <main className="ls_MainContent">{children}</main>
+            </div>
+        </TooltipProvider>
     );
 }
