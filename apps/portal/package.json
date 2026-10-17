@@ -10,9 +10,11 @@
         "lint": "biome check src/"
     },
     "dependencies": {
-        "@lastarter/ui": "workspace:*",
-        "@lastarter/i18n": "workspace:*",
         "@lastarter/config": "workspace:*",
+        "@lastarter/i18n": "workspace:*",
+        "@lastarter/ui": "workspace:*",
+        "@vector-im/compound-design-tokens": "^11.3.1",
+        "@vector-im/compound-web": "^10.4.0",
         "react": "^19.0.0",
         "react-dom": "^19.0.0"
     },
