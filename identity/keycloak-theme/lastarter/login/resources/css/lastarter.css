@@ -1,284 +1,364 @@
-/* LaStarter — login Keycloak split-screen (style Element Call).
- * Gauche : dégradé vert-noir avec marque. Droite : formulaire Compound.
- * Ce CSS surcharge tout le thème parent keycloak (PatternFly).
+/*
+ * LaStarter SSO : layout deux colonnes.
+ * Gauche 75% : branding vert Compound. Droite 25% : formulaire.
+ * Tokens alignes sur le design system (cpd-color-* / Inter).
  */
 
-/* ================================================================
- * RESET : cacher le layout PatternFly par défaut
- * ================================================================ */
-.pf-v5-c-login,
-.pf-c-login,
-.login-pf body,
-#kc-header,
-#kc-logo,
-.pf-v5-c-login__main-body .pf-v5-c-form,
-card-pf {
-    /* On garde les éléments mais on les re-layout via notre structure. */
+/* ==================== BASE ==================== */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
 }
 
-/* ================================================================
- * SPLIT-SCREEN : structure principale
- * ================================================================ */
-body.login-pf,
-body {
-    margin: 0 !important;
-    padding: 0 !important;
-    font-family: Inter, "Segoe UI", system-ui, sans-serif !important;
-    background: #ffffff !important;
+.ls-sso-body {
+    margin: 0;
     min-height: 100vh;
+    font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        sans-serif;
+    color: #1b1d22;
+    background: #ffffff;
+    -webkit-font-smoothing: antialiased;
 }
 
-/* Le conteneur PatternFly devient un flex 2 colonnes */
-.pf-v5-c-login,
-.pf-c-login {
-    display: flex !important;
-    min-height: 100vh;
-    background: #ffffff !important;
-}
+/* ==================== SHELL : 75% / 25% ==================== */
 
-.pf-v5-c-login__container,
-.pf-c-login__container {
-    display: flex !important;
-    width: 100% !important;
-    max-width: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    flex-direction: row !important;
-}
-
-/* ================================================================
- * PANNEAU GAUCHE : dégradé vert-noir Element Call
- * ================================================================ */
-.pf-v5-c-login__main,
-.pf-c-login__main {
-    order: 2 !important; /* Formulaire à droite */
-    flex: 0 0 45% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    padding: 48px 64px !important;
-    background: #ffffff !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-}
-
-/* Le panneau gauche : on l'injecte via ::before sur le body ou le container */
-.pf-v5-c-login__container::before,
-.pf-c-login__container::before {
-    content: "";
-    order: 1;
-    flex: 0 0 55%;
-    background: linear-gradient(135deg, #0d3d2e 0%, #062b20 40%, #002311 100%) !important;
+.ls-sso-shell {
     display: flex;
+    min-height: 100vh;
 }
 
-/* Texte de marque sur le panneau gauche (via ::after pour le texte) */
-.pf-v5-c-login__container::after,
-.pf-c-login__container::after {
+/* ---------- Colonne gauche : 75% ---------- */
+
+.ls-sso-left {
+    flex: 0 0 75%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 64px 72px 40px;
+    background: linear-gradient(160deg, #046c4e 0%, #035941 55%, #024533 100%);
+    color: #ffffff;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Motif decoratif discret : cercle immense en transparence */
+.ls-sso-left::after {
     content: "";
-    order: 0;
-    display: none;
+    position: absolute;
+    right: -220px;
+    bottom: -220px;
+    width: 560px;
+    height: 560px;
+    border-radius: 50%;
+    background: rgba(11, 196, 145, 0.12);
+    pointer-events: none;
 }
 
-/* ================================================================
- * EN-TÊTE : titre du realm (visible dans le panneau droit)
- * ================================================================ */
-#kc-header {
-    display: block !important;
-    padding: 0 !important;
-    margin: 0 0 32px !important;
-    background: transparent !important;
-    text-indent: 0 !important;
+.ls-sso-left::before {
+    content: "";
+    position: absolute;
+    right: -100px;
+    bottom: -120px;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    pointer-events: none;
 }
 
-#kc-header-wrapper {
-    font-size: 1.75rem !important;
-    font-weight: 600 !important;
-    color: #1b1d22 !important;
-    letter-spacing: -0.02em !important;
-    text-transform: none !important;
-    padding: 0 !important;
-    background: transparent !important;
+.ls-sso-brand {
+    position: relative;
+    z-index: 1;
+    margin-top: 8vh;
 }
 
-h1#kc-page-title {
-    display: none; /* Le header-wrapper suffit */
+.ls-sso-logo {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: #0bc491;
+    color: #04352a;
+    font-size: 28px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 28px;
 }
 
-/* ================================================================
- * FORMULAIRE (panneau droit) : champs style Compound
- * ================================================================ */
-.ls-field,
-.pf-v5-c-form__group,
-.pf-c-form__group {
-    margin-bottom: 20px;
+.ls-sso-title {
+    margin: 0 0 12px;
+    font-size: 42px;
+    line-height: 1.15;
+    font-weight: 600;
+    letter-spacing: -0.02em;
 }
 
-.ls-field label,
-.pf-v5-c-form__label {
-    display: block !important;
-    font-size: 0.875rem !important;
-    font-weight: 500 !important;
-    color: #1b1d22 !important;
-    margin-bottom: 6px !important;
-    text-transform: none !important;
+.ls-sso-tagline {
+    margin: 0 0 36px;
+    font-size: 18px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.82);
+    max-width: 520px;
 }
 
-.ls-field input,
-#kc-form-login input[type="text"],
-#kc-form-login input[type="password"],
-.pf-v5-c-form-control,
-.pf-c-form-control,
-input#username,
-input#password {
-    width: 100% !important;
-    box-sizing: border-box !important;
-    min-height: 40px !important;
-    padding: 8px 14px !important;
-    font-size: 0.9375rem !important;
-    font-family: Inter, system-ui, sans-serif !important;
-    color: #1b1d22 !important;
-    background: #ffffff !important;
-    border: 1px solid #bdc4cc !important;
-    border-radius: 8px !important;
-    transition: border-color 0.1s, box-shadow 0.1s;
+.ls-sso-features {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 24px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.72);
 }
 
-.ls-field input:focus,
-#kc-form-login input:focus,
-.pf-v5-c-form-control:focus,
-input#username:focus,
-input#password:focus {
-    outline: none !important;
-    border-color: #007a61 !important;
-    box-shadow: 0 0 0 2px #e3f7ed !important;
+.ls-sso-features li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ls-sso-features li::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #0bc491;
+    flex-shrink: 0;
+}
+
+.ls-sso-footer {
+    position: relative;
+    z-index: 1;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+/* ---------- Colonne droite : 25% ---------- */
+
+.ls-sso-right {
+    flex: 1 1 25%;
+    min-width: 320px;
+    max-width: 460px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 36px;
+    background: #ffffff;
+}
+
+.ls-sso-card {
+    width: 100%;
+    max-width: 340px;
+}
+
+.ls-sso-card-header h2 {
+    margin: 0 0 28px;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #1b1d22;
+}
+
+.ls-sso-card-body {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ==================== CHAMPS ==================== */
+
+.ls-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 18px;
+}
+
+.ls-field label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1b1d22;
+}
+
+.ls-field input {
+    padding: 10px 14px;
+    border: 1px solid #e1e6ec;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: inherit;
+    color: #1b1d22;
+    background: #ffffff;
+    transition:
+        border-color 0.1s ease,
+        box-shadow 0.1s ease;
+}
+
+.ls-field input:focus {
+    outline: none;
+    border-color: #0bc491;
+    box-shadow: 0 0 0 2px rgba(11, 196, 145, 0.25);
+}
+
+.ls-field input[aria-invalid="true"] {
+    border-color: #d6455d;
 }
 
 .ls-error {
-    display: block;
-    margin-top: 4px;
-    font-size: 0.8125rem;
-    color: #d51928;
+    font-size: 13px;
+    color: #d6455d;
 }
 
-/* ================================================================
- * BOUTON : pilule Compound (gris foncé)
- * ================================================================ */
-.ls-btn-primary,
-#kc-form-login button[type="submit"],
-button.pf-m-primary,
-.pf-v5-c-button.pf-m-primary {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 100% !important;
-    min-height: 40px !important;
-    padding: 6px 24px !important;
-    font-size: 0.9375rem !important;
-    font-weight: 500 !important;
-    font-family: Inter, system-ui, sans-serif !important;
-    background: #1b1d22 !important;
-    color: #ffffff !important;
-    border: none !important;
-    border-radius: 9999px !important;
-    cursor: pointer;
-    transition: background-color 0.1s;
+.ls-field-actions {
+    margin-top: 6px;
 }
 
-.ls-btn-primary:hover,
-#kc-form-login button[type="submit"]:hover,
-button.pf-m-primary:hover {
-    background: #3c4045 !important;
-}
-
-.ls-btn-primary:active,
-#kc-form-login button[type="submit"]:active {
-    background: #4c5158 !important;
-}
-
-/* ================================================================
- * CHECKBOX remember me
- * ================================================================ */
-.ls-checkbox label {
-    display: flex !important;
+.ls-checkbox {
+    font-size: 14px;
+    color: #656d77;
+    display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 0.875rem !important;
-    font-weight: 400 !important;
+    margin-bottom: 20px;
+}
+
+.ls-checkbox label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     cursor: pointer;
 }
 
-.ls-checkbox input[type="checkbox"] {
-    accent-color: #0bc491 !important;
+.ls-checkbox input {
+    accent-color: #0bc491;
     width: 16px;
     height: 16px;
 }
 
-/* ================================================================
- * LIENS : forgot password / register
- * ================================================================ */
+/* ==================== BOUTON ==================== */
+
+.ls-btn-primary {
+    display: block;
+    width: 100%;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 9999px;
+    background: #0bc491;
+    color: #04352a;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+}
+
+.ls-btn-primary:hover {
+    background: #0ad08a;
+}
+
+.ls-btn-primary:focus-visible {
+    outline: 2px solid #046c4e;
+    outline-offset: 2px;
+}
+
+.ls-btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ==================== LIENS & MESSAGES ==================== */
+
 .ls-links {
     margin-top: 24px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    font-size: 0.875rem;
+    gap: 10px;
+    font-size: 14px;
+    color: #656d77;
 }
 
-.ls-links a,
-#kc-form-options a,
-.pf-v5-c-login__main-footer-links-item-link {
-    color: #007a61 !important;
-    text-decoration: none !important;
-    font-size: 0.875rem !important;
+.ls-links a {
+    color: #045c49;
+    text-decoration: none;
+    font-weight: 500;
 }
 
 .ls-links a:hover {
-    text-decoration: underline !important;
+    text-decoration: underline;
 }
 
-/* ================================================================
- * SUPPRESSION : le reste du chrome PatternFly
- * ================================================================ */
-.pf-v5-c-login__main-footer,
-.pf-c-login__main-footer,
-.pf-v5-c-login__footer,
-.pf-c-login__footer,
-#kc-info,
-#kc-info-wrapper {
-    display: none !important;
-}
-
-.pf-v5-c-login__main-header,
-.pf-c-login__main-header {
-    background: transparent !important;
-    padding: 0 !important;
-    margin-bottom: 24px;
-}
-
-/* Message d'erreur/succès Keycloak */
-#kc-error-message,
-#kc-info-message {
-    padding: 12px 16px;
+.ls-message {
+    padding: 12px 14px;
     border-radius: 8px;
-    background: #ffefec;
-    color: #d51928;
-    font-size: 0.875rem;
+    font-size: 14px;
     margin-bottom: 20px;
+    line-height: 1.4;
 }
 
-/* ================================================================
- * RESPONSIVE : mobile = une seule colonne (formulaire seulement)
- * ================================================================ */
-@media (max-width: 768px) {
-    .pf-v5-c-login__container::before,
-    .pf-c-login__container::before {
-        display: none !important;
+.ls-message-success {
+    background: #e8f7f0;
+    color: #046c4e;
+}
+
+.ls-message-error {
+    background: #fdeef0;
+    color: #a43547;
+}
+
+.ls-message-warning {
+    background: #fdf5e6;
+    color: #8a5a12;
+}
+
+.ls-message-info {
+    background: #ecf2f8;
+    color: #2f5a87;
+}
+
+.ls-sso-card-info {
+    margin-top: 24px;
+    font-size: 13px;
+    color: #656d77;
+    line-height: 1.5;
+}
+
+/* ==================== RESPONSIVE ==================== */
+
+@media (max-width: 900px) {
+    .ls-sso-shell {
+        flex-direction: column;
     }
 
-    .pf-v5-c-login__main,
-    .pf-c-login__main {
-        flex: 1 !important;
-        padding: 32px 24px !important;
+    .ls-sso-left {
+        flex: 0 0 auto;
+        padding: 40px 32px;
+    }
+
+    .ls-sso-brand {
+        margin-top: 0;
+    }
+
+    .ls-sso-title {
+        font-size: 30px;
+    }
+
+    .ls-sso-features {
+        display: none;
+    }
+
+    .ls-sso-footer {
+        display: none;
+    }
+
+    .ls-sso-right {
+        max-width: none;
+        padding: 40px 24px;
     }
 }
