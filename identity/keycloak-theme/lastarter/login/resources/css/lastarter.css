@@ -256,7 +256,6 @@
     border-radius: 0.5rem;
     padding: var(--cpd-space-3x) var(--cpd-space-4x);
     box-sizing: border-box;
-    font-family: inherit;
     font: var(--cpd-font-body-md-regular);
     color: var(--cpd-color-text-primary);
     transition:
@@ -338,7 +337,6 @@
     gap: var(--cpd-space-2x);
     box-sizing: border-box;
     font: var(--cpd-font-body-md-semibold);
-    font-family: inherit;
     transition-duration: 0.1s;
     transition-property: color, background-color, border-color;
 
