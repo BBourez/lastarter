@@ -570,7 +570,16 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             # de chat.<domaine> (public_baseurl de notre Synapse) pour éviter la
             # canonicalisation Synapse.
             chat_host = f"chat.{bare}" + (f":{domain.split(':')[1]}" if ":" in domain else "")
+            chat_origin = f"https://{chat_host}"
             lines += [
+                "    # Rien de public : la racine renvoie vers le chat (SSO obligatoire).",
+                "    # Meet s'utilise en widget dans les salons (pattern ess-helm) ;",
+                "    # les liens de salle /room/<id> restent directs pour les invites",
+                "    # authentifiés (guest + password désactivés côté Synapse).",
+                "    location = / {",
+                f"        return 302 {chat_origin}/;",
+                "    }",
+                "",
                 "    # Matrix API proxy (same-origin, Host: chat = public_baseurl).",
                 "    location /_matrix/ {",
                 "        resolver 127.0.0.11 valid=10s ipv6=off;",
@@ -861,18 +870,30 @@ def render_discussions_homeserver(template: str, answers: dict, vault: dict[str,
     return REALM_SECRET_TOKEN.sub(secret, rendered)
 
 
-def render_discussions_element_config(template: str, answers: dict) -> str:
-    """Rend config.json Element Web des Discussions : same-origin + marque."""
+def render_discussions_element_config(template: str, answers: dict, meet_enabled: bool = False) -> str:
+    """Rend config.json Element Web des Discussions : same-origin + marque.
+
+    meet_enabled : ajoute le widget Element Call (pattern ess-helm use_exclusively).
+    """
     domain = answers["domain"]
     bare = domain.split(":")[0]
     port = domain.split(":")[1] if ":" in domain else ""
     scheme = _scheme(domain)
     chat_origin = f"{scheme}://chat.{bare}" + (f":{port}" if port else "")
-    return (
+    meet_origin = f"{scheme}://meet.{bare}" + (f":{port}" if port else "")
+    rendered = (
         template.replace("{{CHAT_ORIGIN}}", chat_origin)
+        .replace("{{MEET_ORIGIN}}", meet_origin)
         .replace("{{SERVER_NAME}}", bare)
         .replace("{{BRAND}}", answers.get("brand_name", "LaStarter"))
     )
+    if not meet_enabled:
+        # Sans Meet : retirer les blocs features/element_call du template.
+        parsed = json.loads(rendered)
+        parsed.pop("features", None)
+        parsed.pop("element_call", None)
+        rendered = json.dumps(parsed, indent=4)
+    return rendered
 
 
 APP_EMOJI = {
@@ -1370,12 +1391,19 @@ def run_deploy(opts) -> int:
         element_tpl = repo_root / "identity" / "element-discussions-config.json"
         if not element_tpl.is_file():
             raise DeployError("identity/element-discussions-config.json manquant")
-        (discussions_cfg / "config.json").write_text(
-            render_discussions_element_config(
-                element_tpl.read_text(encoding="utf-8"), answers
-            ),
-            encoding="utf-8",
+        element_rendered = render_discussions_element_config(
+            element_tpl.read_text(encoding="utf-8"),
+            answers,
+            meet_enabled="element-call" in selected,
         )
+        (discussions_cfg / "config.json").write_text(element_rendered, encoding="utf-8")
+        # Anti-dérive : le conteneur COPIE config.json au boot — un changement
+        # doit le recréer (bind mount ≠ recopie).
+        el_hash = hashlib.sha256(element_rendered.encode()).hexdigest()
+        el_applied = runtime_dir / ".discussions-element-config.applied"
+        if not el_applied.is_file() or el_applied.read_text(encoding="utf-8").strip() != el_hash:
+            to_recreate.setdefault("discussions_element_web", "config.json element changé")
+            pending_markers.append((el_applied, el_hash))
         compose_env["DISCUSSIONS_CONFIG_DIR"] = _portable(discussions_cfg)
         # Résolution intra-conteneurs de la passerelle (POC .localhost).
         compose_env["LASTARTER_GATEWAY_SERVICE"] = "gateway"
