@@ -4,7 +4,6 @@
  * Copyright 2026 LaStarter. SPDX-License-Identifier: Proprietary.
  */
 
-import React, { useState } from "react";
 import {
     Avatar,
     Badge,
@@ -14,6 +13,8 @@ import {
     Tooltip,
     TooltipProvider,
 } from "@vector-im/compound-web";
+import type React from "react";
+import { useState } from "react";
 import "./element-shell.css";
 
 /* ==================== ICONES (SVG inline, style Element) ==================== */
@@ -206,7 +207,11 @@ function LeftPanel({
                             <HelpIcon /> Aide
                         </button>
                         <Separator horizontal />
-                        <button type="button" className="ls_MenuItem ls_MenuItemDanger" role="menuitem">
+                        <button
+                            type="button"
+                            className="ls_MenuItem ls_MenuItemDanger"
+                            role="menuitem"
+                        >
                             <LogoutIcon /> Se deconnecter
                         </button>
                     </div>

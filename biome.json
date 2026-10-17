@@ -23,6 +23,7 @@
                 "useKeyWithClickEvents": "off",
                 "useSemanticElements": "off",
                 "noSvgWithoutTitle": "off",
+                "noInteractiveElementToNoninteractiveRole": "off",
                 "useFocusableInteractive": "off"
             }
         }
@@ -41,6 +42,6 @@
         }
     },
     "files": {
-        "ignore": ["node_modules", "dist", ".turbo", "identity/realm-lastarter.json", "e2e"]
+        "ignore": ["node_modules", "dist", ".turbo", "identity/realm-lastarter.json"]
     }
 }
