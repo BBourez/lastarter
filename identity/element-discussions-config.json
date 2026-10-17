@@ -1,0 +1,29 @@
+{
+    "default_server_config": {
+        "m.homeserver": {
+            "base_url": "{{CHAT_ORIGIN}}",
+            "server_name": "{{SERVER_NAME}}"
+        }
+    },
+    "sso_redirect_options": {
+        "immediate": true
+    },
+    "setting_defaults": {
+        "UIFeature.registration": false,
+        "UIFeature.passwordReset": false,
+        "UIFeature.deactivate": false,
+        "urlPreviewsEnabled": true
+    },
+    "embedded_pages": {
+        "login_for_welcome": true
+    },
+    "disable_custom_urls": true,
+    "disable_guests": true,
+    "default_country_code": "FR",
+    "brand": "{{BRAND}}",
+    "show_labs_settings": false,
+    "fallback_icc_profile": true,
+    "room_directory": {
+        "servers": ["{{SERVER_NAME}}"]
+    }
+}

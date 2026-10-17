@@ -3,7 +3,7 @@
   "enabled": true,
   "sslRequired": "external",
   "loginTheme": "lastarter",
-  "registrationAllowed": true,
+  "registrationAllowed": false,
   "registrationEmailAsUsername": false,
   "rememberMe": true,
   "verifyEmail": false,
@@ -18,9 +18,44 @@
     "realm": [
       { "name": "user", "composite": false },
       { "name": "admin", "composite": false }
-    ]
+    ],
+    "client": {
+      "account": [
+        { "name": "manage-account", "composite": false },
+        { "name": "view-profile", "composite": false },
+        { "name": "manage-account-links", "composite": false },
+        { "name": "view-applications", "composite": false },
+        { "name": "view-consent", "composite": false },
+        { "name": "manage-consent", "composite": false },
+        { "name": "view-groups", "composite": false },
+        { "name": "delete-account", "composite": false }
+      ]
+    }
   },
   "defaultRoles": ["user", "offline_access", "uma_authorization"],
+  "clientScopes": [
+    {
+      "name": "account",
+      "description": "Scope audience-account : les tokens destines a la console de compte",
+      "protocol": "openid-connect",
+      "attributes": { "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "audience-account",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "account",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultDefaultClientScopes": ["web-origins", "acr", "roles", "profile", "basic", "email"],
   "users": [
     {
       "username": "demo",
@@ -32,8 +67,46 @@
       "credentials": [
         { "type": "password", "value": "{{SECRET:demo_user_password}}", "temporary": false }
       ],
-      "realmRoles": ["user"]
+      "realmRoles": ["user"],
+      "clientRoles": {
+        "account": [
+          "manage-account",
+          "view-profile",
+          "manage-account-links",
+          "view-applications",
+          "view-consent",
+          "manage-consent",
+          "view-groups",
+          "delete-account"
+        ]
+      }
     }
   ],
-  "clients": {{CLIENTS_JSON}}
+  "clients": [
+    {
+      "clientId": "account",
+      "name": "Account API",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "redirectUris": ["/realms/lastarter/account/*"],
+      "webOrigins": ["+"],
+      "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "basic", "email", "account"]
+    },
+    {
+      "clientId": "account-console",
+      "name": "Account Console",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["/realms/lastarter/account/*"],
+      "webOrigins": ["+"],
+      "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "basic", "email", "account"],
+      "attributes": { "pkce.code.challenge.method": "S256" }
+    },
+    {{CLIENTS_JSON}}
+  ]
 }

@@ -42,6 +42,13 @@
         }
     },
     "files": {
-        "ignore": ["node_modules", "dist", ".turbo", "identity/realm-lastarter.json"]
+        "ignore": [
+            "node_modules",
+            "dist",
+            ".turbo",
+            "identity/realm-lastarter.json",
+            "identity/keycloak-theme/lastarter/login/resources/css/cpd-*.css",
+            "identity/keycloak-theme/lastarter/login/resources/fonts/**"
+        ]
     }
 }

@@ -160,7 +160,9 @@ def build_realm_clients(bricks: list[Brick], rendered_envs: dict[str, str], answ
                     "post.logout.redirect.uris": f"{origin}/*",
                     "backchannel.logout.session.required": "true",
                 },
-                "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "email"],
+                # Scope « account » obligatoire : il porte le mapper
+                # audience-account (sans lui, l'API console de compte répond 401).
+                "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "basic", "email", "account"],
                 "optionalClientScopes": ["address", "phone", "offline_access"],
             }
         )
@@ -193,7 +195,11 @@ def ensure_dev_certs(runtime_dir: Path, san_names: list[str]) -> tuple[Path, Pat
     certs_dir.mkdir(parents=True, exist_ok=True)
     ca, crt, key = certs_dir / "ca.crt", certs_dir / "server.crt", certs_dir / "server.key"
     ca_key = certs_dir / "ca.key"
-    wanted_sans = sorted(set(san_names) | {"localhost", "*.localhost"})
+    # SANs explicites uniquement — JAMAIS de "*.localhost" : service_identity
+    # (Twisted/Synapse) rejette le certificat ENTIER dès qu'il voit un wildcard
+    # mono-label (« too few host components for wildcard usage », RFC 6125),
+    # même si des noms explicites sont présents. Leçon du POC chat.localhost.
+    wanted_sans = sorted(set(san_names) | {"localhost"})
     marker = certs_dir / ".sans"
     current_sans = marker.read_text(encoding="utf-8").strip() if marker.is_file() else ""
     leaf_current = crt.is_file() and key.is_file() and current_sans == "\n".join(wanted_sans)
@@ -204,17 +210,26 @@ def ensure_dev_certs(runtime_dir: Path, san_names: list[str]) -> tuple[Path, Pat
     # feuille est re-émis quand la liste d'hôtes change.
     san_line = ",".join(f"DNS:{name}" for name in wanted_sans)
     make_ca = "" if ca.is_file() and ca_key.is_file() else (
+        # Extensions X.509 obligatoires : Python/OpenSSL modernes refusent une
+        # CA sans basicConstraints/keyUsage (« CA cert does not include key
+        # usage extension »). Leçon du POC.
         "openssl req -x509 -newkey rsa:2048 -nodes -days 3650 "
-        "-keyout /certs/ca.key -out /certs/ca.crt -subj '/CN=LaStarter POC CA'; "
+        "-keyout /certs/ca.key -out /certs/ca.crt -subj '/CN=LaStarter POC CA' "
+        "-addext 'basicConstraints=critical,CA:TRUE' "
+        "-addext 'keyUsage=critical,keyCertSign,cRLSign' "
+        "-addext 'subjectKeyIdentifier=hash'; "
     )
     script = (
         "set -e; "
         + make_ca
         + "openssl req -newkey rsa:2048 -nodes "
         "-keyout /certs/server.key -out /certs/server.csr -subj '/CN=localhost'; "
-        f"printf 'subjectAltName={san_line}\\nbasicConstraints=CA:FALSE\\n' > /certs/san.ext; "
+        "printf 'basicConstraints=CA:FALSE\\n"
+        "keyUsage=digitalSignature,keyEncipherment\\n"
+        "extendedKeyUsage=serverAuth\\n"
+        f"subjectAltName={san_line}\\n' > /certs/san.ext; "
         "openssl x509 -req -in /certs/server.csr -CA /certs/ca.crt -CAkey /certs/ca.key "
-        "-CAcreateserial -out /certs/server.crt -days 825 -extfile /certs/san.ext; "
+        "-CAcreateserial -out /certs/server.crt -days 825 -sha256 -extfile /certs/san.ext; "
         "rm -f /certs/server.csr /certs/san.ext /certs/ca.srl"
     )
     result = subprocess.run(
@@ -482,6 +497,32 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             "    location = /signup { return 302 https://$host/; }",
             "",
         ]
+        # Discussions (Element Web + Synapse) : same-origin validé en POC —
+        # l'API Matrix et le callback SSO vivent sur chat.<domaine> (un seul
+        # certificat, pas de CORS, pas de canonicalisation Synapse).
+        if brick.name == "discussions":
+            lines += [
+                "    # Matrix API -> Synapse (same-origin : un seul certificat).",
+                "    location /_matrix/ {",
+                "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                "        set $backend_matrix discussions_synapse:8008;",
+                "        proxy_pass http://$backend_matrix;",
+                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
+                "        proxy_set_header X-Forwarded-Proto https;",
+                "    }",
+                "",
+                "    # Synapse OIDC callback (same-origin SSO).",
+                "    location /_synapse/ {",
+                "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                "        set $backend_syn discussions_synapse:8008;",
+                "        proxy_pass http://$backend_syn;",
+                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
+                "        proxy_set_header X-Forwarded-Proto https;",
+                "    }",
+                "",
+            ]
         # Element Call standalone : proxy Matrix API sur le MEME domaine (same-origin,
         # évite les problèmes CORS/certificat cross-domain).
         if brick.name == "element-call":
@@ -756,9 +797,44 @@ def render_element_call_config(template: str, answers: dict) -> str:
     return rendered
 
 
+def render_discussions_homeserver(template: str, answers: dict, vault: dict[str, str]) -> str:
+    """Rend homeserver.yaml des Discussions : OIDC vers le SSO + secrets du coffre."""
+    domain = answers["domain"]
+    bare = domain.split(":")[0]
+    port = domain.split(":")[1] if ":" in domain else ""
+    scheme = _scheme(domain)
+    chat_origin = f"{scheme}://chat.{bare}" + (f":{port}" if port else "")
+
+    def secret(match: re.Match) -> str:
+        name = match.group(1)
+        if name not in vault:
+            raise DeployError(f"secret manquant dans secrets.env : {name}")
+        return vault[name]
+
+    rendered = template.replace("{{SSO_ORIGIN}}", _id_origin(domain))
+    rendered = rendered.replace("{{CHAT_ORIGIN}}", chat_origin)
+    rendered = rendered.replace("{{SERVER_NAME}}", bare)
+    return REALM_SECRET_TOKEN.sub(secret, rendered)
+
+
+def render_discussions_element_config(template: str, answers: dict) -> str:
+    """Rend config.json Element Web des Discussions : same-origin + marque."""
+    domain = answers["domain"]
+    bare = domain.split(":")[0]
+    port = domain.split(":")[1] if ":" in domain else ""
+    scheme = _scheme(domain)
+    chat_origin = f"{scheme}://chat.{bare}" + (f":{port}" if port else "")
+    return (
+        template.replace("{{CHAT_ORIGIN}}", chat_origin)
+        .replace("{{SERVER_NAME}}", bare)
+        .replace("{{BRAND}}", answers.get("brand_name", "LaStarter"))
+    )
+
+
 APP_EMOJI = {
     "drive": "📁",
     "meet": "🎥",
+    "discussions": "💬",
     "element-web": "💬",
     "element-call": "📞",
     "transfers": "📨",
@@ -1109,6 +1185,49 @@ def run_deploy(opts) -> int:
                 encoding="utf-8",
             )
             compose_env["ELEMENT_CALL_CONFIG_PATH"] = _portable(ec_path)
+
+    # Discussions (Element Web + Synapse) : homeserver, signing key, config
+    # element et log config rendus as-code — l'architecture same-origin validée.
+    if "discussions" in selected:
+        homeserver_tpl = repo_root / "identity" / "homeserver-discussions.yaml"
+        if not homeserver_tpl.is_file():
+            raise DeployError("identity/homeserver-discussions.yaml manquant")
+        hs_rendered = render_discussions_homeserver(
+            homeserver_tpl.read_text(encoding="utf-8"), answers, vault
+        )
+        hs_path = runtime_dir / "discussions-homeserver.yaml"
+        hs_path.write_text(hs_rendered, encoding="utf-8")
+        hs_hash = hashlib.sha256(hs_rendered.encode()).hexdigest()
+        applied = runtime_dir / ".discussions-homeserver.applied"
+        if not applied.is_file() or applied.read_text(encoding="utf-8").strip() != hs_hash:
+            to_recreate.setdefault("discussions_synapse", "homeserver.yaml discussions changé")
+            pending_markers.append((applied, hs_hash))
+        signing_path = runtime_dir / "discussions-signing.key"
+        signing_path.write_text(
+            f"ed25519 0 {vault['discussions_signing_key']}\n", encoding="utf-8"
+        )
+        log_tpl = repo_root / "identity" / "discussions-synapse-log.yaml"
+        log_path = runtime_dir / "discussions-synapse-log.yaml"
+        if log_tpl.is_file():
+            shutil.copyfile(log_tpl, log_path)
+        element_tpl = repo_root / "identity" / "element-discussions-config.json"
+        if not element_tpl.is_file():
+            raise DeployError("identity/element-discussions-config.json manquant")
+        element_path = runtime_dir / "discussions-element-config.json"
+        element_path.write_text(
+            render_discussions_element_config(
+                element_tpl.read_text(encoding="utf-8"), answers
+            ),
+            encoding="utf-8",
+        )
+        compose_env["DISCUSSIONS_HOMESERVER_PATH"] = _portable(hs_path)
+        compose_env["DISCUSSIONS_SIGNING_KEY_PATH"] = _portable(signing_path)
+        compose_env["DISCUSSIONS_LOG_CONFIG_PATH"] = _portable(log_path)
+        compose_env["DISCUSSIONS_ELEMENT_CONFIG_PATH"] = _portable(element_path)
+        # La CA vit dans .runtime/certs (rendu par ensure_dev_certs plus bas).
+        compose_env["DISCUSSIONS_CA_PATH"] = _portable(runtime_dir / "certs" / "ca.crt")
+        # Résolution intra-conteneurs de la passerelle (POC .localhost).
+        compose_env["LASTARTER_GATEWAY_SERVICE"] = "gateway"
 
     # Portail : copie des pages + config générée dans .runtime/portal/ (montage unique).
     portal_dir = repo_root / "portal"

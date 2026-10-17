@@ -1,5 +1,5 @@
 """Tests offline du catalogue — stdlib unittest uniquement.
-Catalogue CORE : keycloak uniquement (fondation), zéro app."""
+Catalogue : keycloak (fondation) + discussions (Element Web + Synapse)."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ class CatalogueTests(unittest.TestCase):
         self.assertEqual(self.errors, [])
         self.assertEqual(
             set(self.bricks),
-            {"keycloak"},
+            {"keycloak", "discussions"},
         )
 
     def test_keycloak_is_core_foundation(self):
@@ -52,6 +52,28 @@ class CatalogueTests(unittest.TestCase):
     def test_keycloak_secrets_generated(self):
         names = secret_names(self.bricks["keycloak"])
         self.assertIsInstance(names, list)
+
+    def test_discussions_est_une_app(self):
+        d = self.bricks["discussions"]
+        self.assertFalse(d.core)
+        self.assertEqual(d.requires, ["keycloak"])
+        self.assertEqual(d.oidc["client_id"], "synapse")
+        self.assertEqual(d.compose.get("route_label"), "chat")
+        # Secrets critiques du homeserver présents.
+        names = set(secret_names(d))
+        for expected in (
+            "discussions_signing_key",
+            "discussions_macaroon_secret",
+            "discussions_form_secret",
+            "discussions_registration_secret",
+            "discussions_oidc_secret",
+        ):
+            self.assertIn(expected, names)
+
+    def test_resolve_selection_discussions_ajoute_keycloak(self):
+        ordered, added = resolve_selection(["discussions"], self.bricks)
+        self.assertEqual(ordered, ["keycloak", "discussions"])
+        self.assertEqual(added, ["keycloak"])
 
 
 class InitWriterTests(unittest.TestCase):

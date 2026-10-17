@@ -256,9 +256,8 @@
     border-radius: 0.5rem;
     padding: var(--cpd-space-3x) var(--cpd-space-4x);
     box-sizing: border-box;
-    font-feature-settings: "calt" 0;
-    font: var(--cpd-font-body-md-regular);
     font-family: inherit;
+    font: var(--cpd-font-body-md-regular);
     color: var(--cpd-color-text-primary);
     transition:
         border-color 0.1s,

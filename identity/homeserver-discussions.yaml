@@ -1,0 +1,64 @@
+# Synapse pour LaStarter — rendu par le CLI (identity/homeserver-discussions.yaml).
+# Architecture validée : same-origin, public_baseurl sur chat.<domaine>.
+server_name: "{{SERVER_NAME}}"
+pid_file: /data/homeserver.pid
+public_baseurl: "{{CHAT_ORIGIN}}/"
+
+listeners:
+  - port: 8008
+    resources:
+      - compress: false
+        names:
+          - client
+          - federation
+    tls: false
+    type: http
+    x_forwarded: true
+
+database:
+  name: sqlite3
+  args:
+    database: /data/homeserver.db
+
+log_config: "/data/discussions.log.config"
+media_store_path: /data/media_store
+report_stats: false
+
+# Secrets du coffre (générés par `lastarter init`, jamais re-générés).
+registration_shared_secret: "{{SECRET:discussions_registration_secret}}"
+macaroon_secret_key: "{{SECRET:discussions_macaroon_secret}}"
+form_secret: "{{SECRET:discussions_form_secret}}"
+signing_key_path: "/data/discussions.signing.key"
+
+trusted_key_servers:
+  - server_name: "matrix.org"
+
+# ==================== SSO KEYCLOAK ====================
+# Auth unique via le realm lastarter. Comptes provisionnés à la 1re connexion.
+
+oidc_providers:
+  - idp_id: lastarter
+    idp_name: "LaStarter SSO"
+    issuer: "{{SSO_ORIGIN}}/realms/lastarter"
+    client_id: "synapse"
+    client_secret: "{{SECRET:discussions_oidc_secret}}"
+    scopes: ["openid", "profile", "email"]
+    authorization_endpoint: "{{SSO_ORIGIN}}/realms/lastarter/protocol/openid-connect/auth"
+    token_endpoint: "{{SSO_ORIGIN}}/realms/lastarter/protocol/openid-connect/token"
+    userinfo_endpoint: "{{SSO_ORIGIN}}/realms/lastarter/protocol/openid-connect/userinfo"
+    backchannel_logout_enabled: true
+    user_mapping_provider:
+      config:
+        localpart_template: "{{ user.preferred_username }}"
+        display_name_template: "{{ user.name }}"
+        email_template: "{{ user.email }}"
+
+# Pas d'inscription locale : tout passe par le SSO.
+enable_registration: false
+password_config:
+  enabled: false
+  localdb_enabled: false
+
+# ==================== CHIFFREMENT (E2EE) ====================
+# Clés gérées par les clients (Element Web) ; chiffrement par défaut partout.
+encryption_enabled_by_default_for_room_type: "all"

@@ -1,0 +1,57 @@
+# Brique communication : Discussions — Element Web + Synapse (SSO Keycloak).
+# Architecture validée en local (deploy/local/chat.yml) : same-origin, le
+# homeserver Matrix (API + callback SSO) est servi sur chat.<domaine>.
+
+[brick]
+name = "discussions"
+title = "Discussions — messagerie Matrix"
+category = "communication"
+description = "Messagerie chiffrée E2EE : Element Web (Compound) + Synapse, authentifiés par le SSO."
+license = "AGPL-3.0-only"
+upstream_repo = "https://github.com/element-hq/element-web"
+upstream_image = "ghcr.io/element-hq/element-web"
+upstream_pin = "v1.12.31"
+core = false
+requires = ["keycloak"]
+extra_secrets = [
+  "discussions_signing_key",       # ed25519 : signature de fédération Matrix
+  "discussions_macaroon_secret",   # jetons d'accès Synapse
+  "discussions_form_secret",       # protection de formulaires
+  "discussions_registration_secret", # secret d'enregistrement partagé
+  "discussions_oidc_secret",       # secret du client OIDC `synapse`
+]
+
+[oidc]
+# Client confidentiel du realm lastarter (secret partagé avec Synapse).
+realm = "lastarter"
+client_id = "synapse"
+scopes = "openid profile email"
+
+[branding.env]
+BRAND_NAME = "{brand_name}"
+
+[env]
+OIDC_RP_CLIENT_SECRET = "{secret:discussions_oidc_secret}"
+SYNAPSE_SERVER_NAME = "{domain_host}"
+SYNAPSE_PUBLIC_BASEURL = "{origin}/"
+SYNAPSE_MACAROON_SECRET = "{secret:discussions_macaroon_secret}"
+SYNAPSE_FORM_SECRET = "{secret:discussions_form_secret}"
+SYNAPSE_SIGNING_KEY = "{secret:discussions_signing_key}"
+SYNAPSE_OIDC_ISSUER = "{sso_origin}/realms/lastarter"
+ELEMENT_WEB_IMAGE = "ghcr.io/element-hq/element-web:v1.12.31"
+SYNAPSE_IMAGE = "matrixdotorg/synapse:latest"
+
+[compose]
+profile = "discussions"
+route_label = "chat"                  # chat.<domaine>
+frontend_target = "discussions_element_web:80"
+# L'API Matrix est servie same-origin via la passerelle (/_matrix, /_synapse).
+infra_services = []
+services = [
+  "discussions_synapse",      # matrixdotorg/synapse:latest (OIDC Keycloak)
+  "discussions_element_web",  # ghcr.io/element-hq/element-web:v1.12.31
+]
+extras = []
+
+[notes]
+warnings = "Le chiffrement E2EE est actif par défaut (encryption_enabled_by_default_for_room_type: all). Les comptes sont provisionnés à la première connexion SSO — aucune inscription locale."

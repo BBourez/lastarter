@@ -1,0 +1,50 @@
+# Brique discussions — Element Web + Synapse sur chat.<domaine>.
+# Assemblé par `lastarter deploy` (base.yml + discussions.yml).
+# Rendus du CLI montés : homeserver, signing key, config element, CA.
+
+services:
+  discussions_synapse:
+    image: ${SYNAPSE_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-discussions-synapse
+    # CA locale dans le magasin système (le client OIDC de Synapse ignore
+    # SSL_CERT_FILE) + pinnage IPv4 de la passerelle dans /etc/hosts :
+    # RFC 6761 renvoie *.localhost vers 127.0.0.1 et host-gateway IPv6
+    # fait timeouter Twisted — les deux leçons du POC.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        update-ca-certificates 2>/dev/null || true
+        PROXY_IP=$$(getent hosts ${LASTARTER_GATEWAY_SERVICE} | awk '{print $$1; exit}')
+        if [ -n "$$PROXY_IP" ]; then
+          echo "$$PROXY_IP ${LASTARTER_HOST} id.${LASTARTER_HOST} chat.${LASTARTER_HOST}" >> /etc/hosts
+        fi
+        exec /start.py run
+    environment:
+      SSL_CERT_FILE: /usr/local/share/ca-certificates/lastarter-ca.crt
+      REQUESTS_CA_BUNDLE: /usr/local/share/ca-certificates/lastarter-ca.crt
+    volumes:
+      - discussions_data:/data
+      - ${DISCUSSIONS_HOMESERVER_PATH}:/data/homeserver.yaml:ro
+      - ${DISCUSSIONS_SIGNING_KEY_PATH}:/data/discussions.signing.key:ro
+      - ${DISCUSSIONS_LOG_CONFIG_PATH}:/data/discussions.log.config:ro
+      - ${DISCUSSIONS_CA_PATH}:/usr/local/share/ca-certificates/lastarter-ca.crt:ro
+    networks: [lastarter]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8008/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+
+  discussions_element_web:
+    image: ${ELEMENT_WEB_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-discussions-element-web
+    volumes:
+      - ${DISCUSSIONS_ELEMENT_CONFIG_PATH}:/app/config.json:ro
+    networks: [lastarter]
+    restart: unless-stopped
+
+volumes:
+  discussions_data:
