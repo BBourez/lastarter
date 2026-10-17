@@ -28,12 +28,8 @@
     <body class="ls-sso-body">
         <div class="ls-sso-shell">
 
-            <!-- ============ COLONNE GAUCHE : 75% branding (sans texte) ============ -->
-            <div class="ls-sso-left">
-                <div class="ls-sso-brand">
-                    <div class="ls-sso-logo" aria-hidden="true"></div>
-                </div>
-            </div>
+            <!-- ============ COLONNE GAUCHE : 75% branding (visuel seul) ============ -->
+            <div class="ls-sso-left"></div>
 
             <!-- ============ COLONNE DROITE : 25% formulaire ============ -->
             <div class="ls-sso-right">
