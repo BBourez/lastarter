@@ -258,9 +258,7 @@
     box-sizing: border-box;
     font: var(--cpd-font-body-md-regular);
     color: var(--cpd-color-text-primary);
-    transition:
-        border-color 0.1s,
-        box-shadow 0.1s;
+    transition: border-color 0.1s, box-shadow 0.1s;
 }
 
 @media (hover) {
