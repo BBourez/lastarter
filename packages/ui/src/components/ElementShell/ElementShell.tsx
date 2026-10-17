@@ -177,12 +177,12 @@ function LeftPanel({
                         role="listitem"
                     >
                         <span className="ls_ModuleLabel">{mod.label}</span>
-                        {mod.badge ? <Badge count={mod.badge} /> : null}
+                        {mod.badge ? <Badge>{mod.badge}</Badge> : null}
                     </a>
                 ))}
             </div>
 
-            <Separator horizontal className="ls_UserSeparator" />
+            <Separator className="ls_UserSeparator" />
 
             <div className="ls_UserMenu">
                 <button
@@ -206,7 +206,7 @@ function LeftPanel({
                         <button type="button" className="ls_MenuItem" role="menuitem">
                             <HelpIcon /> Aide
                         </button>
-                        <Separator horizontal />
+                        <Separator />
                         <button
                             type="button"
                             className="ls_MenuItem ls_MenuItemDanger"
