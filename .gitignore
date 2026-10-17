@@ -20,3 +20,6 @@ Thumbs.db
 node_modules/
 .turbo/
 dist/
+
+# Cles et certificats locaux (jamais commis)
+deploy/local/certs/
