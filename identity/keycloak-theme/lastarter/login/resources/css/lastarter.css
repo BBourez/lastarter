@@ -4,8 +4,43 @@
  * - Input  : Form/Controls/Text/Text.module.css (compound-web)
  * - Button : Button/Button.module.css (compound-web)
  * - Layout : pattern mx_AuthPage d'Element Web (radius --cpd-space-6x)
+ * Fonts    : Inter chargee comme element-web (via @fontsource/inter)
  * Tokens   : @vector-im/compound-design-tokens (charges via theme.properties)
  */
+
+/* ==================== INTER (comme element-web : @fontsource) ==================== */
+
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-display: swap;
+    font-weight: 400;
+    src: url("../fonts/inter-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-display: swap;
+    font-weight: 500;
+    src: url("../fonts/inter-latin-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-display: swap;
+    font-weight: 600;
+    src: url("../fonts/inter-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-display: swap;
+    font-weight: 700;
+    src: url("../fonts/inter-latin-700-normal.woff2") format("woff2");
+}
 
 /* ==================== BASE ==================== */
 
@@ -18,8 +53,8 @@
 .ls-sso-body {
     margin: 0;
     min-height: 100vh;
-    /* La vraie pile de polices Compound */
-    font-family: var(--cpd-font-family-body), var(--cpd-font-family-fallbacks);
+    /* Le vrai token Compound : Inter + fallbacks metriques */
+    font-family: var(--cpd-font-family-sans);
     color: var(--cpd-color-text-primary);
     background: var(--cpd-color-bg-canvas-default);
     -webkit-font-smoothing: antialiased;
