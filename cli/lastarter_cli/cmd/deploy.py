@@ -1015,7 +1015,9 @@ def provision_realm(base_url: str, admin_user: str, admin_password: str,
     realm = json.loads(text)
     realm.update(
         {
-            "registrationAllowed": True,
+            # SSO uniquement : l'inscription locale reste fermée (le realm as-code
+            # provisionne les comptes ; les apps provisionnent à la 1re connexion).
+            "registrationAllowed": False,
             "resetPasswordAllowed": True,
             "bruteForceProtected": True,
             "rememberMe": True,
@@ -1032,10 +1034,14 @@ def provision_realm(base_url: str, admin_user: str, admin_password: str,
         _ensure_realm_user(admin, token, "admin", "Admin", realm_admin_password, ca_file)
 
 
-def provision_realm_clients(base_url: str, admin_user: str, admin_password: str, clients_json: str, ca_file: Path | None = None) -> list[str]:
+def provision_realm_clients(base_url: str, admin_user: str, admin_password: str, clients_json: str, ca_file: Path | None = None, ensure_scopes: list[dict] | None = None) -> list[str]:
     """Crée ou met à jour chaque client OIDC du realm `lastarter` via l'API admin.
 
     Idempotent : GET par clientId, POST si absent, PUT sinon (secret + redirects).
+    `ensure_scopes` : définitions de client scopes (avec mappers) lues depuis le
+    template du realm — créées si absentes (un realm importé avant leur ajout
+    ne les possède pas : Keycloak rejette alors « Invalid scopes: openid profile
+    email » au premier login OIDC).
     Retourne la liste des clientIds synchronisés.
     """
     status, text = _http_json(
@@ -1054,7 +1060,47 @@ def provision_realm_clients(base_url: str, admin_user: str, admin_password: str,
     token = json.loads(text)["access_token"]
 
     admin = f"{base_url}/admin/realms/lastarter"
+
+    # 0) Client scopes requis (avec mappers) : créés si absents.
+    # NB : l'endpoint ignore le filtre ?name= (retourne tout) — tri côté client.
+    if ensure_scopes:
+        status, text = _http_json(
+            f"{admin}/client-scopes",
+            method="GET", token=token, ca_file=ca_file,
+        )
+        if status != 200:
+            raise DeployError(f"lecture client scopes impossible (HTTP {status})")
+        existing_scope_names = {s["name"] for s in json.loads(text)}
+        for scope in ensure_scopes:
+            name = scope["name"]
+            if name in existing_scope_names:
+                continue  # déjà présent : l'API fait autorité, pas d'écrasement
+            payload = {k: v for k, v in scope.items() if k != "protocolMappers"}
+            status, _ = _http_json(
+                f"{admin}/client-scopes", method="POST", token=token, body=payload, ca_file=ca_file
+            )
+            if status not in (200, 201, 204):
+                raise DeployError(f"création du client scope {name} impossible (HTTP {status})")
+            status, text = _http_json(
+                f"{admin}/client-scopes",
+                method="GET", token=token, ca_file=ca_file,
+            )
+            scope_id = next(s["id"] for s in json.loads(text) if s["name"] == name)
+            for mapper in scope.get("protocolMappers", []):
+                status, _ = _http_json(
+                    f"{admin}/client-scopes/{scope_id}/protocol-mappers/models",
+                    method="POST", token=token, body=mapper, ca_file=ca_file,
+                )
+                if status not in (200, 201, 204):
+                    raise DeployError(f"création du mapper {mapper['name']} impossible (HTTP {status})")
+            print(f"client scope créé : {name}")
+
     done: list[str] = []
+    # Résolution id par nom des client scopes (pour le linkage ci-dessous).
+    status, text = _http_json(
+        f"{admin}/client-scopes", method="GET", token=token, ca_file=ca_file,
+    )
+    scope_ids_by_name = {s["name"]: s["id"] for s in json.loads(text)}
     for client in json.loads(clients_json):
         client_id = client["clientId"]
         status, text = _http_json(
@@ -1065,13 +1111,37 @@ def provision_realm_clients(base_url: str, admin_user: str, admin_password: str,
             raise DeployError(f"lecture clients Keycloak impossible (HTTP {status})")
         existing = json.loads(text)
         if existing:
+            internal_id = existing[0]["id"]
             status, _ = _http_json(
-                f"{admin}/clients/{existing[0]['id']}", method="PUT", token=token, body=client, ca_file=ca_file
+                f"{admin}/clients/{internal_id}", method="PUT", token=token, body=client, ca_file=ca_file
             )
         else:
             status, _ = _http_json(f"{admin}/clients", method="POST", token=token, body=client, ca_file=ca_file)
+            if status not in (200, 201, 204):
+                raise DeployError(f"synchronisation du client {client_id} impossible (HTTP {status})")
+            status, text = _http_json(
+                f"{admin}/clients?clientId={urllib.parse.quote(client_id)}",
+                method="GET", token=token, ca_file=ca_file,
+            )
+            internal_id = json.loads(text)[0]["id"]
         if status not in (200, 201, 204):
             raise DeployError(f"synchronisation du client {client_id} impossible (HTTP {status})")
+        # Le PUT/POST client ne relie PAS les scopes : sans linkage dédié,
+        # Keycloak rejette « Invalid scopes » au premier login OIDC.
+        status, text = _http_json(
+            f"{admin}/clients/{internal_id}/default-client-scopes",
+            method="GET", token=token, ca_file=ca_file,
+        )
+        linked = {s["name"] for s in json.loads(text)} if status == 200 else set()
+        for scope_name in client.get("defaultClientScopes", []):
+            if scope_name in linked or scope_name not in scope_ids_by_name:
+                continue
+            status, _ = _http_json(
+                f"{admin}/clients/{internal_id}/default-client-scopes/{scope_ids_by_name[scope_name]}",
+                method="PUT", token=token, ca_file=ca_file,
+            )
+            if status not in (200, 201, 204):
+                raise DeployError(f"linkage du scope {scope_name} sur {client_id} impossible (HTTP {status})")
         done.append(client_id)
     return done
 
@@ -1119,6 +1189,20 @@ def run_deploy(opts) -> int:
     rendered_envs: dict[str, str] = {}
     to_recreate: dict[str, str] = {}  # service -> raison
     pending_markers: list[tuple[Path, str]] = []  # (marqueur, hash) écrits après succès
+    # Définitions de client scopes lues dans le template du realm : le
+    # provisioning les garantit sur les realms importés avant leur ajout.
+    realm_scope_definitions: list[dict] = []
+    realm_tpl_for_scopes = repo_root / "identity" / "realm-lastarter.json"
+    if realm_tpl_for_scopes.is_file():
+        try:
+            tpl_text = realm_tpl_for_scopes.read_text(encoding="utf-8")
+            tpl_text = tpl_text.replace("{{CLIENTS_JSON}}", "[]")
+            # Les jetons {{SECRET:x}} vivent DANS des guillemets JSON : substitution nue.
+            tpl_text = REALM_SECRET_TOKEN.sub("__secret__", tpl_text)
+            realm_tpl_json = json.loads(tpl_text)
+            realm_scope_definitions = realm_tpl_json.get("clientScopes", [])
+        except json.JSONDecodeError:
+            pass  # template non parsable : le provisioning live reste fonctionnel
     selected_bricks = [bricks[name] for name in selected]
     for name in selected:
         draft_path = deployment_dir / "env" / f"{name}.env"
@@ -1449,6 +1533,7 @@ def run_deploy(opts) -> int:
             admin_password=vault["kc_admin_password"],
             clients_json=build_realm_clients(selected_bricks, rendered_envs, answers),
             ca_file=ca_path,
+            ensure_scopes=realm_scope_definitions,
         )
         print(f"Clients OIDC synchronisés via l'API admin : {', '.join(provisioned)}")
 
