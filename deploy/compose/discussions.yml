@@ -1,6 +1,7 @@
 # Brique discussions — Element Web + Synapse sur chat.<domaine>.
 # Assemblé par `lastarter deploy` (base.yml + discussions.yml).
-# Rendus du CLI montés : homeserver, signing key, config element, CA.
+# Montage par DOSSIER (.runtime/discussions/) : les mounts fichier unique
+# renvoient 0 octet sous Docker Desktop Windows (leçon POC).
 
 services:
   discussions_synapse:
@@ -10,6 +11,7 @@ services:
     # SSL_CERT_FILE) + pinnage IPv4 de la passerelle dans /etc/hosts :
     # RFC 6761 renvoie *.localhost vers 127.0.0.1 et host-gateway IPv6
     # fait timeouter Twisted — les deux leçons du POC.
+    user: root
     entrypoint:
       - /bin/sh
       - -c
@@ -19,16 +21,15 @@ services:
         if [ -n "$$PROXY_IP" ]; then
           echo "$$PROXY_IP ${LASTARTER_HOST} id.${LASTARTER_HOST} chat.${LASTARTER_HOST}" >> /etc/hosts
         fi
-        exec /start.py run
+        chown -R 991:991 /data
+        exec gosu 991:991 /start.py run
     environment:
-      SSL_CERT_FILE: /usr/local/share/ca-certificates/lastarter-ca.crt
-      REQUESTS_CA_BUNDLE: /usr/local/share/ca-certificates/lastarter-ca.crt
+      SYNAPSE_CONFIG_PATH: /config/homeserver.yaml
+      SSL_CERT_FILE: /config/ca.crt
+      REQUESTS_CA_BUNDLE: /config/ca.crt
     volumes:
       - discussions_data:/data
-      - ${DISCUSSIONS_HOMESERVER_PATH}:/data/homeserver.yaml:ro
-      - ${DISCUSSIONS_SIGNING_KEY_PATH}:/data/discussions.signing.key:ro
-      - ${DISCUSSIONS_LOG_CONFIG_PATH}:/data/discussions.log.config:ro
-      - ${DISCUSSIONS_CA_PATH}:/usr/local/share/ca-certificates/lastarter-ca.crt:ro
+      - ${DISCUSSIONS_CONFIG_DIR}:/config:ro
     networks: [lastarter]
     restart: unless-stopped
     healthcheck:
@@ -41,8 +42,17 @@ services:
   discussions_element_web:
     image: ${ELEMENT_WEB_IMAGE}
     container_name: ${LASTARTER_CLIENT}-discussions-element-web
+    user: root
+    # config.json copié en root depuis le montage dossier (robuste Windows),
+    # puis nginx démarre (master root, workers nginx — usage standard).
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        cp /config-element/config.json /app/config.json
+        exec /docker-entrypoint.sh nginx -g "daemon off;"
     volumes:
-      - ${DISCUSSIONS_ELEMENT_CONFIG_PATH}:/app/config.json:ro
+      - ${DISCUSSIONS_CONFIG_DIR}:/config-element:ro
     networks: [lastarter]
     restart: unless-stopped
 

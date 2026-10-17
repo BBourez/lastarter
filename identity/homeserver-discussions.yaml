@@ -20,7 +20,7 @@ database:
   args:
     database: /data/homeserver.db
 
-log_config: "/data/discussions.log.config"
+log_config: "/config/discussions.log.config"
 media_store_path: /data/media_store
 report_stats: false
 
@@ -28,7 +28,7 @@ report_stats: false
 registration_shared_secret: "{{SECRET:discussions_registration_secret}}"
 macaroon_secret_key: "{{SECRET:discussions_macaroon_secret}}"
 form_secret: "{{SECRET:discussions_form_secret}}"
-signing_key_path: "/data/discussions.signing.key"
+signing_key_path: "/config/discussions.signing.key"
 
 trusted_key_servers:
   - server_name: "matrix.org"

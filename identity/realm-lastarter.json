@@ -82,31 +82,5 @@
       }
     }
   ],
-  "clients": [
-    {
-      "clientId": "account",
-      "name": "Account API",
-      "enabled": true,
-      "protocol": "openid-connect",
-      "publicClient": true,
-      "standardFlowEnabled": true,
-      "redirectUris": ["/realms/lastarter/account/*"],
-      "webOrigins": ["+"],
-      "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "basic", "email", "account"]
-    },
-    {
-      "clientId": "account-console",
-      "name": "Account Console",
-      "enabled": true,
-      "protocol": "openid-connect",
-      "publicClient": true,
-      "standardFlowEnabled": true,
-      "directAccessGrantsEnabled": false,
-      "redirectUris": ["/realms/lastarter/account/*"],
-      "webOrigins": ["+"],
-      "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "basic", "email", "account"],
-      "attributes": { "pkce.code.challenge.method": "S256" }
-    },
-    {{CLIENTS_JSON}}
-  ]
+  "clients": {{CLIENTS_JSON}}
 }

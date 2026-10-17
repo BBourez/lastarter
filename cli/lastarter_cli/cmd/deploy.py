@@ -126,6 +126,41 @@ def _client_secret_from_env(rendered_env: str) -> str:
     raise DeployError("OIDC_RP_CLIENT_SECRET / OIDC_CLIENT_SECRET absent de l'env rendu")
 
 
+# Clients de console de compte injectés dans le realm importé : requis pour
+# l'audience "account" (scope + mapper du template) et l'API /account/*.
+# Le secret OIDC de chaque brique reste géré par build_realm_clients.
+ACCOUNT_CONSOLE_CLIENTS = [
+    {
+        "clientId": "account",
+        "name": "Account API",
+        "enabled": True,
+        "protocol": "openid-connect",
+        "publicClient": True,
+        "standardFlowEnabled": True,
+        "redirectUris": ["/realms/lastarter/account/*"],
+        "webOrigins": ["+"],
+        "defaultClientScopes": [
+            "web-origins", "acr", "roles", "profile", "basic", "email", "account",
+        ],
+    },
+    {
+        "clientId": "account-console",
+        "name": "Account Console",
+        "enabled": True,
+        "protocol": "openid-connect",
+        "publicClient": True,
+        "standardFlowEnabled": True,
+        "directAccessGrantsEnabled": False,
+        "redirectUris": ["/realms/lastarter/account/*"],
+        "webOrigins": ["+"],
+        "defaultClientScopes": [
+            "web-origins", "acr", "roles", "profile", "basic", "email", "account",
+        ],
+        "attributes": {"pkce.code.challenge.method": "S256"},
+    },
+]
+
+
 def build_realm_clients(bricks: list[Brick], rendered_envs: dict[str, str], answers: dict) -> str:
     """Construit le tableau JSON des clients OIDC depuis le catalogue + env rendus.
 
@@ -143,6 +178,7 @@ def build_realm_clients(bricks: list[Brick], rendered_envs: dict[str, str], answ
                 "clientId": brick.oidc["client_id"],
                 "description": f"LaStarter {brick.title} (OIDC)",
                 "enabled": True,
+                "consentRequired": False,  # consentement implicite : apps de première partie, pas d'écran « Continue to your account »
                 "clientAuthenticatorType": "client-secret",
                 "secret": _client_secret_from_env(rendered_envs[brick.name]),
                 "redirectUris": [f"{origin}/*"],
@@ -1121,9 +1157,15 @@ def run_deploy(opts) -> int:
     # de chaque brique, extrait de l'env rendu).
     realm_template = repo_root / "identity" / "realm-lastarter.json"
     if "keycloak" in selected and realm_template.is_file():
-        clients_json = build_realm_clients(selected_bricks, rendered_envs, answers)
+        brick_clients = json.loads(build_realm_clients(selected_bricks, rendered_envs, answers))
+        # Le placeholder est la VALEUR ENTIÈRE de "clients" : on fusionne les
+        # clients de console de compte (account/account-console, requis pour
+        # l'audience "account") avec ceux des briques.
         realm_rendered = render_realm(
-            realm_template.read_text(encoding="utf-8"), answers, vault, clients_json
+            realm_template.read_text(encoding="utf-8"),
+            answers,
+            vault,
+            json.dumps(ACCOUNT_CONSOLE_CLIENTS + brick_clients, indent=2, ensure_ascii=False),
         )
         realm_path = runtime_dir / "realm-lastarter.json"
         realm_path.write_text(realm_rendered, encoding="utf-8")
@@ -1188,44 +1230,39 @@ def run_deploy(opts) -> int:
 
     # Discussions (Element Web + Synapse) : homeserver, signing key, config
     # element et log config rendus as-code — l'architecture same-origin validée.
+    # Tout vit dans .runtime/discussions/ : montage par DOSSIER (les mounts
+    # fichier unique renvoient 0 octet sous Docker Desktop Windows).
     if "discussions" in selected:
+        discussions_cfg = runtime_dir / "discussions"
+        discussions_cfg.mkdir(parents=True, exist_ok=True)
         homeserver_tpl = repo_root / "identity" / "homeserver-discussions.yaml"
         if not homeserver_tpl.is_file():
             raise DeployError("identity/homeserver-discussions.yaml manquant")
         hs_rendered = render_discussions_homeserver(
             homeserver_tpl.read_text(encoding="utf-8"), answers, vault
         )
-        hs_path = runtime_dir / "discussions-homeserver.yaml"
-        hs_path.write_text(hs_rendered, encoding="utf-8")
+        (discussions_cfg / "homeserver.yaml").write_text(hs_rendered, encoding="utf-8")
         hs_hash = hashlib.sha256(hs_rendered.encode()).hexdigest()
         applied = runtime_dir / ".discussions-homeserver.applied"
         if not applied.is_file() or applied.read_text(encoding="utf-8").strip() != hs_hash:
             to_recreate.setdefault("discussions_synapse", "homeserver.yaml discussions changé")
             pending_markers.append((applied, hs_hash))
-        signing_path = runtime_dir / "discussions-signing.key"
-        signing_path.write_text(
+        (discussions_cfg / "discussions.signing.key").write_text(
             f"ed25519 0 {vault['discussions_signing_key']}\n", encoding="utf-8"
         )
         log_tpl = repo_root / "identity" / "discussions-synapse-log.yaml"
-        log_path = runtime_dir / "discussions-synapse-log.yaml"
         if log_tpl.is_file():
-            shutil.copyfile(log_tpl, log_path)
+            shutil.copyfile(log_tpl, discussions_cfg / "discussions.log.config")
         element_tpl = repo_root / "identity" / "element-discussions-config.json"
         if not element_tpl.is_file():
             raise DeployError("identity/element-discussions-config.json manquant")
-        element_path = runtime_dir / "discussions-element-config.json"
-        element_path.write_text(
+        (discussions_cfg / "config.json").write_text(
             render_discussions_element_config(
                 element_tpl.read_text(encoding="utf-8"), answers
             ),
             encoding="utf-8",
         )
-        compose_env["DISCUSSIONS_HOMESERVER_PATH"] = _portable(hs_path)
-        compose_env["DISCUSSIONS_SIGNING_KEY_PATH"] = _portable(signing_path)
-        compose_env["DISCUSSIONS_LOG_CONFIG_PATH"] = _portable(log_path)
-        compose_env["DISCUSSIONS_ELEMENT_CONFIG_PATH"] = _portable(element_path)
-        # La CA vit dans .runtime/certs (rendu par ensure_dev_certs plus bas).
-        compose_env["DISCUSSIONS_CA_PATH"] = _portable(runtime_dir / "certs" / "ca.crt")
+        compose_env["DISCUSSIONS_CONFIG_DIR"] = _portable(discussions_cfg)
         # Résolution intra-conteneurs de la passerelle (POC .localhost).
         compose_env["LASTARTER_GATEWAY_SERVICE"] = "gateway"
 
@@ -1276,6 +1313,11 @@ def run_deploy(opts) -> int:
     # Certificats changés → nginx recharge ses certs au boot : recreation gateway.
     if certs_changed:
         to_recreate.setdefault("gateway", "certificats TLS régénérés")
+    # La CA est aussi copiée dans le dossier de config des Discussions :
+    # Synapse la monte (magasin système) pour l'OIDC vers la passerelle TLS.
+    discussions_cfg_dir = runtime_dir / "discussions"
+    if discussions_cfg_dir.is_dir():
+        shutil.copyfile(ca_path, discussions_cfg_dir / "ca.crt")
     # Thème de login LaStarter (drop-in Keycloak).
     theme_dir = repo_root / "identity" / "keycloak-theme"
     if theme_dir.is_dir():

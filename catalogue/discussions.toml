@@ -47,6 +47,10 @@ route_label = "chat"                  # chat.<domaine>
 frontend_target = "discussions_element_web:80"
 # L'API Matrix est servie same-origin via la passerelle (/_matrix, /_synapse).
 infra_services = []
+# Synapse tourne en non-root (uid 991) : le volume /data doit lui appartenir.
+prepare_service = "discussions_synapse"
+prepare_command = "chown 991:991 /data"
+prepare_user = "0:0"
 services = [
   "discussions_synapse",      # matrixdotorg/synapse:latest (OIDC Keycloak)
   "discussions_element_web",  # ghcr.io/element-hq/element-web:v1.12.31
