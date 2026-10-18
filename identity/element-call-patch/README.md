@@ -59,3 +59,11 @@ Correction de la v6 : les room IDs v11+ (Synapse moderne, room_version 11/12)
 sont opaques SANS suffixe serveur — le lien n'est pas mutilé, c'est le format.
 On accepte les IDs sans «:» tels quels (l'ajout «:domaine» creait un ID
 invalide -> salle introuvable -> page d'erreur).
+
+## v9 : inscription guest reelle
+
+`useRegisterPasswordlessUser` : le code amont faisait une inscription
+COMPLETE (username+password) -> 403 sur Synapse SSO-only, puis crash sur
+`error.data.params[...]` sans garde. Remplace par `registerRequest({},
+undefined, { kind: "guest" })` + `setDisplayName` (compte invite, pas de
+mot de passe). Garde `?.` ajoutee dans `useInteractiveRegistration`.
