@@ -32,6 +32,24 @@ services:
     networks: [lastarter]
     restart: unless-stopped
 
+  # Registrar d'invités : crée de VRAIS comptes via le shared secret (les
+  # guests Synapse ne peuvent pas obtenir de jeton OpenID → pas d'appel SFU).
+  guest_registrar:
+    image: python:3.12-alpine
+    container_name: ${LASTARTER_CLIENT}-guest-registrar
+    working_dir: /srv
+    command: ["python", "guest-registrar.py"]
+    environment:
+      SYNAPSE_URL: http://discussions_synapse:8008
+      GUEST_REG_SECRET: ${GUEST_REG_SECRET}
+    volumes:
+      - ./files/guest-registrar.py:/srv/guest-registrar.py:ro
+    networks: [lastarter]
+    restart: unless-stopped
+    depends_on:
+      discussions_synapse:
+        condition: service_healthy
+
   # Point de terminaison federation LOCAL : lk-jwt valide les jetons OpenID
   # via https://<server_name>:8448 (port federation standard). Comme le
   # server_name est un *.localhost non résolvable, ce sidecar partage le

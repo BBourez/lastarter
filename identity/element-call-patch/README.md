@@ -67,3 +67,12 @@ COMPLETE (username+password) -> 403 sur Synapse SSO-only, puis crash sur
 `error.data.params[...]` sans garde. Remplace par `registerRequest({},
 undefined, { kind: "guest" })` + `setDisplayName` (compte invite, pas de
 mot de passe). Garde `?.` ajoutee dans `useInteractiveRegistration`.
+
+## v10 : registrar d'invites (vrais comptes)
+
+Les comptes guest Synapse ne peuvent PAS obtenir de jeton OpenID
+(M_GUEST_ACCESS_FORBIDDEN, couche auth generique - aucun flag) donc ne
+peuvent jamais rejoindre l'appel SFU. Le registrar (deploy/compose/files/
+guest-registrar.py, service guest_registrar) cree de VRAIS comptes via le
+shared secret (nonce GET /_synapse/admin/v1/register + HMAC SHA1) et pose
+le nom affiche. Le SPA appelle POST /_lastarter/register {display_name}.

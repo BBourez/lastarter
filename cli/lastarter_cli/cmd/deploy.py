@@ -593,6 +593,16 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 "        proxy_set_header X-Forwarded-Proto https;",
                 "    }",
                 "",
+                "    # Registrar d'invités Meet (vrais comptes pseudo-seul).",
+                "    location /_lastarter/register {",
+                "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                "        set $backend_registrar guest_registrar:8090;",
+                "        rewrite ^/_lastarter/register$ /register break;",
+                "        proxy_pass http://$backend_registrar;",
+                "        proxy_set_header Host $http_host;",
+                "        proxy_set_header X-Forwarded-Proto https;",
+                "    }",
+                "",
                 "    # MatrixRTC Authorization (lk-jwt-service).",
                 "    # Le rewrite STRIP le prefixe : le service sert /sfu/get a sa",
                 "    # racine (API v3), pas sous /livekit/jwt/.",
@@ -1453,6 +1463,10 @@ def run_deploy(opts) -> int:
         compose_env["MEET_CONFIG_DIR"] = _portable(meet_cfg)
         compose_env["MEET_ORIGIN"] = app_origin(answers["domain"], "meet")
         compose_env["MEET_ISSUER"] = f"{_id_origin(answers['domain'])}/realms/lastarter"
+        # Registrar d'invités Meet : le shared secret des Discussions crée
+        # de vrais comptes (les guests ne peuvent pas joindre l'appel SFU).
+        if "discussions_registration_secret" in vault:
+            compose_env["GUEST_REG_SECRET"] = vault["discussions_registration_secret"]
 
     # Discussions (Element Web + Synapse) : homeserver, signing key, config
     # element et log config rendus as-code â€” l'architecture same-origin validÃ©e.

@@ -10,7 +10,6 @@ import { createClient } from "matrix-js-sdk";
 import { logger } from "matrix-js-sdk/lib/logger";
 
 import { useClient } from "../ClientContext";
-import { generateRandomName } from "../auth/generateRandomName";
 import { initClient } from "../utils/matrix";
 import { Config } from "../config/Config";
 import { useUrlParams } from "../UrlParams";
@@ -36,16 +35,27 @@ export function useRegisterPasswordlessUser(): UseRegisterPasswordlessUserType {
         );
       }
 
-      // LaStarter : l'inscription complète est fermée (SSO only) — on crée
-      // un compte INVITÉ (kind=guest, pas de mot de passe) et on pose le
-      // nom affiché. Synapse attribue @N:domaine automatiquement.
+      // LaStarter : les comptes « guest » de Synapse ne peuvent pas obtenir
+      // de jeton OpenID (M_GUEST_ACCESS_FORBIDDEN) donc pas rejoindre l'appel
+      // SFU. Le registrar de la passerelle crée un VRAI compte pseudo-seul
+      // (via le shared secret, côté serveur) et pose le nom affiché.
       const baseUrl = Config.defaultHomeserverUrl()!;
-      const authClient = createClient({ baseUrl });
-      const creds = await authClient.registerRequest(
-        {},
-        undefined,
-        { kind: "guest" },
-      );
+      const res = await fetch("/_lastarter/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ display_name: displayName }),
+      });
+      if (!res.ok) {
+        throw new Error(
+          `Guest registrar failed: ${res.status} ${await res.text()}`,
+        );
+      }
+      const creds = (await res.json()) as {
+        user_id: string;
+        access_token: string;
+        device_id: string;
+      };
+
       const client = await initClient(
         {
           baseUrl,
@@ -55,7 +65,6 @@ export function useRegisterPasswordlessUser(): UseRegisterPasswordlessUserType {
         },
         false,
       );
-      await client.setDisplayName(displayName);
       const user = client.getUser(client.getUserId()!)!;
       user.setRawDisplayName(displayName);
       user.setDisplayName(displayName);
@@ -65,7 +74,9 @@ export function useRegisterPasswordlessUser(): UseRegisterPasswordlessUserType {
         access_token: creds.access_token,
         passwordlessUser: true,
       });
-      logger.info(`Registered guest ${creds.user_id} as ${displayName}`);
+      logger.info(
+        `Registered invite ${creds.user_id} as ${displayName}`,
+      );
     },
     [setClient, isWidget],
   );
