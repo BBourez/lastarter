@@ -49,6 +49,7 @@
             "identity/realm-lastarter.json",
             "identity/keycloak-theme/lastarter/login/resources/css/cpd-*.css",
             "identity/keycloak-theme/lastarter/login/resources/fonts/**",
+            "identity/element-call-patch/**",
             "deployments/**"
         ]
     }
