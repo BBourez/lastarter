@@ -472,12 +472,9 @@ export function getRoomIdentifierFromUrl(
     roomId = roomId.replaceAll(/^[^ -~]+|[^ -~]+$/g, "");
     if (!roomId.startsWith("!")) {
       roomId = null;
-    } else if (!roomId.includes(":")) {
-      // LaStarter : les liens partagés perdent parfois le suffixe serveur
-      // (linkify des chats, copie tronquée) — on rattache le homeserver
-      // par défaut plutôt que de rejeter la salle.
-      roomId = `${roomId}:${Config.defaultServerName()}`;
     }
+    // Room v11+ IDs are opaque WITHOUT a server part (MSC2540) — accept
+    // colon-less IDs as-is; do NOT append the default server name.
   }
 
   return {

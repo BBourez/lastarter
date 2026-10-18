@@ -52,3 +52,10 @@ defaut au lieu d'etre rejete (les salles e2ee n'ont pas d'alias de secours).
 `nginx-lastarter.conf` : index.html en `no-cache, must-revalidate`
 (les deploys du bundle n'arrivaient pas aux navigateurs — salons recrees
 avec l'ancien code), assets hashes `immutable` 1 an.
+
+## v8 : room IDs v11+ (MSC2540)
+
+Correction de la v6 : les room IDs v11+ (Synapse moderne, room_version 11/12)
+sont opaques SANS suffixe serveur — le lien n'est pas mutilé, c'est le format.
+On accepte les IDs sans «:» tels quels (l'ajout «:domaine» creait un ID
+invalide -> salle introuvable -> page d'erreur).
