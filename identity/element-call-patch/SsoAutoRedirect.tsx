@@ -41,6 +41,7 @@ export const SsoAutoRedirect: FC = () => {
     const match =
       (window as { __lsLoginToken?: string }).__lsLoginToken ??
       window.location.hash.match(/loginToken=([^&]+)/)?.[1] ??
+      window.location.search.match(/loginToken=([^&]+)/)?.[1] ??
       null;
 
     if (!match) {

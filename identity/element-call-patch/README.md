@@ -20,3 +20,9 @@ par le CLI (le kickoff SSO pose le cookie Synapse sur l'origine du callback).
   `window.__lsLoginToken` + nettoyage du fragment).
 - `SsoAutoRedirect` : lit le stash en priorite, consomme le stash,
   et NE relance PAS le SSO en cas d'echec d'echange (anti-boucle).
+
+## v3 : le loginToken arrive en QUERY (pas fragment)
+
+Capture du HAR : Synapse renvoie `?loginToken=` (query string) et non
+`#loginToken=`. `main.tsx` capture les DEUX formes (hash + query),
+l'URL est nettoyee (pathname seul).
