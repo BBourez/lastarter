@@ -1046,6 +1046,11 @@ def provision_realm(base_url: str, admin_user: str, admin_password: str,
             "rememberMe": True,
             "loginWithEmailAllowed": True,
             "loginTheme": "lastarter",
+            # Sessions : 1h en standard, 7 jours avec « Se souvenir de moi ».
+            "ssoSessionIdleTimeout": 3600,             # 1h
+            "ssoSessionMaxLifespan": 43200,            # 12h
+            "ssoSessionIdleTimeoutRememberMe": 604800, # 7j (remember me)
+            "ssoSessionMaxLifespanRememberMe": 604800, # 7j (remember me)
         }
     )
     status, _ = _http_json(f"{admin}", method="PUT", token=token, body=realm, ca_file=ca_file)
