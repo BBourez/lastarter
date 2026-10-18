@@ -76,3 +76,9 @@ peuvent jamais rejoindre l'appel SFU. Le registrar (deploy/compose/files/
 guest-registrar.py, service guest_registrar) cree de VRAIS comptes via le
 shared secret (nonce GET /_synapse/admin/v1/register + HMAC SHA1) et pose
 le nom affiche. Le SPA appelle POST /_lastarter/register {display_name}.
+
+## v11 : import Trans restaure
+
+Le nettoyage v4 avait retire l'import `Trans` encore utilise par la
+mention SSLA du formulaire -> ReferenceError au rendu de RoomAuthView
+(capture dans un vrai navigateur via Playwright/Edge headless).
