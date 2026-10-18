@@ -26,3 +26,11 @@ par le CLI (le kickoff SSO pose le cookie Synapse sur l'origine du callback).
 Capture du HAR : Synapse renvoie `?loginToken=` (query string) et non
 `#loginToken=`. `main.tsx` capture les DEUX formes (hash + query),
 l'URL est nettoyee (pathname seul).
+
+## v4 : liens d'invitation + menus
+
+- `RoomPage` : RoomAuthView restauree pour les liens de salon (join en
+  guest avec juste un pseudo ; les sessions SSO ne la voient jamais).
+- `RoomAuthView` : footer « Create an account » supprime.
+- `index.css` : override des bordures parasites au survol des elements
+  de menu Compound (outline/border/box-shadow none).
