@@ -33,8 +33,9 @@ async function clickIfVisible(page, selector, timeout = 3000) {
     await page.fill("#password", DEMO_PWD);
     await page.locator("button[type=submit]").click();
     await page.waitForTimeout(10000);
-    // Page de confirmation Synapse éventuelle
+    // Page de confirmation Synapse éventuelle (uniquement si on est sur son URL)
     for (let i = 0; i < 2; i++) {
+      if (!page.url().includes("/_synapse/")) break;
       const cont = page.locator("button:has-text('Continue'), a:has-text('Continue')");
       if (await cont.count()) { console.log("   Clic Continue (Synapse)"); await cont.first().click(); await page.waitForTimeout(6000); }
       else break;
@@ -71,19 +72,37 @@ async function clickIfVisible(page, selector, timeout = 3000) {
   const midText = await page.evaluate(() => document.body.innerText.slice(0, 200));
   console.log(`   Page apres dialogues : ${midText.replace(/\n/g, " | ").slice(0, 130)}`);
 
-  // 3) Ouvrir un salon existant (reunion-client cree via Meet) ou en creer un
-  console.log("3. Ouverture d'un salon...");
+  // 3) Ouvrir un salon existant ou en CREER un (install fraiche)
+  console.log("3. Ouverture/creation d'un salon...");
   let roomOpen = false;
   const existing = page.locator("div[class*=roomName]").filter({ hasText: "reunion-client" }).first();
-  if (!(await existing.count())) {
-    await page.locator("text=reunion-client").first().click({ timeout: 8000 }).catch(() => {});
-    roomOpen = true;
-    console.log("   Salon 'reunion-client' ouvert (texte)");
-  } else {
+  if (await existing.count()) {
     await existing.click();
     await page.waitForTimeout(4000);
     roomOpen = true;
     console.log("   Salon 'reunion-client' ouvert");
+  } else {
+    console.log("   Aucun salon -> creation via 'New room'");
+    let newRoomBtn = page.locator("[aria-label='New room']").first();
+    try { await newRoomBtn.waitFor({ state: "visible", timeout: 8000 }); } catch { newRoomBtn = null; }
+    if (!newRoomBtn) newRoomBtn = page.locator("text=Create a Group Chat").first();
+    if (await newRoomBtn.count()) {
+      await newRoomBtn.click();
+      await page.waitForTimeout(2500);
+      // Champ nom du dialogue de creation (input TEXTE visible, pas l'avatar)
+      const nameInput = page.locator("input[type=text]:visible, input[placeholder*='Name']:visible").first();
+      if (await nameInput.count()) await nameInput.fill("salon-e2e");
+      // Valider (bouton Create room / Create)
+      const createBtn = page.locator("button:has-text('Create room'), button:has-text('Create')").last();
+      if (await createBtn.count()) await createBtn.click();
+      else await page.keyboard.press("Enter");
+      await page.waitForTimeout(8000);
+      const txt = await page.evaluate(() => document.body.innerText);
+      roomOpen = txt.includes("salon-e2e");
+      console.log(`   Salon 'salon-e2e' cree et ouvert : ${roomOpen ? "OUI" : "a verifier"}`);
+    } else {
+      console.log("   Bouton New room introuvable");
+    }
   }
 
   console.log("4. Envoi d'un message...");

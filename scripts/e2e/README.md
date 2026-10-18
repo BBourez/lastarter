@@ -34,3 +34,12 @@ node scripts/e2e/meet.js
   Dismiss. Les classes CSS-modules ne sont pas stables : on cible par texte.
 - 404 benignes filtree : config.<domaine>.json (optionnelle), auth_metadata,
   dehydrated_device (MSC3814 optionnel).
+
+## Install de zero (validation du 2026-10-18)
+
+Purge totale (conteneurs, volumes, runtime ET coffre) -> `lastarter init`
+-> `lastarter deploy` -> import CA (certutil) -> les DEUX suites E2E
+passent : chat (SSO -> creation salon via UI -> message visible) et meet
+(SSO -> creation reunion -> invitation contexte vierge -> appel chiffre).
+NB : le SSO provisionne `@demo1` (dedup avec le `@demo` pre-cree par le
+CLI) - harmonisation du provisionnement a prevoir.
