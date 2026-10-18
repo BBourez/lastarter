@@ -873,6 +873,8 @@ def render_discussions_homeserver(template: str, answers: dict, vault: dict[str,
 
     rendered = template.replace("{{SSO_ORIGIN}}", _id_origin(domain))
     rendered = rendered.replace("{{CHAT_ORIGIN}}", chat_origin)
+    meet_origin = f"{scheme}://meet.{bare}" + (f":{port}" if port else "")
+    rendered = rendered.replace("{{MEET_ORIGIN}}", meet_origin)
     rendered = rendered.replace("{{SERVER_NAME}}", bare)
     return REALM_SECRET_TOKEN.sub(secret, rendered)
 

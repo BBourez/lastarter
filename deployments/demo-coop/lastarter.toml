@@ -9,7 +9,7 @@ brand_name = "LaStarter"
 theme = "element-light"
 brand_color = "#0bc491"
 logo_url = ""
-created = "2026-10-18T10:24:38+00:00"
+created = "2026-10-18T12:28:15+00:00"
 cli_version = "0.1.0"
 
 [bricks.keycloak]

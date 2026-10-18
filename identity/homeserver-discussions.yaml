@@ -53,6 +53,13 @@ oidc_providers:
         display_name_template: "{{ user.name }}"
         email_template: "{{ user.email }}"
 
+# Whitelist SSO : sans elle, Synapse exige un clic « Continue » avant chaque
+# redirection vers le client (chat ET meet) — friction inutile pour nos apps.
+sso:
+  client_whitelist:
+    - "{{CHAT_ORIGIN}}"
+    - "{{MEET_ORIGIN}}"
+
 # Pas d'inscription locale : tout passe par le SSO. Le password reste actif
 # pour Element Call standalone (meet.<domaine> — cette version du SPA n'a pas
 # de SSO natif) : le CLI provisionne le compte demo avec le MEME mot de passe
