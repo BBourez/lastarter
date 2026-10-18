@@ -44,7 +44,7 @@ LIVEKIT_HS_SERVER_NAME = "{domain_host}"
 LIVEKIT_CS_API_URL_OVERRIDES = "{domain_host}=http://discussions_synapse:8008"
 LIVEKIT_FULL_ACCESS_HOMESERVERS = "*"
 
-ELEMENT_CALL_IMAGE = "ghcr.io/element-hq/element-call:latest"
+ELEMENT_CALL_IMAGE = "lastarter/element-call:sso"
 LK_JWT_IMAGE = "ghcr.io/element-hq/lk-jwt-service:0.9.0"
 LIVEKIT_IMAGE = "livekit/livekit-server:v1.13.9"
 
@@ -56,12 +56,11 @@ OAUTH2_PROXY_COOKIE_SECRET = "{secret:meet_gate_cookie_secret}"
 [compose]
 profile = "meet"
 route_label = "meet"            # meet.<domaine> → visio standalone
-# Le gate SSO intercepte / : la passerelle route vers meet_gate, qui proxie
-# vers element_call APRÈS le login Keycloak.
-frontend_target = "meet_gate:4180"
+# SSO natif dans le SPA (notre build patche) : direct vers element_call.
+frontend_target = "element_call:8080"
 api_target = ""
 infra_services = ["call_livekit", "call_redis"]
-recreate_service = "meet_gate"
+recreate_service = "element_call"
 extra_servers = [
   { label = "livekit", target = "call_livekit:7880" },
 ]

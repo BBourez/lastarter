@@ -5,6 +5,7 @@
             "server_name": "{{SERVER_NAME}}"
         }
     },
+    "sso_redirect_base_url": "{{CHAT_ORIGIN}}",
     "livekit": {
         "livekit_service_url": "{{MEET_ORIGIN}}/livekit/jwt"
     },

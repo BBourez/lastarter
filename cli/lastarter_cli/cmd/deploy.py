@@ -573,42 +573,6 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             # canonicalisation Synapse.
             chat_host = f"chat.{bare}" + (f":{domain.split(':')[1]}" if ":" in domain else "")
             lines += [
-                "    # Racine : gate SSO PUIS pre-remplissage du nom SSO. Le script",
-                "    # recupere le nom via /oauth2/userinfo et complete le champ du",
-                "    # landing : l'utilisateur n'a plus qu'a creer son appel.",
-                "    location = / {",
-                "        resolver 127.0.0.11 valid=10s ipv6=off;",
-                "        set $backend_gate meet_gate:4180;",
-                "        proxy_pass http://$backend_gate;",
-                '        proxy_set_header Accept-Encoding "";',
-                "        proxy_set_header Host $http_host;",
-                "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
-                "        proxy_set_header X-Forwarded-Proto https;",
-                "        sub_filter '</body>' '<script>",
-                "        (function(){",
-                "          if (location.pathname !== \"/\") return;",
-                "          fetch(\"/oauth2/userinfo\").then(function(r){return r.ok ? r.json() : null}).then(function(u){",
-                "            if (!u) return;",
-                "            var n = (u.preferred_username || u.given_name || u.name || u.email || \"\").toString().split(\"@\")[0];",
-                "            if (!n) return;",
-                "            var tries = 0;",
-                "            (function fill(){",
-                "              var el = document.querySelector(\"input[data-testid=home_display_name], input[name=displayName], form input[type=text]\");",
-                "              if (el) {",
-                "                var set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, \"value\").set;",
-                "                set.call(el, n);",
-                "                el.dispatchEvent(new Event(\"input\", {bubbles: true}));",
-                "                return;",
-                "              }",
-                "              if (++tries < 40) setTimeout(fill, 250);",
-                "            })();",
-                "          }).catch(function(){});",
-                "        })();",
-                "        </script></body>';",
-                "        sub_filter_once on;",
-                "        sub_filter_types text/html;",
-                "    }",
-                "",
                 "    # Matrix API proxy (same-origin, Host: chat = public_baseurl).",
                 "    location /_matrix/ {",
                 "        resolver 127.0.0.11 valid=10s ipv6=off;",
@@ -872,8 +836,10 @@ def render_element_call_config(template: str, answers: dict) -> str:
     bare = domain.split(":")[0]
     port = domain.split(":")[1] if ":" in domain else ""
     meet_origin = f"{_scheme(domain)}://meet.{bare}" + (f":{port}" if port else "")
+    chat_origin = f"{_scheme(domain)}://chat.{bare}" + (f":{port}" if port else "")
     return (
         template.replace("{{MEET_ORIGIN}}", meet_origin)
+        .replace("{{CHAT_ORIGIN}}", chat_origin)
         .replace("{{SERVER_NAME}}", bare)
         .replace("{{BRAND}}", answers.get("brand_name", "LaStarter"))
     )
