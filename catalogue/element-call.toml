@@ -39,10 +39,14 @@ LIVEKIT_AS_TOKEN = "{secret:lk_as_token}"
 LIVEKIT_HS_TOKEN = "{secret:lk_hs_token}"
 LIVEKIT_JWT_BIND = "0.0.0.0:6080"
 LIVEKIT_URL = "{ws}://livekit.{domain}"
-LIVEKIT_HS_SERVER_NAME = "{domain_host}"
-# Résolution interne vers le Synapse des Discussions (pas de DNS public).
-LIVEKIT_CS_API_URL_OVERRIDES = "{domain_host}=http://discussions_synapse:8008"
+LIVEKIT_HS_SERVER_NAME = "{domain_bare}"
+# Résolution interne vers le Synapse des Discussions (pas de DNS public) :
+# la clé est le server_name Matrix (= domaine nu), la valeur le Synapse direct.
+LIVEKIT_CS_API_URL_OVERRIDES = "{domain_bare}=http://discussions_synapse:8008"
 LIVEKIT_FULL_ACCESS_HOMESERVERS = "*"
+# POC : la validation OpenID passe par le sidecar TLS local (netns partagé)
+# signé par la CA locale — rustls n'a pas de magasin configurable, on skip.
+LIVEKIT_INSECURE_SKIP_VERIFY_TLS = "YES_I_KNOW_WHAT_I_AM_DOING"
 
 ELEMENT_CALL_IMAGE = "lastarter/element-call:sso"
 LK_JWT_IMAGE = "ghcr.io/element-hq/lk-jwt-service:0.9.0"

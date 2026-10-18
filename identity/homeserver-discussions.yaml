@@ -62,6 +62,18 @@ password_config:
   enabled: true
   localdb_enabled: true
 
+# POC : rate limit de login desactive (tests repetes / outillage CLI).
+rc_login:
+  address:
+    per_second: 10000
+    burst_count: 10000
+  account:
+    per_second: 10000
+    burst_count: 10000
+  failed_attempts:
+    per_second: 10000
+    burst_count: 10000
+
 # ==================== CHIFFREMENT (E2EE) ====================
 # Clés gérées par les clients (Element Web) ; chiffrement par défaut partout.
 encryption_enabled_by_default_for_room_type: "all"

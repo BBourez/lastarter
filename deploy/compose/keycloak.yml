@@ -68,6 +68,7 @@ services:
       lastarter:
         aliases:
           - id.localhost
+          - livekit.${LASTARTER_HOST}
     depends_on:
       keycloak:
         condition: service_healthy

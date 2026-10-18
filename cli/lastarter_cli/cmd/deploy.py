@@ -1447,6 +1447,9 @@ def run_deploy(opts) -> int:
         livekit_tpl = repo_root / "deploy" / "compose" / "files" / "livekit-call.yaml"
         if livekit_tpl.is_file():
             shutil.copyfile(livekit_tpl, meet_cfg / "livekit-call.yaml")
+        fed_tpl = repo_root / "deploy" / "compose" / "files" / "lk-fed-proxy.conf"
+        if fed_tpl.is_file():
+            shutil.copyfile(fed_tpl, meet_cfg / "fed-proxy.conf")
         compose_env["MEET_CONFIG_DIR"] = _portable(meet_cfg)
         compose_env["MEET_ORIGIN"] = app_origin(answers["domain"], "meet")
         compose_env["MEET_ISSUER"] = f"{_id_origin(answers['domain'])}/realms/lastarter"
@@ -1468,12 +1471,17 @@ def run_deploy(opts) -> int:
         # l'appservice lk-jwt-service (MSC4512) dans le homeserver.
         if "element-call" in selected:
             hs_rendered += (
-                "\n# ==================== MATRIXRTC (Meet sÃ©lectionnÃ©) ====================\n"
+                "\n# ==================== MATRIXRTC (Meet sélectionné) ====================\n"
                 "# MSC3266 : member updates ; MSC4143 : sessions RTC ; MSC4222 : expiry.\n"
+                "# MSC4502/4512 : lk-jwt-service en appservice — Synapse proxifie\n"
+                "# /rtc/livekit/* vers le service (API C-S/S-S, SANS lookup federation\n"
+                "# qui echoue en local sur *.localhost).\n"
                 "experimental_features:\n"
                 "  msc3266_enabled: true\n"
                 "  msc4143_enabled: true\n"
                 "  msc4222_enabled: true\n"
+                "  msc4502_enabled: true\n"
+                "  msc4512_enabled: true\n"
                 "# Appservice lk-jwt-service (jetons LiveKit, MSC4512).\n"
                 "app_service_config_files:\n"
                 "  - /config/lk-jwt-service.yaml\n"
@@ -1569,6 +1577,11 @@ def run_deploy(opts) -> int:
         cfg_dir = runtime_dir / cfg_dir_name
         if cfg_dir.is_dir():
             shutil.copyfile(ca_path, cfg_dir / "ca.crt")
+            # Meet : le sidecar federation (lk-jwt) termine le TLS sur 8448
+            # avec le certificat feuille (SAN *.localhost).
+            if cfg_dir_name == "meet":
+                shutil.copyfile(crt_path, cfg_dir / "server.crt")
+                shutil.copyfile(key_path, cfg_dir / "server.key")
     # ThÃ¨me de login LaStarter (drop-in Keycloak).
     theme_dir = repo_root / "identity" / "keycloak-theme"
     if theme_dir.is_dir():

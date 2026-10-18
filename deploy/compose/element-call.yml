@@ -32,6 +32,29 @@ services:
     networks: [lastarter]
     restart: unless-stopped
 
+  # Point de terminaison federation LOCAL : lk-jwt valide les jetons OpenID
+  # via https://<server_name>:8448 (port federation standard). Comme le
+  # server_name est un *.localhost non résolvable, ce sidecar partage le
+  # namespace réseau de lk-jwt et termine le TLS sur 8448 → Synapse.
+  lk_fed_proxy:
+    image: nginx:1.27-alpine
+    container_name: ${LASTARTER_CLIENT}-lk-fed-proxy
+    network_mode: "service:lk-jwt-service"
+    volumes:
+      # Montage DOSSIER complet (les fichiers uniques renvoient 0 octet sous
+      # Docker Desktop Windows) : fed-proxy.conf + server.crt + server.key.
+      - ${MEET_CONFIG_DIR}:/fed:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        cp /fed/fed-proxy.conf /etc/nginx/conf.d/default.conf
+        exec nginx -g "daemon off;"
+    restart: unless-stopped
+    depends_on:
+      lk-jwt-service:
+        condition: service_started
+
   # SPA Element Call : notre build SSO natif (checkout patche) — le gate
   # oauth2-proxy n'est plus necessaire : le SPA redirige lui-meme vers le SSO
   # Synapse/Keycloak et echange le loginToken (comme Element Web).
