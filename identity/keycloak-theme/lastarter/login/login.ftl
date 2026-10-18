@@ -11,7 +11,7 @@
         <div id="kc-form">
             <div id="kc-form-wrapper">
                 <#if realm.password>
-                    <form id="kc-form-login" onsubmit="login.disabled = true; return true;" action="${url.loginAction}" method="post">
+                    <form id="kc-form-login" onsubmit="var b=this.querySelector('button[type=submit]'); if(b) b.disabled=true; return true;" action="${url.loginAction}" method="post">
                         <div class="ls-field">
                             <label for="username">${msg("username")}</label>
                             <input id="username" name="username" type="text" autofocus autocomplete="username"
