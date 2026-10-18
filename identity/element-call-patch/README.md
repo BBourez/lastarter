@@ -46,3 +46,9 @@ et la valeur spec est « can_join », pas « guest »).
 `UrlParams.ts` : un roomId sans suffixe serveur (lien tronque par un chat
 ou une copie — l'URL perd `:localhost`) est rattache au homeserver par
 defaut au lieu d'etre rejete (les salles e2ee n'ont pas d'alias de secours).
+
+## v7 : cache-busting
+
+`nginx-lastarter.conf` : index.html en `no-cache, must-revalidate`
+(les deploys du bundle n'arrivaient pas aux navigateurs — salons recrees
+avec l'ancien code), assets hashes `immutable` 1 an.
