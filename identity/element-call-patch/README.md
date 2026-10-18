@@ -40,3 +40,9 @@ l'URL est nettoyee (pathname seul).
 `utils/matrix.ts` createRoom : initial_state `m.room.guest_access`
 = `can_join` (le champ guest_access de createRoom est IGNORE par Synapse,
 et la valeur spec est « can_join », pas « guest »).
+
+## v6 : liens d'invitation resilientes
+
+`UrlParams.ts` : un roomId sans suffixe serveur (lien tronque par un chat
+ou une copie — l'URL perd `:localhost`) est rattache au homeserver par
+defaut au lieu d'etre rejete (les salles e2ee n'ont pas d'alias de secours).

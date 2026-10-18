@@ -1,0 +1,519 @@
+/*
+Copyright 2022-2024 New Vector Ltd.
+Copyright 2026 Element Creations Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE in the repository root for full details.
+*/
+
+import { createContext, use, useMemo } from "react";
+import { useLocation } from "react-router-dom";
+import { logger } from "matrix-js-sdk/lib/logger";
+import { pickBy } from "lodash-es";
+
+import { Config } from "./config/Config";
+import { type EncryptionSystem } from "./e2ee/sharedKeyManagement";
+import { E2eeType } from "./e2ee/e2eeType";
+import {
+  BackgroundStyle,
+  configurationForIntent,
+  HeaderStyle,
+  type UrlConfiguration,
+  UserIntent,
+} from "./UrlConfiguration";
+import { redact } from "./utils/redact";
+
+// Moved to their own module, so that a host can import them without the rest
+// of this one; re-exported here as they always were
+export {
+  BackgroundStyle,
+  configurationForIntent,
+  HeaderStyle,
+  type UrlConfiguration,
+  UserIntent,
+} from "./UrlConfiguration";
+
+interface RoomIdentifier {
+  roomAlias: string | null;
+  roomId: string | null;
+  viaServers: string[];
+}
+
+/**
+ * The UrlProperties are used to pass required data to the widget.
+ * Those are different in different rooms, users, devices. They do not configure the behavior of the
+ * widget but provide the required data to the widget.
+ */
+export interface UrlProperties {
+  // Widget api related params
+  widgetId: string | null;
+  parentUrl: string | null;
+  /**
+   * Whether Element Call was started as a widget of a Matrix client, which is
+   * to say whether it was given a widget ID and a parent to talk to.
+   *
+   * Only meaningful to the standalone and widget builds, which own the URL —
+   * so use it for decisions that belong to the app shell, such as whether
+   * Element Call is responsible for authenticating the user. Anything the call
+   * interface itself needs to know about its host should come from the host
+   * bridge instead.
+   */
+  isWidget: boolean;
+  /**
+   * Anything about what room we're pointed to should be from useRoomIdentifier which
+   * parses the path and resolves alias with respect to the default server name, however
+   * roomId is an exception as we need the room ID in embedded (matroyska) mode, and not
+   * the room alias (or even the via params because we are not trying to join it). This
+   * is also not validated, where it is in useRoomIdentifier().
+   */
+  roomId: string | null;
+  /**
+   * The user's ID (only used in matryoshka mode).
+   */
+  userId: string | null;
+
+  /**
+   * The display name to use for auto-registration.
+   */
+  displayName: string | null;
+  /**
+   * The device's ID (only used in matryoshka mode).
+   */
+  deviceId: string | null;
+  /**
+   * The base URL of the homeserver to use for media lookups in matryoshka mode.
+   */
+  baseUrl: string | null;
+  /**
+   * The BCP 47 code of the language the app should use.
+   */
+  lang: string | null;
+  /**
+   * The fonts which the interface should use, if not empty.
+   */
+  fonts: string[];
+  /**
+   * The factor by which to scale the interface's font size.
+   */
+  fontScale: number | null;
+  /**
+   * The Posthog analytics ID. It is only available if the user has given consent for sharing telemetry in element web.
+   */
+  posthogUserId: string | null;
+  /**
+   * The Posthog API host. This is only used in the embedded package of Element Call.
+   */
+  posthogApiHost: string | null;
+  /**
+   * The Posthog API key. This is only used in the embedded package of Element Call.
+   */
+  posthogApiKey: string | null;
+  /**
+   * Whether to use end-to-end encryption.
+   */
+  e2eEnabled: boolean;
+  /**
+   * E2EE password
+   */
+  password: string | null;
+  /** This defines the homeserver that is going to be used when joining a room.
+   * It has to be set to a non default value for links to rooms
+   * that are not on the default homeserver,
+   * that is in use for the current user.
+   */
+  viaServers: string | null;
+
+  /**
+   * This defines the homeserver that is going to be used when registering
+   * a new (guest) user.
+   * This can be user to configure a non default guest user server when
+   * creating a spa link.
+   */
+  homeserver: string | null;
+
+  /**
+   * The rageshake submit URL. This is only used in the embedded package of Element Call.
+   */
+  rageshakeSubmitUrl: string | null;
+
+  /**
+   * The Sentry DSN. This is only used in the embedded package of Element Call.
+   */
+  sentryDsn: string | null;
+
+  /**
+   * The Sentry environment. This is only used in the embedded package of Element Call.
+   */
+  sentryEnvironment: string | null;
+  /**
+   * The theme to use for element call.
+   * can be "light", "dark", "light-high-contrast" or "dark-high-contrast".
+   */
+  theme: string | null;
+  /**
+   * The visual style of the page background.
+   */
+  background: BackgroundStyle;
+}
+export interface UrlParams extends UrlProperties, UrlConfiguration {}
+
+class ParamParser {
+  private fragmentParams: URLSearchParams;
+  private queryParams: URLSearchParams;
+
+  public constructor(search: string, hash: string) {
+    this.queryParams = new URLSearchParams(search);
+
+    const fragmentQueryStart = hash.indexOf("?");
+    this.fragmentParams = new URLSearchParams(
+      fragmentQueryStart === -1 ? "" : hash.substring(fragmentQueryStart),
+    );
+  }
+
+  // Normally, URL params should be encoded in the fragment so as to avoid
+  // leaking them to the server. However, we also check the normal query
+  // string for backwards compatibility with versions that only used that.
+  public getParam(name: string): string | null {
+    return this.fragmentParams.get(name) ?? this.queryParams.get(name);
+  }
+
+  public getEnumParam<T extends string>(
+    name: string,
+    type: { [s: string]: T } | ArrayLike<T>,
+  ): T | undefined {
+    const value = this.getParam(name);
+    if (value !== null && Object.values(type).includes(value as T)) {
+      return value as T;
+    }
+    return undefined;
+  }
+
+  public getAllParams(name: string): string[] {
+    return [
+      ...this.fragmentParams.getAll(name),
+      ...this.queryParams.getAll(name),
+    ];
+  }
+
+  /**
+   * Returns true if the flag exists and is not "false".
+   */
+  public getFlagParam(name: string, defaultValue = false): boolean {
+    const param = this.getParam(name);
+    return param === null ? defaultValue : param !== "false";
+  }
+  /**
+   * Returns the value of the flag if it exists, or undefined if it does not.
+   */
+  public getFlag(name: string): boolean | undefined {
+    const param = this.getParam(name);
+    return param !== null ? param !== "false" : undefined;
+  }
+}
+
+let urlParamCache: {
+  search?: string;
+  hash?: string;
+  params?: UrlParams;
+} = {};
+
+/**
+ * Gets the url params and loads them from a cache if already computed.
+ * @param search The URL search string
+ * @param hash The URL hash
+ * @returns The app parameters encoded in the URL
+ */
+export const getUrlParams = (
+  search = window.location.search,
+  hash = window.location.hash,
+): UrlParams => {
+  if (
+    urlParamCache.search === search &&
+    urlParamCache.hash === hash &&
+    urlParamCache.params
+  ) {
+    return urlParamCache.params;
+  }
+  const params = computeUrlParams(search, hash);
+  urlParamCache = { search, hash, params };
+
+  return params;
+};
+
+/**
+ * The {@link UrlProperties} for Element Call running as a component inside a
+ * host application.
+ *
+ * It has no URL of its own to read these from, and it does not need most of
+ * them: the widget plumbing does not apply, the Matrix client and the analytics
+ * configuration come from the host by other routes, and what is left is either
+ * the host's to state through the component's props or Element Call's own
+ * default.
+ */
+export const componentProperties: UrlProperties = {
+  widgetId: null,
+  parentUrl: null,
+  isWidget: false,
+  roomId: null,
+  userId: null,
+  displayName: null,
+  deviceId: null,
+  baseUrl: null,
+  lang: null,
+  fonts: [],
+  fontScale: null,
+  posthogUserId: null,
+  posthogApiHost: null,
+  posthogApiKey: null,
+  e2eEnabled: true,
+  password: null,
+  viaServers: null,
+  homeserver: null,
+  rageshakeSubmitUrl: null,
+  sentryDsn: null,
+  sentryEnvironment: null,
+  theme: null,
+  // Solid rather than the gradient the standalone app defaults to: the gradient
+  // is drawn by a `position: fixed` pseudo-element, which would escape the
+  // container Element Call was given and cover the host's own interface.
+  background: BackgroundStyle.Solid,
+};
+
+/**
+ * Gets the app parameters for the current URL.
+ * @param search The URL search string
+ * @param hash The URL hash
+ * @returns The app parameters encoded in the URL
+ */
+export const computeUrlParams = (search = "", hash = ""): UrlParams => {
+  const parser = new ParamParser(search, hash);
+
+  const fontScale = parseFloat(parser.getParam("fontScale") ?? "");
+
+  const widgetId = parser.getParam("widgetId");
+  const parentUrl = parser.getParam("parentUrl");
+  const isWidget = !!widgetId && !!parentUrl;
+
+  /**
+   * The user's intent with respect to the call.
+   * e.g. if they clicked a Start Call button, this would be `start_call`.
+   * If it was a Join Call button, it would be `join_existing`.
+   * This is a platform specific default set of parameters, that allows to minize the configuration
+   * needed to start a call. And empowers the EC codebase to control the platform/intent behavior in
+   * a central place.
+   *
+   * In short: either provide url query parameters of UrlConfiguration or set the intent
+   * (or the global defaults will be used).
+   */
+  const intent = !isWidget
+    ? UserIntent.Unknown
+    : (parser.getEnumParam("intent", UserIntent) ?? UserIntent.Unknown);
+  const intentPreset = configurationForIntent(intent);
+
+  const properties: UrlProperties = {
+    widgetId,
+    parentUrl,
+    isWidget,
+    // NB. we don't validate roomId here as we do in getRoomIdentifierFromUrl:
+    // what would we do if it were invalid? If the widget API says that's what
+    // the room ID is, then that's what it is.
+    roomId: parser.getParam("roomId"),
+    password: parser.getParam("password"),
+    userId: isWidget ? parser.getParam("userId") : null,
+    displayName: parser.getParam("displayName"),
+    deviceId: isWidget ? parser.getParam("deviceId") : null,
+    baseUrl: isWidget ? parser.getParam("baseUrl") : null,
+    lang: parser.getParam("lang"),
+    fonts: parser.getAllParams("font"),
+    fontScale: Number.isNaN(fontScale) ? null : fontScale,
+    theme: parser.getParam("theme"),
+    background:
+      parser.getEnumParam("background", BackgroundStyle) ??
+      BackgroundStyle.Gradient,
+    viaServers: !isWidget ? parser.getParam("viaServers") : null,
+    homeserver: !isWidget ? parser.getParam("homeserver") : null,
+    posthogApiHost: parser.getParam("posthogApiHost"),
+    posthogApiKey: parser.getParam("posthogApiKey"),
+    posthogUserId: parser.getParam("posthogUserId"),
+    rageshakeSubmitUrl: parser.getParam("rageshakeSubmitUrl"),
+    sentryDsn: parser.getParam("sentryDsn"),
+    sentryEnvironment: parser.getParam("sentryEnvironment"),
+    e2eEnabled: parser.getFlagParam("enableE2EE", true),
+  };
+
+  const configuration: Partial<UrlConfiguration> = {
+    confineToRoom: parser.getFlag("confineToRoom"),
+    preload: isWidget ? parser.getFlag("preload") : undefined,
+    // Check hideHeader for backwards compatibility. If header is set, hideHeader
+    // is ignored.
+    header: parser.getEnumParam("header", HeaderStyle),
+    showControls: parser.getFlag("showControls"),
+    hideScreensharing: parser.getFlag("hideScreensharing"),
+    allowIceFallback: parser.getFlag("allowIceFallback"),
+    controlledAudioDevices: parser.getFlag("controlledAudioDevices"),
+    skipLobby: isWidget ? parser.getFlag("skipLobby") : false,
+    // In SPA mode the user should always exit to the home screen when hanging
+    // up, rather than being sent back to the lobby
+    returnToLobby: isWidget ? parser.getFlag("returnToLobby") : false,
+    sendNotificationType: parser.getEnumParam("sendNotificationType", [
+      "ring",
+      "notification",
+    ]),
+    waitForCallPickup: parser.getFlag("waitForCallPickup"),
+    autoLeaveWhenOthersLeft: parser.getFlag("autoLeave"),
+    noiseSuppression: parser.getFlagParam("noiseSuppression", true),
+    echoCancellation: parser.getFlagParam("echoCancellation", true),
+  };
+
+  // Log the final configuration for debugging purposes.
+  // This will only log when the cache is not yet set.
+  logger.info(
+    "UrlParams: final set of url params\n",
+    "intent:",
+    intent,
+    "\nproperties:",
+    redact(properties, "password", "posthogUserId"),
+    "configuration:",
+    configuration,
+  );
+
+  return {
+    ...properties,
+    ...intentPreset,
+    ...pickBy(configuration, (v?: unknown) => v !== undefined),
+  };
+};
+
+const UrlParamsContext = createContext<UrlParams | null>(null);
+
+/**
+ * Supplies the parameters Element Call should run with.
+ *
+ * The standalone and widget builds derive these from the URL, but the
+ * component has no URL of its own to read them from, so its host provides them
+ * directly instead.
+ *
+ * TODO: `UrlParams` is no longer an accurate name now that these need not come
+ * from a URL. Renaming it touches every consumer, so it is left until the rest
+ * of the de-globalisation work has settled.
+ */
+export const UrlParamsProvider = UrlParamsContext.Provider;
+
+/**
+ * The parameters Element Call is running with.
+ *
+ * Falls back to parsing `window.location` when no provider is present, so that
+ * tests and stories keep working without one.
+ */
+export const useUrlParams = (): UrlParams =>
+  use(UrlParamsContext) ?? getUrlParams();
+
+/**
+ * Derives {@link UrlParams} from the current router location.
+ *
+ * Only meaningful when Element Call owns the URL; the component is given its
+ * params directly through {@link UrlParamsProvider}.
+ */
+export const useUrlParamsFromLocation = (): UrlParams => {
+  const { search, hash } = useLocation();
+  return useMemo(() => getUrlParams(search, hash), [search, hash]);
+};
+
+export function getRoomIdentifierFromUrl(
+  pathname: string,
+  search: string,
+  hash: string,
+): RoomIdentifier {
+  let roomAlias: string | null = null;
+  pathname = pathname.substring(1); // Strip the "/"
+  const pathComponents = pathname.split("/");
+  const pathHasRoom = pathComponents[0] == "room";
+  const hasRoomAlias = pathComponents.length > 1;
+
+  // What type is our url: roomAlias in hash, room alias as the search path, roomAlias after /room/
+  if (hash === "" || hash.startsWith("#?")) {
+    if (hasRoomAlias && pathHasRoom) {
+      roomAlias = pathComponents[1];
+    }
+    if (!pathHasRoom) {
+      roomAlias = pathComponents[0];
+    }
+  } else {
+    roomAlias = hash;
+  }
+
+  // Delete "?" and what comes afterwards
+  roomAlias = roomAlias?.split("?")[0] ?? null;
+
+  if (roomAlias) {
+    // Make roomAlias is null, if it only is a "#"
+    if (roomAlias.length <= 1) {
+      roomAlias = null;
+    } else {
+      // Add "#", if not present
+      if (!roomAlias.startsWith("#")) {
+        roomAlias = `#${roomAlias}`;
+      }
+      // Add server part, if not present
+      if (!roomAlias.includes(":")) {
+        roomAlias = `${roomAlias}:${Config.defaultServerName()}`;
+      }
+    }
+  }
+
+  const parser = new ParamParser(search, hash);
+
+  // Make sure roomId is valid
+  let roomId: string | null = parser.getParam("roomId");
+  if (roomId !== null) {
+    // Replace any non-printable characters that another client may have inserted.
+    // For instance on iOS, some copied links end up with zero width characters on the end which get encoded into the URL.
+    // This isn't valid for a roomId, so we can freely strip the content.
+    roomId = roomId.replaceAll(/^[^ -~]+|[^ -~]+$/g, "");
+    if (!roomId.startsWith("!")) {
+      roomId = null;
+    } else if (!roomId.includes(":")) {
+      // LaStarter : les liens partagés perdent parfois le suffixe serveur
+      // (linkify des chats, copie tronquée) — on rattache le homeserver
+      // par défaut plutôt que de rejeter la salle.
+      roomId = `${roomId}:${Config.defaultServerName()}`;
+    }
+  }
+
+  return {
+    roomAlias,
+    roomId,
+    viaServers: parser.getAllParams("viaServers"),
+  };
+}
+
+export const useRoomIdentifier = (): RoomIdentifier => {
+  const { pathname, search, hash } = useLocation();
+  return useMemo(
+    () => getRoomIdentifierFromUrl(pathname, search, hash),
+    [pathname, search, hash],
+  );
+};
+
+export function generateUrlSearchParams(
+  roomId: string,
+  encryptionSystem: EncryptionSystem,
+  viaServers?: string[],
+): URLSearchParams {
+  const params = new URLSearchParams();
+  // The password shouldn't need URL encoding here (we generate URL-safe ones) but encode
+  // it in case it came from another client that generated a non url-safe one
+  if (encryptionSystem?.kind === E2eeType.SHARED_KEY) {
+    const encodedPassword = encodeURIComponent(encryptionSystem.secret);
+    if (encodedPassword !== encryptionSystem.secret) {
+      logger.info(
+        "Encoded call password used non URL-safe chars: buggy client?",
+      );
+    }
+    params.set("password", encodedPassword);
+  }
+  params.set("roomId", roomId);
+  viaServers?.forEach((s) => params.set("viaServers", s));
+
+  return params;
+}
