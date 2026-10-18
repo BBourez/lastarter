@@ -34,3 +34,9 @@ l'URL est nettoyee (pathname seul).
 - `RoomAuthView` : footer « Create an account » supprime.
 - `index.css` : override des bordures parasites au survol des elements
   de menu Compound (outline/border/box-shadow none).
+
+## v5 : salons invitable par guests
+
+`utils/matrix.ts` createRoom : initial_state `m.room.guest_access`
+= `can_join` (le champ guest_access de createRoom est IGNORE par Synapse,
+et la valeur spec est « can_join », pas « guest »).
