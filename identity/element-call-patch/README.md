@@ -13,3 +13,10 @@ Build : `pnpm install && pnpm build` puis `docker build -f Dockerfile.lastarter
 
 Cle de config : `"sso_redirect_base_url": "https://chat.<domaine>"` generee
 par le CLI (le kickoff SSO pose le cookie Synapse sur l'origine du callback).
+
+## v2 : fix boucle SSO (loginToken perdu au boot)
+
+- `main.tsx` : capture le loginToken AVANT le montage React (stash
+  `window.__lsLoginToken` + nettoyage du fragment).
+- `SsoAutoRedirect` : lit le stash en priorite, consomme le stash,
+  et NE relance PAS le SSO en cas d'echec d'echange (anti-boucle).

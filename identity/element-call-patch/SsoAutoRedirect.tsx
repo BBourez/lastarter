@@ -38,7 +38,10 @@ export const SsoAutoRedirect: FC = () => {
       window.location.href = `${ssoBase}/_matrix/client/v3/login/sso/redirect?redirectUrl=${redirect}`;
     };
 
-    const match = window.location.hash.match(/loginToken=([^&]+)/);
+    const match =
+      (window as { __lsLoginToken?: string }).__lsLoginToken ??
+      window.location.hash.match(/loginToken=([^&]+)/)?.[1] ??
+      null;
 
     if (!match) {
       // Origine du kickoff : clé LaStarter du config, sinon le homeserver.
@@ -58,8 +61,9 @@ export const SsoAutoRedirect: FC = () => {
       return;
     }
 
-    const token = match[1];
-    // Nettoyer le fragment pour éviter les rejeux.
+    const token = match;
+    // Consommer le stash + nettoyer le fragment pour éviter les rejeux.
+    delete (window as { __lsLoginToken?: string }).__lsLoginToken;
     window.history.replaceState(null, "", window.location.pathname);
     const authClient = createClient({ baseUrl });
     authClient
@@ -84,10 +88,9 @@ export const SsoAutoRedirect: FC = () => {
         });
       })
       .catch((error) => {
-        // Session expirée : relancer le flux SSO proprement.
+        // PAS de retry automatique : un loginToken rejoué bouclerait le flux
+        // SSO à l'infini. L'utilisateur recharge la page pour un nouveau flux.
         console.error("SSO loginToken exchange failed", error);
-        if (cancelled) return;
-        ssoKickoff(baseUrl);
       });
     return () => {
       cancelled = true;
