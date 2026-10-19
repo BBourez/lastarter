@@ -1,0 +1,92 @@
+# LaStarter — Drive (stockage de fichiers).
+# Backend Django + frontend Next (export statique, image Compound) + infra.
+# Le secret OIDC vient du coffre (drive_oidc_secret) — voir catalogue/drive.toml.
+
+services:
+  drive_postgresql:
+    image: postgres:16
+    container_name: ${LASTARTER_CLIENT}-drive-postgresql
+    environment:
+      POSTGRES_DB: drive
+      POSTGRES_USER: dinum
+      POSTGRES_PASSWORD: pass
+    volumes:
+      - drive_pgdata:/var/lib/postgresql/data
+    networks: [lastarter]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d drive -U dinum"]
+      interval: 5s
+      timeout: 3s
+      retries: 120
+
+  drive_redis:
+    image: redis:5
+    container_name: ${LASTARTER_CLIENT}-drive-redis
+    networks: [lastarter]
+    restart: unless-stopped
+
+  drive_rustfs:
+    image: rustfs/rustfs:1.0.0
+    container_name: ${LASTARTER_CLIENT}-drive-rustfs
+    environment:
+      RUSTFS_ACCESS_KEY: drive
+      RUSTFS_SECRET_KEY: password
+      RUSTFS_CORS_ALLOWED_ORIGINS: ${DRIVE_ORIGIN}
+    volumes:
+      - drive_mediadata:/data
+    networks: [lastarter]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9000/health"]
+      interval: 5s
+      timeout: 20s
+      retries: 120
+
+  drive_createbuckets:
+    image: amazon/aws-cli
+    container_name: ${LASTARTER_CLIENT}-drive-createbuckets
+    environment:
+      AWS_ACCESS_KEY_ID: drive
+      AWS_SECRET_ACCESS_KEY: password
+      AWS_DEFAULT_REGION: eu-east-1
+      AWS_ENDPOINT_URL: http://drive_rustfs:9000
+    entrypoint: >
+      sh -c "
+      aws s3 mb s3://drive-media-storage; \
+      aws s3api put-bucket-versioning --bucket drive-media-storage --versioning-configuration Status=Enabled && \
+      exit 0;"
+    networks: [lastarter]
+    restart: "no"
+    depends_on:
+      drive_rustfs:
+        condition: service_healthy
+
+  drive_backend:
+    image: ${DRIVE_BACKEND_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-drive-backend
+    env_file: ["${RUNTIME_DIR}/drive/backend.env"]
+    environment:
+      REQUESTS_CA_BUNDLE: /certs/ca.crt
+    volumes:
+      - ${CERTS_DIR}:/certs:ro
+    networks: [lastarter]
+    restart: unless-stopped
+    depends_on:
+      drive_postgresql:
+        condition: service_healthy
+      drive_rustfs:
+        condition: service_healthy
+
+  drive_frontend:
+    image: ${DRIVE_FRONTEND_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-drive-frontend
+    networks: [lastarter]
+    restart: unless-stopped
+    depends_on:
+      drive_backend:
+        condition: service_started
+
+volumes:
+  drive_pgdata:
+  drive_mediadata:

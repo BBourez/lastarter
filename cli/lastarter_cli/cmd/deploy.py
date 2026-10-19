@@ -565,6 +565,39 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 "    }",
                 "",
             ]
+        # Drive : medias S3 avec auth-request par le backend Django
+        # (le bucket n'est JAMAIS exposé directement).
+        if brick.name == "drive":
+            lines += [
+                "    # Medias : auth par le backend puis S3 rustfs (jamais direct).",
+                "    location /media/ {",
+                "        auth_request /drive-media-auth;",
+                "        auth_request_set $authHeader $upstream_http_authorization;",
+                "        auth_request_set $authDate $upstream_http_x_amz_date;",
+                "        auth_request_set $authContentSha256 $upstream_http_x_amz_content_sha256;",
+                "        proxy_set_header Authorization $authHeader;",
+                "        proxy_set_header X-Amz-Date $authDate;",
+                "        proxy_set_header X-Amz-Content-SHA256 $authContentSha256;",
+                "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                "        set $backend_s3 drive_rustfs:9000;",
+                "        proxy_pass http://$backend_s3;",
+                "        proxy_set_header Host drive_rustfs:9000;",
+                '        add_header Content-Disposition "attachment";',
+                "    }",
+                "    location = /drive-media-auth {",
+                "        internal;",
+                "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                "        set $backend_driveapi drive_backend:8000;",
+                "        proxy_pass http://$backend_driveapi/api/v1.0/items/media-auth/;",
+                "        proxy_set_header X-Forwarded-Proto https;",
+                "        proxy_set_header Host $host;",
+                "        proxy_set_header X-Original-URL $request_uri;",
+                "        proxy_pass_request_body off;",
+                '        proxy_set_header Content-Length "";',
+                "        proxy_set_header X-Original-Method $request_method;",
+                "    }",
+                "",
+            ]
         # Element Call standalone : proxy Matrix API sur le MEME domaine (same-origin,
         # Ã©vite les problÃ¨mes CORS/certificat cross-domain).
         if brick.name == "element-call":
@@ -855,6 +888,69 @@ def render_element_call_config(template: str, answers: dict) -> str:
         .replace("{{SERVER_NAME}}", bare)
         .replace("{{BRAND}}", answers.get("brand_name", "LaStarter"))
     )
+
+
+def render_drive_backend_env(answers: dict, vault: dict[str, str]) -> str:
+    """Rend l'env du backend Drive (Django + OIDC realm lastarter + S3 rustfs)."""
+    domain = answers["domain"]
+    bare = domain.split(":")[0]
+    port = domain.split(":")[1] if ":" in domain else ""
+    scheme = _scheme(domain)
+    drive_origin = f"{scheme}://drive.{bare}" + (f":{port}" if port else "")
+    id_origin = _id_origin(domain)
+
+    def secret(name: str) -> str:
+        if name not in vault:
+            raise DeployError(f"secret manquant dans secrets.env : {name}")
+        return vault[name]
+
+    django_key = secret("kc_admin_password") if "drive_django_key" not in vault else secret("drive_django_key")
+    return f"""# Rendu par lastarter-cli — ne pas éditer à la main.
+DJANGO_SETTINGS_MODULE=drive.settings
+DJANGO_CONFIGURATION=Production
+DJANGO_SECRET_KEY={django_key}-drive
+DJANGO_ALLOWED_HOSTS=drive.{bare},{bare}
+
+DATABASE_URL=postgres://dinum:pass@drive_postgresql:5432/drive
+DB_HOST=drive_postgresql
+DB_NAME=drive
+DB_USER=dinum
+DB_PASSWORD=pass
+DB_PORT=5432
+
+AWS_S3_ACCESS_KEY_ID=drive
+AWS_S3_SECRET_ACCESS_KEY=password
+AWS_S3_REGION_NAME=eu-east-1
+AWS_S3_SIGNATURE_VERSION=s3v4
+AWS_S3_ENDPOINT_URL=http://drive_rustfs:9000
+AWS_S3_DOMAIN_REPLACE={drive_origin}
+MEDIA_BASE_URL={drive_origin}
+
+REDIS_URL=redis://drive_redis:6379/0
+
+OIDC_OP_JWKS_ENDPOINT={id_origin}/realms/lastarter/protocol/openid-connect/certs
+OIDC_OP_AUTHORIZATION_ENDPOINT={id_origin}/realms/lastarter/protocol/openid-connect/auth
+OIDC_OP_TOKEN_ENDPOINT={id_origin}/realms/lastarter/protocol/openid-connect/token
+OIDC_OP_USER_ENDPOINT={id_origin}/realms/lastarter/protocol/openid-connect/userinfo
+OIDC_RP_CLIENT_ID=drive
+OIDC_RP_CLIENT_SECRET={secret("drive_oidc_secret")}
+OIDC_RP_SIGN_ALGO=RS256
+OIDC_RP_SCOPES=openid email profile
+LOGIN_REDIRECT_URL={drive_origin}
+LOGIN_REDIRECT_URL_FAILURE={drive_origin}
+LOGOUT_REDIRECT_URL={drive_origin}
+OIDC_REDIRECT_ALLOWED_HOSTS=drive.{bare}{":" + port if port else ""},id.{bare}{":" + port if port else ""}
+
+FRONTEND_THEME=dsfr-light
+FRONTEND_FEEDBACK_BUTTON_SHOW=False
+FRONTEND_FEEDBACK_MESSAGES_WIDGET_ENABLED=False
+USER_RECONCILIATION_FORM_URL={drive_origin}
+MALWARE_DETECTION_BACKEND=core.malware_detection.SleepyDummyBackend
+FEATURES_INDEXED_SEARCH=False
+WOPI_CLIENTS=
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+SEARCH_INDEXER_CLASS=
+"""
 
 
 def render_discussions_homeserver(template: str, answers: dict, vault: dict[str, str]) -> str:
@@ -1469,6 +1565,14 @@ def run_deploy(opts) -> int:
         # de vrais comptes (les guests ne peuvent pas joindre l'appel SFU).
         if "discussions_registration_secret" in vault:
             compose_env["GUEST_REG_SECRET"] = vault["discussions_registration_secret"]
+
+    # Drive : env du backend Django rendu as-code dans .runtime/drive/.
+    if "drive" in selected:
+        drive_cfg = runtime_dir / "drive"
+        drive_cfg.mkdir(parents=True, exist_ok=True)
+        drive_backend_env = render_drive_backend_env(answers, vault)
+        (drive_cfg / "backend.env").write_text(drive_backend_env, encoding="utf-8")
+        compose_env["DRIVE_ORIGIN"] = app_origin(answers["domain"], "drive")
 
     # Discussions (Element Web + Synapse) : homeserver, signing key, config
     # element et log config rendus as-code â€” l'architecture same-origin validÃ©e.

@@ -1,0 +1,57 @@
+# Brique stockage : Drive — Django + Next (design Element Web), SSO Keycloak.
+#
+# FRONTEND : image locale lastarter/drive:compound (export statique Next,
+# design system Compound — même langage visuel qu'Element Web). Construite
+# depuis le checkout examples-inspiration/drive (branche lastarter-compound).
+# BACKEND : image locale lastarter/drive-backend (Django, cible production).
+
+[brick]
+name = "drive"
+title = "Drive — stockage de fichiers"
+category = "storage"
+description = "Stockage et partage de fichiers, authentifié par le SSO."
+license = "MIT"
+upstream_repo = "https://github.com/suitenumerique/drive"
+upstream_pin = "v0.24.0"
+core = false
+requires = ["keycloak"]
+extra_secrets = [
+  "drive_oidc_secret",     # secret du client OIDC `drive`
+]
+
+[oidc]
+realm = "lastarter"
+client_id = "drive"
+scopes = "openid email profile"
+redirect_uri_suffix = "/*"
+
+[branding.env]
+BRAND_NAME = "{brand_name}"
+
+[env]
+DRIVE_BACKEND_IMAGE = "lastarter/drive-backend:latest"
+DRIVE_FRONTEND_IMAGE = "lastarter/drive:compound"
+OIDC_RP_CLIENT_ID = "drive"
+OIDC_RP_CLIENT_SECRET = "{secret:drive_oidc_secret}"
+
+[compose]
+profile = "drive"
+route_label = "drive"                  # drive.<domaine>
+frontend_target = "drive_frontend:8080"
+api_target = "drive_backend:8000"      # /api + /admin + /static → Django
+infra_services = ["drive_postgresql", "drive_redis", "drive_rustfs", "drive_createbuckets"]
+services = [
+  "drive_postgresql",
+  "drive_redis",
+  "drive_rustfs",
+  "drive_backend",
+  "drive_frontend",
+]
+extras = []
+
+[notes]
+poc = """
+Backend Django + S3 rustfs + redis + postgres. Le certificat local est monté
+(REQUESTS_CA_BUNDLE) : le backend appelle l'issuer SSO en HTTPS avec la CA
+locale. L'API est servie same-origin via la passerelle (/api, /admin, /media).
+"""

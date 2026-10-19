@@ -9,7 +9,7 @@ brand_name = "LaStarter"
 theme = "element-light"
 brand_color = "#0bc491"
 logo_url = ""
-created = "2026-10-18T21:13:07+00:00"
+created = "2026-10-19T13:17:39+00:00"
 cli_version = "0.1.0"
 
 [bricks.keycloak]
@@ -23,6 +23,12 @@ title = "Discussions — messagerie Matrix"
 pin = "v1.12.31"
 license = "AGPL-3.0-only"
 upstream = "https://github.com/element-hq/element-web"
+
+[bricks.drive]
+title = "Drive — stockage de fichiers"
+pin = "v0.24.0"
+license = "MIT"
+upstream = "https://github.com/suitenumerique/drive"
 
 [bricks.element-call]
 title = "Meet — visioconférence"
