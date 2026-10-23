@@ -26,6 +26,7 @@ amont), derrière une couche d'intégration as-code :
 | Discussions | Messagerie chiffrée E2EE | [element-web](https://github.com/element-hq/element-web) v1.12.32 + [synapse](https://github.com/element-hq/synapse) v1.163.1 | AGPL-3.0 |
 | Drive | Stockage et partage de fichiers | [suitenumerique/drive](https://github.com/suitenumerique/drive) v0.25.2 | MIT |
 | Meet | Visioconférence navigateur (SFU LiveKit) | [suitenumerique/meet](https://github.com/suitenumerique/meet) v1.36.2 + [livekit](https://github.com/livekit/livekit) v1.13.6 | MIT / Apache-2.0 |
+| `docs` | Éditeur de documents collaboratif | suitenumerique/docs (lasuite/impress-* v6.0.3) | MIT |
 
 Registre complet et obligations associées :
 [docs/licences.md](docs/licences.md) — vérifiés en CI (`lastarter licenses`).

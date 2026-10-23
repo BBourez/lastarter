@@ -80,3 +80,4 @@ rejouable.
 - **Keycloak 26.3.2 → 26.8.1** : catalogue + compose, déployé sur demo-coop (realm re-provisionné, smoke 8/8, e2e chat vert).
 - **PostgreSQL keycloak 14.3 → 18-alpine** : volume réinitialisé + montage déplacé vers `/var/lib/postgresql` (nouveau layout des images postgres 18+, compatible `pg_upgrade`). Pour un client existant : `pg_dump`/`pg_restore` avant montée de version.
 - **Redis 5 → Valkey 8.1-alpine** (drive, meet) : BSD-3, compatible RESP, déployé et healthy.
+- **Brique Docs (lasuite/impress v6.0.3)** : ajoutée (catalogue, compose 11 services, licences) ; collaboration Yjs via yhub sans fork ; export PDF absent des images amont `PUBLISH_AS_MIT` (choix MIT assumé) ; recherche dédiée (brique Find) = roadmap.
