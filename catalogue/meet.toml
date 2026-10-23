@@ -44,7 +44,7 @@ MEET_S3_SECRET_KEY = "{secret:meet_s3_secret}"
 DJANGO_SETTINGS_MODULE = "meet.settings"
 DJANGO_CONFIGURATION = "{django_configuration}"
 DJANGO_SECRET_KEY = "{secret:meet_django_secret_key}"
-ALLOWED_HOSTS = "{app_bare}"
+DJANGO_ALLOWED_HOSTS = "{app_bare}"
 PYTHONPATH = "/app"
 MEET_BASE_URL = "{origin}"
 
