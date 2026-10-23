@@ -6,7 +6,8 @@ services:
     image: postgres:18-alpine
     env_file: ["${RUNTIME_DIR}/keycloak.env"]
     volumes:
-      - kc_pgdata:/var/lib/postgresql/data
+      # postgres 18+ : monter /var/lib/postgresql (layout versionné, compatible pg_upgrade) — plus /data.
+      - kc_pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 2s
