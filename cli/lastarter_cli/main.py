@@ -12,7 +12,37 @@ from .cmd import detect as cmd_detect
 from .cmd import init as cmd_init
 from .cmd import licenses as cmd_licenses
 from .cmd import smoke as cmd_smoke
+from .cmd import updates as cmd_updates
 from .cmd.deploy import DeployError
+from .cmd.theme import ThemeError
+from .cmd.updates import UpdatesError
+
+
+def _add_app_name_flags(init, catalogue_dir: Path | None) -> None:
+    """--app-name-<brique> : nom d'affichage de chaque brique non fondation.
+
+    Dérivé du catalogue au moment de la construction du parser ; si le
+    catalogue est illisible, le CLI reste utilisable sans ces options.
+    """
+    if catalogue_dir is None:
+        return
+    try:
+        from .catalogue import load_catalogue
+
+        bricks, errors = load_catalogue(catalogue_dir)
+    except (OSError, ValueError):  # lecture/tomllib : on dégrade sans options
+        return
+    if errors:
+        return
+    for name in sorted(bricks):
+        if bricks[name].core:
+            continue
+        init.add_argument(
+            f"--app-name-{name}",
+            dest=f"app_name_{name}",
+            default="",
+            help=f"Nom d'affichage de la brique « {name} » (portail, personnalisation)",
+        )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -35,6 +65,15 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--theme", help="Thème visuel (ex. element-light, element-dark — cf. themes/)")
     init.add_argument("--brand-color", dest="brand_color", help="Couleur de marque en hex (ex. #0bc491)")
     init.add_argument("--logo-url", dest="logo_url", help="URL du logo client (affiché dans le portail)")
+    init.add_argument(
+        "--logo",
+        dest="logo",
+        default="",
+        help="Logo client (fichier .svg ou .png) — copié dans deployments/<client>/branding/"
+        " et servi par la passerelle sur /__lastarter/branding/ ;"
+        " défaut : monogramme généré depuis la palette",
+    )
+    _add_app_name_flags(init, _find_catalogue_quiet())
 
     sub.add_parser("list", help="Lister les briques du catalogue")
 
@@ -57,7 +96,27 @@ def build_parser() -> argparse.ArgumentParser:
 
     sbom = sub.add_parser("sbom", help="Générer l'inventaire CycloneDX des briques épinglées")
     sbom.add_argument("--client", required=True, help="Slug du déploiement")
+
+    check = sub.add_parser(
+        "check-updates",
+        help="Veille amont : compare les pins du catalogue aux derniers tags/releases GitHub",
+    )
+    check.add_argument("--json", action="store_true", help="Sortie machine (JSON, un objet par brique)")
+    check.add_argument(
+        "--strict",
+        action="store_true",
+        help="Code de sortie 1 si au moins une brique n'est pas à jour (gate CI de veille)",
+    )
     return parser
+
+
+def _find_catalogue_quiet() -> Path | None:
+    try:
+        from .catalogue import find_catalogue
+
+        return find_catalogue(Path.cwd())
+    except OSError:
+        return None
 
 
 def run_list() -> int:
@@ -113,9 +172,11 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_smoke.run_smoke(opts)
         if opts.command == "sbom":
             return cmd_smoke.run_sbom(opts)
+        if opts.command == "check-updates":
+            return cmd_updates.run_check_updates(opts)
         if opts.command == "list":
             return run_list()
-    except (DeployError, KeyError) as exc:
+    except (DeployError, UpdatesError, ThemeError, KeyError) as exc:
         print(f"erreur : {exc}", file=sys.stderr)
         return 1
     parser.print_help()

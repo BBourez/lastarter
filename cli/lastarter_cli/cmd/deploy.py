@@ -315,6 +315,12 @@ def _theme_nginx_block(include_auto_login: bool = True, auth_url: str = "/api/v1
         '        add_header Cache-Control "public, max-age=31536000";',
         '        add_header Access-Control-Allow-Origin *;',
         "    }",
+        "    # Branding client (logo) : deployments/<client>/branding -> .runtime/branding,",
+        "    # servi par la passerelle sur /__lastarter/branding/ (tous les sous-domaines).",
+        "    location /__lastarter/branding/ {",
+        "        alias /var/www/lastarter-theme/branding/;",
+        '        add_header Cache-Control "no-cache";',
+        "    }",
         f"    sub_filter '</head>' '{inject}';",
         "    sub_filter_once off;",
         "",
@@ -641,7 +647,7 @@ def validate_compose_targets(selected: list[str], bricks: dict[str, Brick], comp
             )
 
 
-def render_drive_backend_env(answers: dict, vault: dict[str, str]) -> str:
+def render_drive_backend_env(answers: dict, vault: dict[str, str], frontend_theme: str = "dsfr-light") -> str:
     """Rend l'env du backend Drive (Django + OIDC realm lastarter + S3 rustfs)."""
     domain = answers["domain"]
     bare = domain.split(":")[0]
@@ -692,7 +698,7 @@ LOGIN_REDIRECT_URL_FAILURE={drive_origin}
 LOGOUT_REDIRECT_URL={drive_origin}
 OIDC_REDIRECT_ALLOWED_HOSTS=drive.{bare}{":" + port if port else ""},id.{bare}{":" + port if port else ""}
 
-FRONTEND_THEME=dsfr-light
+FRONTEND_THEME={frontend_theme}
 FRONTEND_FEEDBACK_BUTTON_SHOW=False
 FRONTEND_FEEDBACK_MESSAGES_WIDGET_ENABLED=False
 USER_RECONCILIATION_FORM_URL={drive_origin}
@@ -750,18 +756,45 @@ def render_discussions_homeserver(template: str, answers: dict, vault: dict[str,
     return REALM_SECRET_TOKEN.sub(secret, rendered)
 
 
-def render_discussions_element_config(template: str, answers: dict) -> str:
-    """Rend config.json Element Web des Discussions : same-origin + marque."""
+def render_discussions_element_config(template: str, answers: dict, repo_root: Path | None = None) -> str:
+    """Rend config.json Element Web : same-origin + marque + thème NATIF.
+
+    Habillage amont Element Web (docs/theming.md) : la palette
+    themes/<theme>.toml devient un thème custom Compound
+    (setting_defaults.custom_themes[{name, is_dark, compound}]) référencé par
+    default_theme "custom-<nom>". Les clés compound (--cpd-color-*) sont
+    dérivées du MÊME gabarit que le CSS passerelle (identity/theme.css.tpl).
+    """
     domain = answers["domain"]
     bare = domain.split(":")[0]
     port = domain.split(":")[1] if ":" in domain else ""
     scheme = _scheme(domain)
     chat_origin = f"{scheme}://chat.{bare}" + (f":{port}" if port else "")
-    return (
+    rendered = (
         template.replace("{{CHAT_ORIGIN}}", chat_origin)
         .replace("{{SERVER_NAME}}", bare)
         .replace("{{BRAND}}", answers.get("brand_name", "LaStarter"))
     )
+    if repo_root is None:
+        return rendered
+    from .theme import build_custom_theme
+
+    custom = build_custom_theme(repo_root, answers.get("theme", "element-light"))
+    config = json.loads(rendered)
+    config.setdefault("setting_defaults", {})["custom_themes"] = [custom]
+    # Nommage amont : un thème custom est référencé « custom-<name> ».
+    config["default_theme"] = f"custom-{custom['name']}"
+    return json.dumps(config, ensure_ascii=False, indent=4) + "\n"
+
+
+def _brand_logo_url(answers: dict) -> str:
+    """URL du logo client : logo_url explicite, sinon branding servi par la
+    passerelle (chemin relatif — chaque sous-domaine sert /__lastarter/)."""
+    explicit = answers.get("logo_url", "")
+    if explicit:
+        return explicit
+    logo_file = (answers.get("brand") or {}).get("logo_path", "")
+    return f"/__lastarter/branding/{Path(logo_file).name}" if logo_file else ""
 
 
 APP_EMOJI = {
@@ -781,7 +814,11 @@ def render_portal_config(bricks: list[Brick], answers: dict) -> str:
         if brick.compose.get("portal_visible", "true") == "false":
             continue  # backends (ex. synapse) : pas de tuile
         label = brick.compose.get("route_label", brick.name)
-        short = brick.title.split("—")[0].strip()
+        # Nom d'affichage : apps.<brique>.label (init --app-name-*) sinon titre court.
+        short = (
+            ((answers.get("apps") or {}).get(brick.name) or {}).get("label")
+            or brick.title.split("—")[0].strip()
+        )
         apps.append(
             {
                 "name": short,
@@ -1164,13 +1201,34 @@ def run_deploy(opts) -> int:
         )
         compose_env["MEET_CONFIG_DIR"] = _portable(meet_cfg)
 
-    # Drive : env du backend Django rendu as-code dans .runtime/drive/.
+    # Drive : env backend Django + personnalisation JSON rendus as-code dans
+    # .runtime/drive/ (dossier monté /config côté conteneur, ro).
     if "drive" in selected:
         drive_cfg = runtime_dir / "drive"
         drive_cfg.mkdir(parents=True, exist_ok=True)
-        drive_backend_env = render_drive_backend_env(answers, vault)
+        from .theme import build_drive_theme_customization, load_theme
+
+        # Thème natif amont : light/dark suit la palette (theme.dark).
+        drive_theme_dark = load_theme(
+            repo_root, answers.get("theme", "element-light")
+        ).get("theme", {}).get("dark", False)
+        drive_backend_env = render_drive_backend_env(
+            answers, vault, frontend_theme="dsfr-dark" if drive_theme_dark else "dsfr-light"
+        )
         (drive_cfg / "backend.env").write_text(drive_backend_env, encoding="utf-8")
-        compose_env["DRIVE_ORIGIN"] = app_origin(answers["domain"], "drive")
+        drive_origin = app_origin(answers["domain"], "drive")
+        # THEME_CUSTOMIZATION_FILE_PATH (docs/customization.md amont) : footer
+        # {default, fr} aux clés FooterProps, logo servi par la passerelle.
+        logo_url = _brand_logo_url(answers)
+        if logo_url.startswith("/"):
+            logo_url = f"{drive_origin}{logo_url}"
+        customization = build_drive_theme_customization(
+            answers.get("brand_name", "LaStarter"), compute_origin(answers["domain"]), logo_url
+        )
+        (drive_cfg / "theme-customization.json").write_text(
+            json.dumps(customization, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        compose_env["DRIVE_ORIGIN"] = drive_origin
 
     # Discussions (Element Web + Synapse) : homeserver, signing key, config
     # element et log config rendus as-code — l'architecture same-origin validée.
@@ -1203,6 +1261,7 @@ def run_deploy(opts) -> int:
         element_rendered = render_discussions_element_config(
             element_tpl.read_text(encoding="utf-8"),
             answers,
+            repo_root,
         )
         (discussions_cfg / "config.json").write_text(element_rendered, encoding="utf-8")
         # Anti-dérive : le conteneur COPIE config.json au boot — un changement
@@ -1237,7 +1296,7 @@ def run_deploy(opts) -> int:
         {
             "name": answers.get("brand_name", "LaStarter"),
             "color": answers.get("brand_color", "#0bc491"),
-            "logo_url": answers.get("logo_url", ""),
+            "logo_url": _brand_logo_url(answers),
         },
     )
     theme_css_path = runtime_dir / "theme.css"
@@ -1247,6 +1306,28 @@ def run_deploy(opts) -> int:
     if old_theme != theme_css:
         to_recreate.setdefault("gateway", "thème changé")
     print(f"Thème « {theme_name} » rendu ({len(theme_css)} octets)")
+
+    # Branding (logo) : deployments/<slug>/branding/ -> .runtime/branding/, servi
+    # par la passerelle sur /__lastarter/branding/ (tous les sous-domaines).
+    # Défaut out-of-the-box : monogramme SVG depuis la palette (1re lettre + primaire).
+    branding_runtime = runtime_dir / "branding"
+    branding_src = deployment_dir / "branding"
+    if branding_src.is_dir() and any(branding_src.iterdir()):
+        shutil.copytree(branding_src, branding_runtime, dirs_exist_ok=True)
+    else:
+        branding_runtime.mkdir(parents=True, exist_ok=True)
+        if not any(branding_runtime.iterdir()):
+            from .theme import default_logo_svg, load_theme, primary_color
+
+            (branding_runtime / "logo.svg").write_text(
+                default_logo_svg(
+                    answers.get("brand_name", "LaStarter"),
+                    primary_color(load_theme(repo_root, theme_name)),
+                ),
+                encoding="utf-8",
+            )
+    compose_env["BRANDING_DIR"] = _portable(branding_runtime)
+    print(f"Branding : {branding_runtime} (servi sur /__lastarter/branding/)")
 
     # Certificats TLS POC — SANs explicites pour chaque hôte déployé (id + apps
     # + serveurs additionnels type media/livekit) ; CPython exige du non-wildcard.

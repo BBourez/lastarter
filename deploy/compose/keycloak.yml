@@ -62,6 +62,8 @@ services:
       - ${THEME_CSS_PATH}:/var/www/lastarter-theme/theme.css:ro
       - ./files/auto-login.js:/var/www/lastarter-theme/auto-login.js:ro
       - ./files/fonts:/var/www/lastarter-theme/fonts:ro
+      # Branding client (logo) : rempli par le CLI dans .runtime/branding/.
+      - ${BRANDING_DIR}:/var/www/lastarter-theme/branding:ro
     # Alias rÃ©seau : les conteneurs rÃ©solvent id.<domaine> â†’ passerelle.
     # NÃ©cessaire pour les apps qui utilisent la dÃ©couverte OIDC (issuer public).
     networks:
