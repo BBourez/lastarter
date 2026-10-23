@@ -21,7 +21,7 @@ npm i            # dans ce dossier (package.json autoportant : playwright-core)
 | Script | Ce qu'il valide |
 |---|---|
 | `element-web.js` | chat : SSO immédiat → connexion → passage des dialogues de 1re session → ouverture salon → envoi d'un message visible |
-| `meet.js` | visio : SSO automatique (contexte A) → création d'une réunion par l'UI → lien de partage `/{slug}` → contexte B vierge : SSO (silent-login) + re-login demo → écran « Join » → **2 participants** (badge compteur du topbar sur les deux pages) + websockets LiveKit ouvertes des deux côtés |
+| `meet.js` | visio : SSO automatique (contexte A) → création par l'UI → lien `/{slug}` → contexte B vierge : silent-login rebondi + re-login demo (login complet forcé) → Join (B éjecte A : *duplicate identity*, comportement amont) → contexte C invité anonyme → **2 participants** (badge topbar sur B et C) + websockets LiveKit |
 
 ## Usage
 
@@ -53,9 +53,23 @@ E2E_CHANNEL=chrome DEMO_PWD=... node meet.js
   sélecteurs `data-attr` amont stables). Le lien de partage est l'URL de la
   salle `https://meet.<domaine>/{slug}` (slug `[a-z]{3}-[a-z]{4}-[a-z]{3}`).
 - **Contexte B** : hors page d'accueil, l'auto-login de la passerelle ne se
-  déclenche pas ; c'est le silent-login du frontend
-  (`/api/v1.0/authenticate/?silent=true&returnTo=…`) qui amène au formulaire
-  Keycloak, puis retour sur `/{slug}` (écran « Join the meeting? » → Join).
+  déclenche pas ; le frontend tente un **silent-login** (`?silent=true` →
+  `prompt=none`). Sans session Keycloak préalable, Keycloak répond
+  `error=login_required` et rebondit sur la salle **non** authentifiée (fenêtre
+  anti-retry de 30 s côté frontend) : le script détecte l'état non connecté
+  (`users/me` = 401) et relance un **login complet** via l'URL exacte du bouton
+  Login de l'app (`/api/v1.0/authenticate/?silent=false&returnTo=…`) →
+  formulaire Keycloak → retour authentifié sur `/{slug}` (Join → Conference).
+- **Identités LiveKit et critère « 2 participants »** : l'identité SFU d'un
+  utilisateur authentifié est `user.sub` (amont `core/utils.generate_token`) —
+  deux sessions du **même** compte SSO sur la même salle = éjection de la plus
+  ancienne par LiveKit (écran produit « You have joined the meeting from
+  another device », comportement conçu). Le second participant est donc un
+  **invité anonyme** (contexte C, identité `uuid4` unique) : les salles créées
+  sont publiques (`RESOURCE_DEFAULT_ACCESS_LEVEL=public` amont) et l'API y
+  délivre un token sans session — chemin produit « invité sans compte ».
+  `?silentLogin=false` (paramètre supporté par le frontend) évite le rebond
+  du silent-login pour ce contexte.
 - **Critère de réussite** : badge compteur du topbar (`aria-describedby` →
   span sr-only « N participants ») = 2 sur les DEUX pages + websockets
   `wss://livekit.…` ouvertes des deux côtés (média headless en bonus via
