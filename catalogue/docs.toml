@@ -1,0 +1,191 @@
+# Brique collaboration : Docs — traitement de texte collaboratif suitenumerique/docs
+# (La Suite Docs / impress). Images AMONT vanilla (lasuite/impress-backend +
+# lasuite/impress-frontend + lasuite/impress-yhub + lasuite/impress-y-provider,
+# MIT) : zéro fork. Collaboration CRDT via yhub (websocket same-origin
+# /collaboration/ws/ servi par le nginx du frontend amont), S3 rustfs pour les
+# pièces jointes, clés RS256 croisées backend <-> yhub/y-provider.
+
+[brick]
+name = "docs"
+title = "Docs — documents collaboratifs"
+category = "collaboration"
+description = "Traitement de texte collaboratif temps réel (La Suite Docs), authentifié par le SSO."
+license = "MIT"
+upstream_repo = "https://github.com/suitenumerique/docs"
+upstream_pin = "v6.0.3"
+upstream_image = "lasuite/impress-backend:v6.0.3"   # + impress-frontend / impress-yhub / impress-y-provider :v6.0.3
+core = false
+requires = ["keycloak"]
+extra_secrets = [
+  "docs_oidc_secret",        # secret du client OIDC `docs`
+  "docs_django_secret_key",  # DJANGO_SECRET_KEY du backend
+  "docs_db_password",        # postgres docs (bases Django ET yhub)
+  "docs_s3_secret",          # secret S3 rustfs (backend + rustfs + createbuckets)
+  "docs_yprovider_api_key",  # clé partagée backend/yhub/y-provider (throttling API)
+]
+
+[oidc]
+realm = "lastarter"
+client_id = "docs"
+scopes = "openid email"
+# Callback EXACT attendu amont : https://docs.<domaine>/api/v1.0/oidc/callback/
+# (urlpatterns de lasuite.oidc_login nichés sous api/<version>/ — core/urls.py
+# amont note que api/ est « the only prefix routed to the backend »). Le CLI
+# crée le client realm avec les redirectUris {origin}/*, qui le couvre.
+
+[env]
+# --- images pinnées (JAMAIS latest : latest lasuite = preprod). Tag v6.0.3
+# --- vérifié git ls-remote (commit 9c233b82) ET Docker Hub (4 images).
+DOCS_BACKEND_IMAGE = "lasuite/impress-backend:v6.0.3"
+DOCS_FRONTEND_IMAGE = "lasuite/impress-frontend:v6.0.3"
+DOCS_YHUB_IMAGE = "lasuite/impress-yhub:v6.0.3"
+DOCS_YPROVIDER_IMAGE = "lasuite/impress-y-provider:v6.0.3"
+
+# --- jetons consommés par deploy/compose/docs.yml (compose.env) ---
+DOCS_ORIGIN = "{origin}"
+DOCS_DB_PASSWORD = "{secret:docs_db_password}"
+DOCS_S3_SECRET_KEY = "{secret:docs_s3_secret}"
+
+# --- backend/yhub/y-provider (rendus en .runtime/docs.env, monté via env_file ;
+# --- noms EXACTS de env.d/production.dist/{common,backend,yprovider,yhub} amont) ---
+DJANGO_SETTINGS_MODULE = "impress.settings"
+DJANGO_CONFIGURATION = "{django_configuration}"
+DJANGO_SECRET_KEY = "{secret:docs_django_secret_key}"
+DJANGO_ALLOWED_HOSTS = "{app_bare}"
+PYTHONPATH = "/app"
+
+# Postgres : DEUX bases sur la même instance (docs pour Django, yhub pour la
+# collaboration — créée par le one-shot docs_yhubinitdb).
+DB_HOST = "docs_postgresql"
+DB_NAME = "docs"
+DB_USER = "docs"
+DB_PASSWORD = "{secret:docs_db_password}"
+DB_PORT = "5432"
+
+REDIS_URL = "redis://docs_redis:6379/1"
+DJANGO_CELERY_BROKER_URL = "redis://docs_redis:6379/0"
+
+# JWT RS256 : le backend signe les jetons qu'il présente à yhub et y-provider
+# (JWKS public servi sur /api/v1.0/jwks). Clés générées par le one-shot docs_keys.
+JWT_PRIVATE_KEY_FILE = "/keys/private.pem"
+YHUB_API_BASE_URL = "http://docs_yhub:3002"
+
+# Conversion y-provider (interne : rien n'est routé dessus par la passerelle)
+Y_PROVIDER_API_BASE_URL = "http://docs_yprovider:4444/api/"
+Y_PROVIDER_API_KEY = "{secret:docs_yprovider_api_key}"
+
+# S3 rustfs (pièces jointes + historique de versions) — alias SANS tiret bas
+# (aws-cli/botocore rejette les hostnames avec underscore).
+AWS_S3_ENDPOINT_URL = "http://docs-rustfs:9000"
+AWS_S3_ACCESS_KEY_ID = "docs"
+AWS_S3_SECRET_ACCESS_KEY = "{secret:docs_s3_secret}"
+AWS_S3_REGION_NAME = "eu-east-1"
+AWS_S3_SIGNATURE_VERSION = "s3v4"
+AWS_STORAGE_BUCKET_NAME = "docs-media-storage"
+MEDIA_BASE_URL = "{origin}"
+
+# OIDC (django-lasuite) : callback https://docs.<domaine>/api/v1.0/oidc/callback/
+# couvert par les redirectUris {origin}/* du client realm.
+OIDC_OP_JWKS_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/certs"
+OIDC_OP_AUTHORIZATION_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/auth"
+OIDC_OP_TOKEN_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/token"
+OIDC_OP_USER_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/userinfo"
+OIDC_OP_LOGOUT_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/logout"
+OIDC_RP_CLIENT_ID = "docs"
+OIDC_RP_CLIENT_SECRET = "{secret:docs_oidc_secret}"
+OIDC_RP_SIGN_ALGO = "RS256"
+OIDC_RP_SCOPES = "openid email"
+LOGIN_REDIRECT_URL = "{origin}"
+LOGIN_REDIRECT_URL_FAILURE = "{origin}"
+LOGOUT_REDIRECT_URL = "{origin}"
+OIDC_REDIRECT_ALLOWED_HOSTS = '["https://{app_host}"]'
+
+# Collaboration : la sync temps réel = yhub. Websocket same-origin
+# wss://docs.<domaine>/collaboration/ws/ — le nginx du frontend amont fait le
+# proxy vers yhub:3002, l'upgrade traverse la passerelle (location / déjà
+# équipée Upgrade/Connection). Valeur du bloc commenté de env.d/common amont.
+COLLABORATION_WS_URL = "{ws}://{app_host}/collaboration/ws/v1/docs"
+# Appelés par yhub et y-provider (JWKS du backend) via la passerelle TLS :
+# NODE_EXTRA_CA_CERTS (docs.yml) fait confiance à la CA locale.
+COLLABORATION_SERVER_ORIGIN = "{origin}"
+COLLABORATION_BACKEND_BASE_URL = "{origin}"
+
+# Email (POC : console) + thème natif amont (CSS servi par la passerelle)
+DJANGO_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DJANGO_EMAIL_BRAND_NAME = "{brand_name}"
+DJANGO_EMAIL_LOGO_IMG = "https://{domain}/__lastarter/branding/logo.svg"
+DJANGO_EMAIL_URL_APP = "{origin}"
+FRONTEND_CSS_URL = "https://{domain}/__lastarter/theme.css"
+
+[compose]
+profile = "docs"
+route_label = "docs"                    # docs.<domaine>
+frontend_target = "docs_frontend:8083"  # nginx frontend amont (routage interne /collaboration, /media)
+api_target = "docs_backend:8000"        # /api + /admin + /static → Django
+infra_services = ["docs_postgresql", "docs_redis", "docs_yhub_valkey", "docs_rustfs"]
+# Ordre : clés RSA -> buckets S3 -> schéma yhub (le serveur ne fait JAMAIS de DDL).
+oneshot_services = ["docs_keys", "docs_createbuckets", "docs_yhubinitdb"]
+migrate_service = "docs_backend"
+migrate_command = "python manage.py migrate --no-input"
+services = [
+  "docs_postgresql",
+  "docs_redis",
+  "docs_yhub_valkey",
+  "docs_rustfs",
+  "docs_keys",
+  "docs_createbuckets",
+  "docs_yhubinitdb",
+  "docs_backend",
+  "docs_yhub",
+  "docs_yprovider",
+  "docs_frontend",
+]
+extras = []
+
+[notes]
+warnings = """
+yhub : le schéma de la base collaboration n'est JAMAIS créé par le serveur —
+le one-shot docs_yhubinitdb (`yarn init-db`, idempotent) est rejoué à chaque
+`lastarter deploy` : il crée la base `yhub` et le DDL de la version épinglée.
+Les clés RS256 (volume docs_keys) sont générées UNE fois : ne pas purger ce
+volume sans faire redémarrer backend + yhub. DEUX bases postgres sur la même
+instance (docs + yhub) : les sauvegarder ensemble — le CONTENU des documents
+vit dans yhub (postgres + valkey AOF), pas dans le bucket S3 (pièces jointes
+et historique de versions).
+"""
+poc = """
+Recherche native Postgres (trigram / full-text) — PAS d'OpenSearch : l'amont v6
+n'a AUCUNE variable OPENSEARCH_* (documentation/env.md, chart helm) ; la section
+OpenSearch de documentation/system-requirements.md concerne la brique séparée
+« Find » (La Suite Find, hors périmètre). Recherche plein texte dédiée = roadmap.
+Celery intégrée au backend (CELERY_TASK_ALWAYS_EAGER=True par défaut amont,
+aucun worker dans le compose de production amont). Email en console (POC, comme
+drive/meet) : SMTP en roadmap. y-provider n'est plus le serveur de collaboration
+depuis v6 : il ne fait que la conversion de formats (markdown/html/pdf/docx),
+appelé en interne par le backend — rien n'est routé dessus par la passerelle.
+IA désactivée (AI_FEATURE_* off par défaut). Limite acceptée : mono-réplica
+yhub (le chart helm amont en tolère plusieurs ; en compose, un seul).
+"""
+theming = """
+Thème NATIF amont : FRONTEND_CSS_URL = https://<domaine>/__lastarter/theme.css
+(CSS servi par la passerelle et injecté par sub_filter) ; habillage des mails
+par DJANGO_EMAIL_BRAND_NAME + DJANGO_EMAIL_LOGO_IMG (/__lastarter/branding/).
+FRONTEND_THEME et THEME_CUSTOMIZATION_FILE_PATH restent aux défauts amont : le
+rendu CLI du JSON de personnalisation (footer) est spécifique drive, l'habillage
+docs passe par le CSS passerelle. NB licence : les images Docker Hub sont
+buildées PUBLISH_AS_MIT=true — les formats d'export dérivés de composants GPL
+(PDF) n'y sont pas inclus (choix MIT assumé, cf. docs/licences.md).
+"""
+cli_integration = """
+Conventions attendues du CLI (hors périmètre catalogue/compose) : AUCUN rendu
+spécifique — env unique .runtime/docs.env lue par backend, yhub et y-provider
+(même superposition que env.d/common+backend+yprovider+yhub amont) ; le
+template nginx du frontend est un fichier statique du dépôt
+(deploy/compose/files/docs/docs.conf.template, adapté du template amont :
+S3 média en http interne docs-rustfs + resolver docker dynamique) monté dans
+/etc/nginx/templates/ — l'image frontend n'embarque PAS ce template (serveur
+statique 3000/8080 seul, entrée prod amont = /docker-entrypoint.sh qui fait
+l'envsubst). Draft deployments/<client>/env/docs.env créé à l'init : rejouer
+`lastarter init` sur un déploiement existant. Exclu v1 : find (recherche plein
+texte), IA, soft-migration legacy (instances pré-yhub, SOFT_MIGRATION).
+"""

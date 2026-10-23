@@ -1,0 +1,225 @@
+# LaStarter — Docs (traitement de texte collaboratif suitenumerique/docs v6.0.3).
+# Images AMONT vanilla : lasuite/impress-backend + impress-frontend + impress-yhub
+# + impress-y-provider, pinnées dans catalogue/docs.toml. Infra aux versions du
+# compose amont (postgres 16, valkey, rustfs 1.0.3 ; aws-cli one-shot).
+# Assemblé par `lastarter deploy` (base.yml + docs.yml) : docs.<domaine> via la
+# passerelle — AUCUN port hôte. Le routage fin (/api /admin /static /external_api
+# -> backend, /collaboration/* -> yhub websocket, /media -> S3) est fait par le
+# nginx du frontend amont (template monté depuis files/docs/).
+
+services:
+  docs_postgresql:
+    image: postgres:16
+    container_name: ${LASTARTER_CLIENT}-docs-postgresql
+    environment:
+      POSTGRES_DB: docs
+      POSTGRES_USER: docs
+      POSTGRES_PASSWORD: ${DOCS_DB_PASSWORD}
+    volumes:
+      - docs_pgdata:/var/lib/postgresql/data
+    networks: [lastarter]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d docs -U docs"]
+      interval: 5s
+      timeout: 3s
+      retries: 120
+
+  # valkey 8.1-alpine (BSD-3, maintenu) : remplace redis 8 amont (cache Django),
+  # compatible RESP — choix roadmap LaStarter (divergence amont assumée).
+  docs_redis:
+    image: valkey/valkey:8.1-alpine
+    container_name: ${LASTARTER_CLIENT}-docs-redis
+    networks: [lastarter]
+    restart: unless-stopped
+
+  # Valkey DÉDIÉ à yhub — c'est un STORE, pas un cache : il détient les updates
+  # non encore persistés en postgres. AOF + volatile-lru, cf. la doc amont
+  # (documentation/installation/compose.md, service yhub-valkey).
+  docs_yhub_valkey:
+    image: valkey/valkey:8.1-alpine
+    container_name: ${LASTARTER_CLIENT}-docs-yhub-valkey
+    # AOF car valkey fait autorité pour les updates en attente de persistance.
+    command: ["valkey-server", "--maxmemory-policy", "volatile-lru",
+              "--appendonly", "yes", "--appendfsync", "everysec"]
+    volumes:
+      - docs_yhub_valkey_data:/data
+    networks: [lastarter]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+
+  docs_rustfs:
+    image: rustfs/rustfs:1.0.3
+    container_name: ${LASTARTER_CLIENT}-docs-rustfs
+    environment:
+      RUSTFS_ACCESS_KEY: docs
+      # Secret via coffre (jeton {secret:docs_s3_secret} du catalogue) : le CLI
+      # rend la MÊME valeur dans docs.env (AWS_S3_SECRET_ACCESS_KEY).
+      RUSTFS_SECRET_KEY: ${DOCS_S3_SECRET_KEY}
+      RUSTFS_CORS_ALLOWED_ORIGINS: ${DOCS_ORIGIN}
+    volumes:
+      - docs_mediadata:/data
+    # Alias tiret : aws-cli/botocore rejette les noms d'hôte contenant un
+    # tiret bas (Invalid endpoint) — tous les endpoints S3 pointent docs-rustfs.
+    networks:
+      lastarter:
+        aliases: [docs-rustfs]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9000/health"]
+      interval: 5s
+      timeout: 20s
+      retries: 120
+
+  # Clés RSA (JWT RS256 backend <-> yhub / y-provider, cf. compose.md amont) :
+  # générées UNE fois dans le volume (idempotent), montées ro par docs_backend
+  # et docs_yhub. Version pinnée = image utilisée par le chart helm amont.
+  docs_keys:
+    image: alpine/openssl:3.5.7
+    container_name: ${LASTARTER_CLIENT}-docs-keys
+    volumes:
+      - docs_keys:/keys
+    entrypoint: >
+      sh -c "
+      test -s /keys/private.pem || openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out /keys/private.pem; \
+      test -s /keys/yhub-private.pem || openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out /keys/yhub-private.pem; \
+      chmod 644 /keys/*.pem"
+    restart: "no"
+
+  docs_createbuckets:
+    image: amazon/aws-cli
+    container_name: ${LASTARTER_CLIENT}-docs-createbuckets
+    environment:
+      AWS_ACCESS_KEY_ID: docs
+      AWS_SECRET_ACCESS_KEY: ${DOCS_S3_SECRET_KEY}
+      AWS_DEFAULT_REGION: eu-east-1
+      AWS_ENDPOINT_URL: http://docs-rustfs:9000
+    entrypoint: >
+      sh -c "
+      aws s3 mb s3://docs-media-storage; \
+      aws s3api put-bucket-versioning --bucket docs-media-storage --versioning-configuration Status=Enabled; \
+      aws s3 mb s3://docs-yhub-storage; \
+      aws s3api put-bucket-versioning --bucket docs-yhub-storage --versioning-configuration Status=Enabled && \
+      exit 0;"
+    networks: [lastarter]
+    restart: "no"
+    depends_on:
+      docs_rustfs:
+        condition: service_healthy
+
+  # Schéma de la collaboration : yhub ne fait JAMAIS de DDL lui-même —
+  # one-shot idempotent (`yarn init-db`, procédure amont compose.md), rejoué à
+  # chaque déploiement (crée la base yhub si le user le peut, sinon les tables).
+  docs_yhubinitdb:
+    image: ${DOCS_YHUB_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-docs-yhubinitdb
+    environment:
+      POSTGRES: postgres://docs:${DOCS_DB_PASSWORD}@docs_postgresql:5432/yhub
+    command: ["yarn", "init-db"]
+    networks: [lastarter]
+    restart: "no"
+    depends_on:
+      docs_postgresql:
+        condition: service_healthy
+
+  docs_backend:
+    image: ${DOCS_BACKEND_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-docs-backend
+    env_file: ["${RUNTIME_DIR}/docs.env"]
+    environment:
+      REQUESTS_CA_BUNDLE: /certs/ca.crt
+    volumes:
+      - ${CERTS_DIR}:/certs:ro
+      - docs_keys:/keys:ro
+    networks: [lastarter]
+    restart: unless-stopped
+    depends_on:
+      docs_postgresql:
+        condition: service_healthy
+      docs_redis:
+        condition: service_started
+      docs_rustfs:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "manage.py", "check"]
+      interval: 15s
+      timeout: 30s
+      retries: 20
+      start_period: 10s
+
+  # Collaboration CRDT : détient le CONTENU des documents (postgres yhub +
+  # valkey AOF), synchronise les éditeurs sur /collaboration/ws/ (routé par le
+  # nginx du frontend amont). Vérifie les jetons du backend via la passerelle
+  # TLS : NODE_EXTRA_CA_CERTS = CA locale (POC).
+  docs_yhub:
+    image: ${DOCS_YHUB_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-docs-yhub
+    env_file: ["${RUNTIME_DIR}/docs.env"]
+    environment:
+      NODE_EXTRA_CA_CERTS: /certs/ca.crt
+    volumes:
+      - ${CERTS_DIR}:/certs:ro
+      - docs_keys:/keys:ro
+    networks: [lastarter]
+    restart: unless-stopped
+    depends_on:
+      docs_postgresql:
+        condition: service_healthy
+      docs_yhub_valkey:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3002/collaboration/ready/v1').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # Conversion de formats (markdown/html/pdf/docx) — interne uniquement
+  # (le backend l'appelle sur Y_PROVIDER_API_BASE_URL, rien n'est routé dessus).
+  docs_yprovider:
+    image: ${DOCS_YPROVIDER_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-docs-yprovider
+    env_file: ["${RUNTIME_DIR}/docs.env"]
+    environment:
+      NODE_EXTRA_CA_CERTS: /certs/ca.crt
+    volumes:
+      - ${CERTS_DIR}:/certs:ro
+    networks: [lastarter]
+    restart: unless-stopped
+
+  docs_frontend:
+    image: ${DOCS_FRONTEND_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-docs-frontend
+    user: "101"
+    # Entrée prod amont : l'entrypoint officiel nginx exécute l'envsubst des
+    # templates (/etc/nginx/templates/*.template) avant de lancer nginx.
+    entrypoint: ["/docker-entrypoint.sh"]
+    command: ["nginx", "-g", "daemon off;"]
+    environment:
+      # Interpolées dans files/docs/docs.conf.template au démarrage.
+      BACKEND_HOST: docs_backend
+      FRONTEND_HOST: docs_frontend
+      YHUB_HOST: docs_yhub
+      S3_HOST: docs-rustfs:9000
+      BUCKET_NAME: docs-media-storage
+    volumes:
+      # Template nginx interne (adapté du template prod amont) — l'image
+      # frontend n'embarque QUE le serveur statique (ports 3000/8080).
+      - ./files/docs/docs.conf.template:/etc/nginx/templates/docs.conf.template:ro
+    networks: [lastarter]
+    restart: unless-stopped
+    depends_on:
+      docs_backend:
+        condition: service_healthy
+      docs_yhub:
+        condition: service_healthy
+
+volumes:
+  docs_pgdata:
+  docs_mediadata:
+  docs_yhub_valkey_data:
+  docs_keys:

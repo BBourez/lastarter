@@ -127,5 +127,70 @@ class InitWriterTests(unittest.TestCase):
         self.assertIn("theme", manifest)
 
 
+class DocsBrickTests(unittest.TestCase):
+    """Brique docs (suitenumerique/docs) : pins amont, secrets, cohérence compose."""
+
+    def setUp(self):
+        self.bricks, self.errors = load_catalogue(REPO_ROOT / "catalogue")
+        self.assertEqual(self.errors, [])
+        self.docs = self.bricks["docs"]
+
+    def test_docs_pin_et_images(self):
+        self.assertEqual(self.docs.upstream_pin, "v6.0.3")
+        self.assertEqual(self.docs.license, "MIT")
+        self.assertEqual(self.docs.requires, ["keycloak"])
+        for key, expected in (
+            ("DOCS_BACKEND_IMAGE", "lasuite/impress-backend:v6.0.3"),
+            ("DOCS_FRONTEND_IMAGE", "lasuite/impress-frontend:v6.0.3"),
+            ("DOCS_YHUB_IMAGE", "lasuite/impress-yhub:v6.0.3"),
+            ("DOCS_YPROVIDER_IMAGE", "lasuite/impress-y-provider:v6.0.3"),
+        ):
+            self.assertEqual(self.docs.env[key], expected)
+        # JAMAIS latest (les tags latest des images lasuite suivent main = preprod).
+        for value in self.docs.env.values():
+            self.assertNotIn(":latest", str(value))
+
+    def test_docs_secrets_couverts(self):
+        # Chaque {secret:X} du [env] est déclaré dans extra_secrets (et réciproquement).
+        self.assertEqual(
+            set(secret_names(self.docs)),
+            {
+                "docs_oidc_secret",
+                "docs_django_secret_key",
+                "docs_db_password",
+                "docs_s3_secret",
+                "docs_yprovider_api_key",
+            },
+        )
+
+    def test_docs_compose_coherent(self):
+        yml = (REPO_ROOT / "deploy" / "compose" / "docs.yml").read_text(encoding="utf-8")
+        compose = self.docs.compose
+        self.assertEqual(compose.get("route_label"), "docs")
+        self.assertEqual(compose.get("frontend_target"), "docs_frontend:8083")
+        self.assertEqual(compose.get("api_target"), "docs_backend:8000")
+        # Chaque service déclaré existe dans le fichier compose (et réciproquement) —
+        # hors bloc volumes (les clés de volume partagent le préfixe docs_).
+        yml_services = yml.split("\nvolumes:", 1)[0]
+        declared = {f"  {service}:" for service in compose.get("services", [])}
+        in_yml = {
+            line.strip().rstrip(":")
+            for line in yml_services.splitlines()
+            if line.startswith("  docs_") and line.strip().endswith(":")
+        }
+        self.assertEqual(in_yml, {service for service in compose.get("services", [])})
+        for line in declared:
+            self.assertIn(line, yml)
+        # S3 : alias sans tiret bas (aws-cli/botocore rejette les underscores).
+        self.assertIn("docs-rustfs", yml)
+        self.assertNotIn("docs_rustfs:9000", yml)
+        # One-shots et migration déclarés.
+        self.assertEqual(
+            compose.get("oneshot_services"),
+            ["docs_keys", "docs_createbuckets", "docs_yhubinitdb"],
+        )
+        self.assertEqual(compose.get("migrate_service"), "docs_backend")
+
+
 if __name__ == "__main__":
     unittest.main()

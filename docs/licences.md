@@ -21,6 +21,9 @@ ci-dessous ; toute divergence casse la CI volontairement.
 | `drive` (backend + frontend) | [suitenumerique/drive](https://github.com/suitenumerique/drive) — images `lasuite/drive-backend` + `lasuite/drive-frontend` | v0.25.2 | MIT |
 | `meet` (backend + frontend) | [suitenumerique/meet](https://github.com/suitenumerique/meet) — images `lasuite/meet-backend` + `lasuite/meet-frontend` | v1.36.2 | MIT |
 | `meet` (SFU audio/vidéo) | [livekit/livekit](https://github.com/livekit/livekit) — image `livekit/livekit-server` | v1.13.6 | Apache-2.0 |
+| `docs` (backend + frontend) | [suitenumerique/docs](https://github.com/suitenumerique/docs) — images `lasuite/impress-backend` + `lasuite/impress-frontend` | v6.0.3 | MIT |
+| `docs` (collaboration yhub) | [suitenumerique/docs](https://github.com/suitenumerique/docs) — image `lasuite/impress-yhub` | v6.0.3 | MIT |
+| `docs` (conversion y-provider) | [suitenumerique/docs](https://github.com/suitenumerique/docs) — image `lasuite/impress-y-provider` | v6.0.3 | MIT |
 
 ## Composants d'infrastructure (compose, hors catalogue)
 
@@ -56,7 +59,7 @@ ci-dessous ; toute divergence casse la CI volontairement.
   amont) ; indiquer les modifications éventuelles (aucune) ; ne pas utiliser
   les marques des projets pour promouvoir un produit dérivé.
 
-### MIT — drive, meet (La Suite numérique)
+### MIT — drive, meet, docs (La Suite numérique)
 
 - Conserver la notice de copyright et le texte d'autorisation dans toutes les
   copies ou parties substantielles — garanti par la conservation des fichiers
