@@ -1,0 +1,133 @@
+# Brique communication : Meet — visioconférence suitenumerique/meet (La Suite).
+# Images AMONT vanilla (lasuite/meet-backend + lasuite/meet-frontend, MIT) :
+# zéro fork. Remplace la brique de visio précédente (retirée).
+# SFU LiveKit dédié, exposé livekit.<domaine> (websocket) par la passerelle.
+
+[brick]
+name = "meet"
+title = "Meet — visioconférence"
+category = "communication"
+description = "Réunions en ligne : créez un salon, partagez le lien, rejoignez depuis le navigateur (SSO)."
+license = "MIT"
+upstream_repo = "https://github.com/suitenumerique/meet"
+upstream_pin = "v1.36.2"
+core = false
+requires = ["keycloak"]
+extra_secrets = [
+  "meet_oidc_secret",        # secret du client OIDC `meet`
+  "meet_django_secret_key",  # DJANGO_SECRET_KEY du backend
+  "meet_livekit_secret",     # clé API LiveKit (backend + livekit.yaml)
+  "meet_s3_secret",          # secret S3 rustfs (backend + createbuckets)
+  "meet_db_password",        # postgres meet
+]
+
+[oidc]
+realm = "lastarter"
+client_id = "meet"
+scopes = "openid email profile"
+
+[branding.env]
+BRAND_NAME = "{brand_name}"
+
+[env]
+# --- images pinnées (JAMAIS latest : latest lasuite = preprod) ---
+MEET_BACKEND_IMAGE = "lasuite/meet-backend:v1.36.2"
+MEET_FRONTEND_IMAGE = "lasuite/meet-frontend:v1.36.2"
+LIVEKIT_IMAGE = "livekit/livekit-server:v1.13.6"   # version du compose amont
+
+# --- jetons consommés par deploy/compose/meet.yml (compose.env) ---
+MEET_ORIGIN = "{origin}"
+MEET_DB_PASSWORD = "{secret:meet_db_password}"
+MEET_S3_SECRET_KEY = "{secret:meet_s3_secret}"
+
+# --- backend Django (rendu en .runtime/meet.env, monté via env_file) ---
+DJANGO_SETTINGS_MODULE = "meet.settings"
+DJANGO_CONFIGURATION = "{django_configuration}"
+DJANGO_SECRET_KEY = "{secret:meet_django_secret_key}"
+ALLOWED_HOSTS = "{app_bare}"
+PYTHONPATH = "/app"
+MEET_BASE_URL = "{origin}"
+
+DB_HOST = "meet_postgresql"
+DB_NAME = "meet"
+DB_USER = "meet"
+DB_PASSWORD = "{secret:meet_db_password}"
+DB_PORT = "5432"
+
+REDIS_URL = "redis://meet_redis:6379/1"
+CELERY_BROKER_URL = "redis://meet_redis:6379/0"
+
+# OIDC (django-lasuite, cf. docs/features/authentication.md amont) : callback
+# https://meet.<domaine>/… couvert par les redirectUris {origin}/* du client realm.
+OIDC_OP_JWKS_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/certs"
+OIDC_OP_AUTHORIZATION_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/auth"
+OIDC_OP_TOKEN_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/token"
+OIDC_OP_USER_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/userinfo"
+OIDC_OP_LOGOUT_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/logout"
+OIDC_RP_CLIENT_ID = "meet"
+OIDC_RP_CLIENT_SECRET = "{secret:meet_oidc_secret}"
+OIDC_RP_SIGN_ALGO = "RS256"
+OIDC_RP_SCOPES = "openid email profile"
+LOGIN_REDIRECT_URL = "{origin}"
+LOGIN_REDIRECT_URL_FAILURE = "{origin}"
+LOGOUT_REDIRECT_URL = "{origin}"
+OIDC_REDIRECT_ALLOWED_HOSTS = '["https://{app_host}"]'
+ALLOW_LOGOUT_GET_METHOD = "True"
+
+# SFU LiveKit (le backend signe les jetons d'accès)
+LIVEKIT_API_KEY = "meet"
+LIVEKIT_API_SECRET = "{secret:meet_livekit_secret}"
+LIVEKIT_API_URL = "https://livekit.{domain}"
+ALLOW_UNREGISTERED_ROOMS = "False"
+
+# S3 rustfs (médias / enregistrements)
+AWS_S3_ENDPOINT_URL = "http://meet_rustfs:9000"
+AWS_S3_ACCESS_KEY_ID = "meet"
+AWS_S3_SECRET_ACCESS_KEY = "{secret:meet_s3_secret}"
+AWS_S3_REGION_NAME = "eu-east-1"
+AWS_S3_SIGNATURE_VERSION = "s3v4"
+AWS_STORAGE_BUCKET_NAME = "meet-media-storage"
+MEDIA_BASE_URL = "{origin}"
+
+# Email (POC : console) + thème natif amont (CSS servi par la passerelle)
+DJANGO_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DJANGO_EMAIL_BRAND_NAME = "{brand_name}"
+FRONTEND_CUSTOM_CSS_URL = "https://{domain}/__lastarter/theme.css"
+
+[compose]
+profile = "meet"
+route_label = "meet"                      # meet.<domaine>
+frontend_target = "meet_frontend:8080"
+api_target = "meet_backend:8000"          # /api + /admin + /static → Django
+infra_services = ["meet_postgresql", "meet_redis", "meet_rustfs", "meet_createbuckets", "meet_livekit"]
+migrate_service = "meet_backend"
+migrate_command = "python manage.py migrate --no-input"
+extra_servers = [
+  { label = "livekit", target = "meet_livekit:7880" },   # livekit.<domaine> : websocket SFU
+]
+services = [
+  "meet_postgresql",
+  "meet_redis",
+  "meet_rustfs",
+  "meet_createbuckets",
+  "meet_livekit",
+  "meet_backend",
+  "meet_frontend",
+]
+extras = []
+
+[notes]
+warnings = "SFU : signalisation wss via livekit.<domaine> (passerelle) ; ni port hôte UDP (mux 7882) ni TURN en v1 — contrainte héritée de la visio POC précédente ; TURN/UDP en roadmap."
+cli_integration = """
+Conventions attendues du CLI (hors périmètre catalogue/compose) :
+- MEET_CONFIG_DIR → .runtime/meet/ contenant livekit.yaml rendu (clé `meet` :
+  secret {secret:meet_livekit_secret}, redis meet_redis:6379, rtc tcp_port 7881 /
+  udp_port 7882 — modèle docs/examples/livekit/server.yaml amont). Montage par
+  DOSSIER (les mounts fichier unique renvoient 0 octet sous Docker Desktop Windows).
+- Le draft deployments/<client>/env/meet.env est créé à l'init depuis [env] :
+  rejouer `lastarter init` sur un déploiement existant pour l'ajouter.
+Exclu v1 (non déployés, en roadmap) : summary (lasuite/meet-summary),
+agents (lasuite/meet-agents), transcription/whisper, egress (enregistrements).
+Limite acceptée v1 : le titre de l'app (VITE_APP_TITLE) est un build-arg amont
+(défaut « La Suite Meet ») — contournement sub_filter edge en roadmap.
+"""

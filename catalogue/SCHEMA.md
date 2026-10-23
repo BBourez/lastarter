@@ -8,7 +8,7 @@ définition canonique (dataclass `Brick`).
 [brick]
 name = "drive"                        # identifiant unique (slug)
 title = "Drive — fichiers collaboratifs"
-category = "collaboration"            # collaboration | communication | fondation
+category = "collaboration"            # collaboration | communication | storage | fondation
 description = "…"
 license = "MIT"                       # licence amont (clé du registre docs/licences.md)
 upstream_repo = "https://github.com/suitenumerique/drive"
@@ -24,6 +24,13 @@ scopes = "openid email"
 
 [branding.env]                        # variables de marque blanche (surchargeables
 BRAND_NAME = "…"                      # par branding/<client>.toml)
+
+[branding.custom_theme]               # palette / personnalisation (optionnel) :
+colors = { primary = "#0bc491" }      # consommé par le CLI pour générer, depuis la
+logo = "branding/logo.svg"            # même source, le JSON de thème NATIF des apps
+                                      # (drive THEME_CUSTOMIZATION_FILE_PATH, element-web
+                                      # custom_themes) et le dossier branding servi par
+                                      # la passerelle sur /__lastarter/
 
 [env]                                 # variables d'environnement principales (brouillon
 KEY = "valeur | {domain} | {secret}"  # .env généré à l'init ; {domain} substitué)
@@ -66,6 +73,37 @@ extras = ["collabora", "onlyoffice"]  # services optionnels activables
 warnings = "…"                        # points d'attention pour l'installateur
 ```
 
+Exemple — brique meet (visio, images amont suitenumerique/meet) :
+
+```toml
+[brick]
+name = "meet"
+title = "Meet — visioconférence"
+category = "communication"
+license = "MIT"
+upstream_repo = "https://github.com/suitenumerique/meet"
+upstream_pin = "v1.36.2"
+requires = ["keycloak"]
+extra_secrets = ["meet_oidc_secret", "meet_django_secret_key", "meet_livekit_secret",
+                 "meet_s3_secret", "meet_db_password"]
+
+[oidc]
+client_id = "meet"
+
+[env]
+MEET_BACKEND_IMAGE = "lasuite/meet-backend:v1.36.2"   # pinné — JAMAIS latest
+FRONTEND_CUSTOM_CSS_URL = "https://{domain}/__lastarter/theme.css"
+LIVEKIT_API_SECRET = "{secret:meet_livekit_secret}"
+
+[compose]
+route_label = "meet"
+frontend_target = "meet_frontend:8080"
+api_target = "meet_backend:8000"
+extra_servers = [{ label = "livekit", target = "meet_livekit:7880" }]
+services = ["meet_postgresql", "meet_redis", "meet_rustfs", "meet_createbuckets",
+            "meet_livekit", "meet_backend", "meet_frontend"]
+```
+
 Règles :
 
 - `requires` ne référence que des briques du catalogue ; les dépendances *internes*
@@ -73,3 +111,6 @@ Règles :
 - `{domain}` dans `[env]` est substitué par le domaine client à l'`init` ;
   `{secret:<nom>}` déclenche la génération d'un secret fort (jamais re-généré ensuite).
 - Toute entrée doit exister dans `docs/licences.md` (gate licence).
+- Toujours PINNER les images à une version exacte — jamais `latest` (les tags
+  `latest` des images lasuite suivent `main` = preprod). Un bump de pin est une
+  décision de roadmap : la commande `check-updates` liste les écarts amont.

@@ -1,6 +1,6 @@
 # Brique communication : Discussions — Element Web + Synapse (SSO Keycloak).
-# Architecture validée en local (deploy/local/chat.yml) : same-origin, le
-# homeserver Matrix (API + callback SSO) est servi sur chat.<domaine>.
+# Architecture validée en local (deploy/compose/discussions.yml) : same-origin,
+# le homeserver Matrix (API + callback SSO) est servi sur chat.<domaine>.
 
 [brick]
 name = "discussions"
@@ -10,7 +10,7 @@ description = "Messagerie chiffrée E2EE : Element Web (Compound) + Synapse, aut
 license = "AGPL-3.0-only"
 upstream_repo = "https://github.com/element-hq/element-web"
 upstream_image = "ghcr.io/element-hq/element-web"
-upstream_pin = "v1.12.31"
+upstream_pin = "v1.12.32"
 core = false
 requires = ["keycloak"]
 extra_secrets = [
@@ -38,8 +38,8 @@ SYNAPSE_MACAROON_SECRET = "{secret:discussions_macaroon_secret}"
 SYNAPSE_FORM_SECRET = "{secret:discussions_form_secret}"
 SYNAPSE_SIGNING_KEY = "{secret:discussions_signing_key}"
 SYNAPSE_OIDC_ISSUER = "{sso_origin}/realms/lastarter"
-ELEMENT_WEB_IMAGE = "ghcr.io/element-hq/element-web:v1.12.31"
-SYNAPSE_IMAGE = "matrixdotorg/synapse:latest"
+ELEMENT_WEB_IMAGE = "ghcr.io/element-hq/element-web:v1.12.32"
+SYNAPSE_IMAGE = "matrixdotorg/synapse:v1.163.1"
 
 [compose]
 profile = "discussions"
@@ -52,8 +52,8 @@ prepare_service = "discussions_synapse"
 prepare_command = "chown 991:991 /data"
 prepare_user = "0:0"
 services = [
-  "discussions_synapse",      # matrixdotorg/synapse:latest (OIDC Keycloak)
-  "discussions_element_web",  # ghcr.io/element-hq/element-web:v1.12.31
+  "discussions_synapse",      # matrixdotorg/synapse:v1.163.1 (OIDC Keycloak)
+  "discussions_element_web",  # ghcr.io/element-hq/element-web:v1.12.32
 ]
 extras = []
 

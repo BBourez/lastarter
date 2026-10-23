@@ -1,9 +1,6 @@
-# Brique stockage : Drive — Django + Next (design Element Web), SSO Keycloak.
-#
-# FRONTEND : image locale lastarter/drive:compound (export statique Next,
-# design system Compound — même langage visuel qu'Element Web). Construite
-# depuis le checkout examples-inspiration/drive (branche lastarter-compound).
-# BACKEND : image locale lastarter/drive-backend (Django, cible production).
+# Brique stockage : Drive — Django + Next (design La Suite), SSO Keycloak.
+# Images AMONT vanilla (lasuite/drive-backend + lasuite/drive-frontend) :
+# aucun fork, intégration Keycloak + habillage par variables d'env natives.
 
 [brick]
 name = "drive"
@@ -12,11 +9,12 @@ category = "storage"
 description = "Stockage et partage de fichiers, authentifié par le SSO."
 license = "MIT"
 upstream_repo = "https://github.com/suitenumerique/drive"
-upstream_pin = "v0.24.0"
+upstream_pin = "v0.25.2"
 core = false
 requires = ["keycloak"]
 extra_secrets = [
   "drive_oidc_secret",     # secret du client OIDC `drive`
+  "drive_s3_secret",       # secret S3 rustfs (backend + rustfs + createbuckets)
 ]
 
 [oidc]
@@ -29,10 +27,16 @@ redirect_uri_suffix = "/*"
 BRAND_NAME = "{brand_name}"
 
 [env]
-DRIVE_BACKEND_IMAGE = "lastarter/drive-backend:latest"
-DRIVE_FRONTEND_IMAGE = "lastarter/drive:compound"
+# Images amont pinnées (Docker Hub, JAMAIS latest : latest lasuite = preprod).
+DRIVE_BACKEND_IMAGE = "lasuite/drive-backend:v0.25.2"
+DRIVE_FRONTEND_IMAGE = "lasuite/drive-frontend:v0.25.2"
 OIDC_RP_CLIENT_ID = "drive"
 OIDC_RP_CLIENT_SECRET = "{secret:drive_oidc_secret}"
+# Secret S3 partagé backend/rustfs/createbuckets (injecté par le CLI dans
+# backend.env AWS_S3_SECRET_ACCESS_KEY — voir notes).
+DRIVE_S3_SECRET_KEY = "{secret:drive_s3_secret}"
+# Habillage des e-mails transactionnels (thème natif amont).
+EMAIL_BRAND_NAME = "{brand_name}"
 
 [compose]
 profile = "drive"
@@ -44,6 +48,7 @@ services = [
   "drive_postgresql",
   "drive_redis",
   "drive_rustfs",
+  "drive_createbuckets",
   "drive_backend",
   "drive_frontend",
 ]
@@ -51,7 +56,20 @@ extras = []
 
 [notes]
 poc = """
-Backend Django + S3 rustfs + redis + postgres. Le certificat local est monté
-(REQUESTS_CA_BUNDLE) : le backend appelle l'issuer SSO en HTTPS avec la CA
-locale. L'API est servie same-origin via la passerelle (/api, /admin, /media).
+Backend Django + S3 rustfs + redis + postgres (versions du compose amont :
+redis 5, rustfs 1.0.3, postgres 16 — redis 5 est BSD, pas de bascule valkey).
+Le certificat local est monté (REQUESTS_CA_BUNDLE) : le backend appelle l'issuer
+SSO en HTTPS avec la CA locale. L'API est servie same-origin via la passerelle
+(/api, /admin, /static ; /media passe par le backend). Pas de
+drive-collaboration-relay : requis uniquement avec collabora/onlyoffice (exclus v1).
+"""
+theming = """
+Thème NATIF amont, injecté par deploy/compose/drive.yml (environment) :
+- FRONTEND_CSS_URL = {DRIVE_ORIGIN}/__lastarter/theme.css (CSS servi par la passerelle) ;
+- THEME_CUSTOMIZATION_FILE_PATH = /config/theme-customization.json — le dossier
+  .runtime/drive/ est monté en /config (ro) : le CLI écrit theme-customization.json
+  (JSON footer/traductions, cf. docs/customization.md amont) ;
+- EMAIL_BRAND_NAME depuis le catalogue (marque blanche).
+Le secret S3 (drive_s3_secret) doit aussi être rendu par le CLI dans
+.runtime/drive/backend.env (AWS_S3_SECRET_ACCESS_KEY) — même valeur que rustfs.
 """

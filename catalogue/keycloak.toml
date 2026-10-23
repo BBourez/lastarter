@@ -1,5 +1,5 @@
 # Brique fondation : Keycloak — identité unique (SSO OIDC) de toute la suite.
-# Ancré sur le compose amont de drive (examples-inspiration/drive/compose.yaml).
+# Ancré sur le compose amont de drive (examples/drive/compose.yaml).
 
 [brick]
 name = "keycloak"
@@ -13,6 +13,8 @@ upstream_pin = "26.3.2"
 core = true
 requires = []
 extra_secrets = [
+  "kc_admin_password",     # mot de passe KEYCLOAK_ADMIN (console d'admin)
+  "kc_db_password",        # mot de passe postgres du realm (KC_DB_PASSWORD)
   "demo_user_password",    # utilisateur de démo du realm as-code
   "realm_admin_password",  # utilisateur « admin » DU REALM (≠ console master)
 ]

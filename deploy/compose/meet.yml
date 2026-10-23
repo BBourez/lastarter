@@ -1,0 +1,121 @@
+# Brique meet — visioconférence suitenumerique/meet (images amont v1.36.2).
+# Backend Django + frontend nginx (port 8080) + SFU LiveKit v1.13.6 + infra
+# aux versions du compose amont (postgres 16, redis 5, rustfs 1.0.3).
+# Assemblé par `lastarter deploy` (base.yml + meet.yml) : meet.<domaine> et
+# livekit.<domaine> (websocket) via la passerelle — AUCUN port hôte.
+
+services:
+  meet_postgresql:
+    image: postgres:16
+    container_name: ${LASTARTER_CLIENT}-meet-postgresql
+    environment:
+      POSTGRES_DB: meet
+      POSTGRES_USER: meet
+      POSTGRES_PASSWORD: ${MEET_DB_PASSWORD}
+    volumes:
+      - meet_pgdata:/var/lib/postgresql/data
+    networks: [lastarter]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d meet -U meet"]
+      interval: 5s
+      timeout: 3s
+      retries: 120
+
+  # redis:5 = version du compose amont meet (BSD — pas de bascule valkey requise).
+  meet_redis:
+    image: redis:5
+    container_name: ${LASTARTER_CLIENT}-meet-redis
+    networks: [lastarter]
+    restart: unless-stopped
+
+  meet_rustfs:
+    image: rustfs/rustfs:1.0.3
+    container_name: ${LASTARTER_CLIENT}-meet-rustfs
+    environment:
+      RUSTFS_ACCESS_KEY: meet
+      # Secret via coffre (jeton {secret:meet_s3_secret} du catalogue).
+      RUSTFS_SECRET_KEY: ${MEET_S3_SECRET_KEY}
+      RUSTFS_CORS_ALLOWED_ORIGINS: ${MEET_ORIGIN}
+    volumes:
+      - meet_mediadata:/data
+    networks: [lastarter]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9000/health"]
+      interval: 5s
+      timeout: 20s
+      retries: 120
+
+  meet_createbuckets:
+    image: amazon/aws-cli
+    container_name: ${LASTARTER_CLIENT}-meet-createbuckets
+    environment:
+      AWS_ACCESS_KEY_ID: meet
+      AWS_SECRET_ACCESS_KEY: ${MEET_S3_SECRET_KEY}
+      AWS_DEFAULT_REGION: eu-east-1
+      AWS_ENDPOINT_URL: http://meet_rustfs:9000
+    entrypoint: >
+      sh -c "
+      aws s3 mb s3://meet-media-storage; \
+      aws s3api put-bucket-versioning --bucket meet-media-storage --versioning-configuration Status=Enabled && \
+      exit 0;"
+    networks: [lastarter]
+    restart: "no"
+    depends_on:
+      meet_rustfs:
+        condition: service_healthy
+
+  # SFU LiveKit : configuration rendue par le CLI dans .runtime/meet/
+  # (clé `meet` + {secret:meet_livekit_secret} + redis, cf. notes de
+  # catalogue/meet.toml). Montage DOSSIER (jamais fichier unique : Windows).
+  meet_livekit:
+    image: ${LIVEKIT_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-meet-livekit
+    command: ["--config", "/config/livekit.yaml"]
+    volumes:
+      - ${MEET_CONFIG_DIR}:/config:ro
+    depends_on:
+      meet_redis:
+        condition: service_started
+    networks: [lastarter]
+    restart: unless-stopped
+
+  meet_backend:
+    image: ${MEET_BACKEND_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-meet-backend
+    env_file: ["${RUNTIME_DIR}/meet.env"]
+    environment:
+      REQUESTS_CA_BUNDLE: /certs/ca.crt
+    volumes:
+      - ${CERTS_DIR}:/certs:ro
+    networks: [lastarter]
+    restart: unless-stopped
+    depends_on:
+      meet_postgresql:
+        condition: service_healthy
+      meet_rustfs:
+        condition: service_healthy
+      meet_livekit:
+        condition: service_started
+      meet_redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "manage.py", "check"]
+      interval: 15s
+      timeout: 30s
+      retries: 20
+      start_period: 10s
+
+  meet_frontend:
+    image: ${MEET_FRONTEND_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-meet-frontend
+    networks: [lastarter]
+    restart: unless-stopped
+    depends_on:
+      meet_backend:
+        condition: service_healthy
+
+volumes:
+  meet_pgdata:
+  meet_mediadata:
