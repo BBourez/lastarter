@@ -21,3 +21,6 @@ deploy/compose/**/data/
 .DS_Store
 Thumbs.db
 node_modules/
+
+# Captures E2E (sorties de scripts)
+scripts/e2e/*.png
