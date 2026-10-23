@@ -22,9 +22,9 @@ services:
       timeout: 3s
       retries: 120
 
-  # redis:5 = version du compose amont meet (BSD — pas de bascule valkey requise).
+  # valkey 8.1-alpine (BSD-3, maintenu) : remplace redis 5 (EOL), compatible RESP — choix roadmap.
   meet_redis:
-    image: redis:5
+    image: valkey/valkey:8.1-alpine
     container_name: ${LASTARTER_CLIENT}-meet-redis
     networks: [lastarter]
     restart: unless-stopped

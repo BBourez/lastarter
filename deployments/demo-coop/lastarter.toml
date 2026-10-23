@@ -9,13 +9,13 @@ brand_name = "LaStarter"
 theme = "element-light"
 brand_color = "#0bc491"
 logo_url = "/__lastarter/branding/logo.svg"
-created = "2026-10-23T16:03:54+00:00"
+created = "2026-10-23T18:11:32+00:00"
 cli_version = "0.1.0"
 
 [bricks.keycloak]
 title = "Keycloak — identité et SSO"
 label = "Keycloak"
-pin = "26.3.2"
+pin = "26.8.1"
 license = "Apache-2.0"
 upstream = "https://github.com/keycloak/keycloak"
 

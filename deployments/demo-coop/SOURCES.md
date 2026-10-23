@@ -7,7 +7,7 @@ référencée ici (cf. docs/licences.md du dépôt LaStarter).
 
 | Brique | Licence | Version épinglée | Source |
 |---|---|---|---|
-| Keycloak — identité et SSO | Apache-2.0 | 26.3.2 | https://github.com/keycloak/keycloak |
+| Keycloak — identité et SSO | Apache-2.0 | 26.8.1 | https://github.com/keycloak/keycloak |
 | Discussions — messagerie Matrix | AGPL-3.0-only | v1.12.32 | https://github.com/element-hq/element-web |
 | Drive — stockage de fichiers | MIT | v0.25.2 | https://github.com/suitenumerique/drive |
 | Meet — visioconférence | MIT | v1.36.2 | https://github.com/suitenumerique/meet |

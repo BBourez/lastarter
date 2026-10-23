@@ -8,8 +8,8 @@ category = "fondation"
 description = "Serveur d'identité : realm unique `lastarter`, clients OIDC de toutes les briques, page de login brandée."
 license = "Apache-2.0"
 upstream_repo = "https://github.com/keycloak/keycloak"
-upstream_image = "quay.io/keycloak/keycloak:26.3.2"
-upstream_pin = "26.3.2"
+upstream_image = "quay.io/keycloak/keycloak:26.8.1"
+upstream_pin = "26.8.1"
 core = true
 requires = []
 extra_secrets = [
@@ -51,7 +51,7 @@ profile = "keycloak"
 # Orchestration pilotée par le CLI (cf. SCHEMA.md) :
 infra_services = ["kc_postgresql"]
 services = [
-  "keycloak",          # quay.io/keycloak/keycloak:26.3.2, start-dev --import-realm
+  "keycloak",          # quay.io/keycloak/keycloak:26.8.1, start-dev --import-realm
   "kc_postgresql",     # postgres:14.3 (DB dédiée au realm)
 ]
 extras = []

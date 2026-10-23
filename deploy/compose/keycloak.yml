@@ -1,9 +1,9 @@
-# Brique keycloak — identité et SSO (quay.io/keycloak/keycloak:26.3.2).
+# Brique keycloak — identité et SSO (quay.io/keycloak/keycloak:26.8.1).
 # Realm importé au premier démarrage (identity/realm-lastarter.json rendu par le CLI).
 
 services:
   kc_postgresql:
-    image: postgres:14.3
+    image: postgres:18-alpine
     env_file: ["${RUNTIME_DIR}/keycloak.env"]
     volumes:
       - kc_pgdata:/var/lib/postgresql/data
@@ -15,7 +15,7 @@ services:
     networks: [lastarter]
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.3.2
+    image: quay.io/keycloak/keycloak:26.8.1
     command: ["start-dev", "--import-realm"]
     env_file: ["${RUNTIME_DIR}/keycloak.env"]
     volumes:
