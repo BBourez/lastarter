@@ -40,7 +40,11 @@ services:
       RUSTFS_CORS_ALLOWED_ORIGINS: ${DRIVE_ORIGIN}
     volumes:
       - drive_mediadata:/data
-    networks: [lastarter]
+    # Alias tiret : aws-cli/botocore rejette les noms d'hôte contenant un
+    # tiret bas (Invalid endpoint) — tous les endpoints S3 pointent drive-rustfs.
+    networks:
+      lastarter:
+        aliases: [drive-rustfs]
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:9000/health"]
@@ -55,7 +59,7 @@ services:
       AWS_ACCESS_KEY_ID: drive
       AWS_SECRET_ACCESS_KEY: ${DRIVE_S3_SECRET_KEY}
       AWS_DEFAULT_REGION: eu-east-1
-      AWS_ENDPOINT_URL: http://drive_rustfs:9000
+      AWS_ENDPOINT_URL: http://drive-rustfs:9000
     entrypoint: >
       sh -c "
       aws s3 mb s3://drive-media-storage; \

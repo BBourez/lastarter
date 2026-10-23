@@ -555,9 +555,11 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 "        proxy_set_header X-Amz-Date $authDate;",
                 "        proxy_set_header X-Amz-Content-SHA256 $authContentSha256;",
                 "        resolver 127.0.0.11 valid=10s ipv6=off;",
-                "        set $backend_s3 drive_rustfs:9000;",
+                # Alias tiret (drive-rustfs) : aws-cli/botocore rejette les
+                # noms d'hôte avec tiret bas (Invalid endpoint).
+                "        set $backend_s3 drive-rustfs:9000;",
                 "        proxy_pass http://$backend_s3;",
-                "        proxy_set_header Host drive_rustfs:9000;",
+                "        proxy_set_header Host drive-rustfs:9000;",
                 '        add_header Content-Disposition "attachment";',
                 "    }",
                 "    location = /drive-media-auth {",
@@ -694,7 +696,7 @@ AWS_S3_ACCESS_KEY_ID=drive
 AWS_S3_SECRET_ACCESS_KEY={secret("drive_s3_secret")}
 AWS_S3_REGION_NAME=eu-east-1
 AWS_S3_SIGNATURE_VERSION=s3v4
-AWS_S3_ENDPOINT_URL=http://drive_rustfs:9000
+AWS_S3_ENDPOINT_URL=http://drive-rustfs:9000
 AWS_S3_DOMAIN_REPLACE={drive_origin}
 MEDIA_BASE_URL={drive_origin}
 
