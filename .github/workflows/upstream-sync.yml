@@ -1,0 +1,105 @@
+# Veille amont hebdomadaire : check-updates → bump des pins du catalogue →
+# PR de revue (changelogs / breaking changes) avant toute fusion.
+# NB : l'API GitHub non authentifiée est limitée (60 req/h) — si le quota
+# devient un problème, provisionner un token read-only dédié (fetcher).
+name: upstream-sync
+
+on:
+  schedule:
+    - cron: "23 6 * * 1" # lundi 06:23 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  veille:
+    name: Veille amont (check-updates)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Rapport de veille
+        run: |
+          PYTHONPATH=cli python -m lastarter_cli check-updates --json \
+            | tee "$RUNNER_TEMP/updates.json"
+
+      - name: Bumper les pins du catalogue en retard
+        id: bumps
+        run: |
+          python - <<'PYEOF'
+          import json, os, pathlib
+
+          root = pathlib.Path.cwd()
+          rows = json.loads(
+              (pathlib.Path(os.environ["RUNNER_TEMP"]) / "updates.json")
+              .read_text(encoding="utf-8")
+          )
+          changed, skipped = [], []
+          for row in rows:
+              name, pin, latest = row["brique"], row["pin"], row["latest"]
+              if row["a_jour"] or not latest:
+                  continue
+              f = root / "catalogue" / f"{name}.toml"
+              text = f.read_text(encoding="utf-8")
+              if pin not in text:
+                  skipped.append(f"{name} : pin {pin} introuvable tel quel — bump manuel requis")
+                  continue
+              # Le pin (ex. v0.25.2) apparaît aussi dans les tags d'images [env] :
+              # remplacer partout garde upstream_pin et images synchronisés.
+              f.write_text(text.replace(pin, latest), encoding="utf-8")
+              changed.append(f"- `{name}` : {pin} → {latest}")
+          lines = changed + ([""] + [f"- ⚠ {s}" for s in skipped] if skipped else [])
+          (pathlib.Path(os.environ["RUNNER_TEMP"]) / "summary.md").write_text(
+              "\n".join(lines) if lines else "Aucun retard de pin.", encoding="utf-8"
+          )
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write(f"changed={'true' if changed else 'false'}\n")
+          PYEOF
+
+      - name: Branche + commit
+        if: steps.bumps.outputs.changed == 'true'
+        run: |
+          BR="upstream-sync/$(date -u +%Y-%m-%d)"
+          echo "BRANCH=$BR" >> "$GITHUB_ENV"
+          git config user.name "lastarter-upstream-sync"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -b "$BR"
+          git add catalogue/
+          git commit -m "chore(catalogue): bump pins amont (veille hebdo)"
+          git push --force origin "$BR"
+
+      - name: Ouvrir la PR de revue
+        if: steps.bumps.outputs.changed == 'true'
+        run: |
+          OPEN=$(gh api "repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY}:${BRANCH}&state=open" --jq 'length')
+          if [ "$OPEN" -eq 0 ]; then
+            {
+              echo "## Veille amont — nouveaux upstream disponibles"
+              echo
+              cat "$RUNNER_TEMP/summary.md"
+              echo
+              echo "**Revue requise avant fusion :**"
+              echo "- lire les changelogs / breaking changes de chaque amont ;"
+              echo "- vérifier que les tags correspondent à des images publiées (Docker Hub / GHCR) — jamais \`latest\` : le latest lasuite est une preprod ;"
+              echo "- synapse et livekit ne sont pas suivis automatiquement (bumps manuels) ;"
+              echo "- après fusion : \`lastarter deploy --client <client> --pull\` sur les déploiements."
+            } > "$RUNNER_TEMP/body.md"
+            gh api "repos/${GITHUB_REPOSITORY}/pulls" \
+              -f title="chore(catalogue): bump pins amont (veille hebdo)" \
+              -F body=@"$RUNNER_TEMP/body.md" \
+              -f head="$BRANCH" -f base=main
+          else
+            echo "PR déjà ouverte pour ${BRANCH} — le push a mis la branche à jour."
+          fi
+
+      - name: Aucun retard
+        if: steps.bumps.outputs.changed != 'true'
+        run: echo "Toutes les briques suivies sont à jour — $(cat "$RUNNER_TEMP/summary.md")"

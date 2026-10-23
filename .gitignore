@@ -5,10 +5,13 @@ __pycache__/
 .venv/
 .pytest_cache/
 
+# Rendus runtime du CLI (secrets substitués, realm, thème, configs natifs)
+.runtime/
+deployments/*/.runtime/
+
 # Secrets générés par le CLI — à chiffrer (SOPS / ansible-vault) avant tout commit
 deployments/*/secrets.env
 deployments/*/secrets/
-deployments/*/.runtime/
 
 # Données locales de dev (POC compose)
 deploy/compose/**/data/
@@ -18,8 +21,3 @@ deploy/compose/**/data/
 .DS_Store
 Thumbs.db
 node_modules/
-.turbo/
-dist/
-
-# Cles et certificats locaux (jamais commis)
-deploy/local/certs/

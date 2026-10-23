@@ -1,50 +1,80 @@
-# LaStarter CI : lint + tests + typecheck sur chaque push/PR.
-# pnpm version vient du packageManager dans package.json (pas de doublon).
+# CI LaStarter : la CLI est stdlib-only — tests offline, catalogue + gate
+# licences, rendu `init` non interactif avec asserts. Aucun docker requis.
+# (Les jobs pnpm/vitest/tsc de l'ère monorepo TS ont été retirés avec elle.)
 name: CI
 
 on:
-    push:
-        branches: [main]
-    pull_request:
-        branches: [main]
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-    lint:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-            - uses: pnpm/action-setup@v4
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: 22
-                  cache: pnpm
-            - run: pnpm install --no-frozen-lockfile
-            - run: pnpm lint
+  cli-tests:
+    name: Tests CLI (unittest, offline)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: unittest discover (zéro dépendance)
+        working-directory: cli
+        run: python -m unittest discover -s tests -v
 
-    test:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-            - uses: pnpm/action-setup@v4
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: 22
-                  cache: pnpm
-            - run: pnpm install --no-frozen-lockfile
-            - run: cd packages/ui && npx vitest run
-            - run: cd packages/api && npx vitest run
+  catalogue:
+    name: Catalogue + gate licences
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Lister les briques
+        run: PYTHONPATH=cli python -m lastarter_cli list
+      - name: Gate licences (liste blanche + registre docs/licences.md)
+        run: PYTHONPATH=cli python -m lastarter_cli licenses
 
-    typecheck:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-            - uses: pnpm/action-setup@v4
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: 22
-                  cache: pnpm
-            - run: pnpm install --no-frozen-lockfile
-            - run: cd packages/ui && npx tsc --noEmit
-            - run: cd packages/api && npx tsc --noEmit
-            - run: cd packages/config && npx tsc --noEmit
-            - run: cd packages/i18n && npx tsc --noEmit
+  rendu:
+    name: Rendu init (client temporaire, hors docker)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Générer un client temporaire
+        run: |
+          PYTHONPATH=cli python -m lastarter_cli init --non-interactive \
+            --client "ACME" --domain acme.example.com \
+            --bricks drive,discussions,meet --theme element-light \
+            --output "${RUNNER_TEMP}/render"
+      - name: Asserts sur les fichiers générés
+        run: |
+          D="${RUNNER_TEMP}/render/acme"
+          for f in lastarter.toml answers.json SOURCES.md README.md secrets.env \
+                   env/keycloak.env env/drive.env env/discussions.env env/meet.env; do
+            test -f "$D/$f" || { echo "FICHIER MANQUANT : $f"; exit 1; }
+          done
+          test -f "$D/branding/logo.svg" || { echo "logo monogramme manquant"; exit 1; }
+          grep -q '\[bricks.keycloak\]' "$D/lastarter.toml"   # fondation toujours incluse
+          grep -q 'pin = "v0.25.2"'  "$D/lastarter.toml"      # pins épinglés dans le manifeste
+          grep -q 'pin = "v1.12.32"' "$D/lastarter.toml"
+          grep -q 'AGPL-3.0' "$D/SOURCES.md"                  # mentions licences (offre de source)
+          python - <<'PYEOF'
+          import json, os, pathlib
+          answers = json.loads(
+              (pathlib.Path(os.environ["RUNNER_TEMP"]) / "render/acme/answers.json")
+              .read_text(encoding="utf-8")
+          )
+          assert answers["brand"]["name"] == "LaStarter"
+          assert answers["brand"]["logo_path"] == "branding/logo.svg"
+          assert set(answers["apps"]) == {"drive", "discussions", "meet"}
+          assert set(answers["bricks"]) == {"drive", "discussions", "meet"}
+          assert answers["theme"] == "element-light"
+          print("answers.json OK")
+          PYEOF

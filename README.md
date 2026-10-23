@@ -1,153 +1,136 @@
 # LaStarter
 
 ![CI](https://github.com/BBourez/lastarter/actions/workflows/ci.yml/badge.svg)
-![Tests](https://img.shields.io/badge/tests-76%20passed-brightgreen)
-![Lint](https://img.shields.io/badge/lint-0%20errors-brightgreen)
-![Typecheck](https://img.shields.io/badge/typecheck-4%2F4%20strict-brightgreen)
 
-Suite collaborative souveraine B2B avec design system Element (Compound).
+**LaStarter est une suite collaborative souveraine, open source, pensée pour
+les organisations (B2B)** : messagerie chiffrée, stockage de fichiers,
+visioconférence et identité unique — déployées sur VOS serveurs, sous VOTRE
+marque, avec un installateur sans aucune dépendance externe.
 
-## Etat du projet
+Le produit n'écrit pas d'application : il assemble des briques open source
+éprouvées — l'écosystème **La Suite numérique** et la stack **Matrix** —
+**épinglées version par version et jamais modifiées** (aucun patch du code
+amont), derrière une couche d'intégration as-code :
 
-| Indicateur | Valeur |
+- **identité unique** : un realm Keycloak, un SSO OIDC pour toutes les briques ;
+- **habillage** : une palette de couleurs pilote le CSS de la passerelle, les
+  mécanismes de thématisation natifs de chaque app, les logos et les noms ;
+- **déploiement** : docker-compose mono-VM orchestré par une CLI Python
+  **zéro dépendance** (stdlib uniquement).
+
+## Briques
+
+| Brique | Rôle | Amont (pin) | Licence |
+|---|---|---|---|
+| Identité (core) | SSO OIDC, realm as-code | [Keycloak](https://github.com/keycloak/keycloak) 26.3.2 | Apache-2.0 |
+| Discussions | Messagerie chiffrée E2EE | [element-web](https://github.com/element-hq/element-web) v1.12.32 + [synapse](https://github.com/element-hq/synapse) v1.163.1 | AGPL-3.0 |
+| Drive | Stockage et partage de fichiers | [suitenumerique/drive](https://github.com/suitenumerique/drive) v0.25.2 | MIT |
+| Meet | Visioconférence navigateur (SFU LiveKit) | [suitenumerique/meet](https://github.com/suitenumerique/meet) v1.36.2 + [livekit](https://github.com/livekit/livekit) v1.13.6 | MIT / Apache-2.0 |
+
+Registre complet et obligations associées :
+[docs/licences.md](docs/licences.md) — vérifiés en CI (`lastarter licenses`).
+
+## Démarrage
+
+Une ligne (bash, docker + python ≥ 3.12 requis) :
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/BBourez/lastarter/main/install.sh | bash
+```
+
+Ou scripté — client, domaine, briques, puis déploiement :
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/BBourez/lastarter/main/install.sh \
+  | LASTARTER_CLIENT="ACME" LASTARTER_DOMAIN=acme.example.com \
+    LASTARTER_APPS=drive,discussions,meet LASTARTER_DEPLOY=1 bash
+```
+
+Variante manuelle :
+
+```bash
+git clone https://github.com/BBourez/lastarter && cd lastarter/cli
+python -m lastarter_cli init                      # questionnaire interactif
+python -m lastarter_cli deploy --client acme --pull
+python -m lastarter_cli ps --client acme
+```
+
+La CLI est stdlib-only : aucun paquet à installer (`pip install -e .` est
+optionnel, pour disposer de la commande `lastarter`). Chaque déploiement vit
+dans `deployments/<client>/` : manifeste versionnable (`lastarter.toml`),
+brouillons `env/*.env`, coffre de secrets (`secrets.env`, gitigné,
+append-only), mentions de licences (`SOURCES.md`), logo (`branding/`).
+
+## Personnalisation (marque blanche)
+
+Tout part du questionnaire `init` — rejouable, pré-rempli, logo conservé :
+
+| Quoi | Comment |
 |---|---|
-| Composants UI | 17 (Button, Sidebar, Modal, Tabs, Toast, Typography...) |
-| Hooks personnalises | 5 (useToggle, useClickOutside, useDebouncedValue...) |
-| Tests | 76 verts (63 UI + 13 API) + 3 e2e Playwright |
-| Typecheck | 4/4 packages strict OK |
-| Lint | 0 erreur (Biome) |
-| CI | GitHub Actions 100% verte |
-| Docs | 7 fichiers (ARCHITECTURE, DESIGN_SYSTEM, DEPLOYMENT...) |
-| Helm | 7 templates Kubernetes |
-| Licence | Proprietaire |
+| Palette | `--theme element-light` (ou `element-dark`) — `themes/*.toml` |
+| Couleur de marque | `--brand-color "#0bc491"` |
+| Logo | `--logo logo.svg` (copié, servi sur `/__lastarter/branding/`) ; défaut : monogramme généré depuis la palette |
+| Nom de marque | `--brand "ACME"` |
+| Noms des applications | `--app-name-drive "Espace documents"`, `--app-name-meet "Réunions"`, … |
 
-## Architecture
+La palette est la source unique : elle produit le `theme.css` de la
+passerelle, le mécanisme natif `custom_themes` d'element-web, le JSON de
+personnalisation natif du drive et le logo servi par la passerelle. Aucun
+fork, aucun patch : uniquement des mécanismes prévus par les amonts.
 
-```
-lastarter/
-├── packages/           Librairies partagees
-│   ├── ui/             Design system (11+ composants Element Web)
-│   ├── i18n/           Multilingue (fr/en)
-│   ├── api/            Client HTTP (Ky) + TanStack Query + types metier
-│   └── config/         Environnement + SSO Keycloak
-├── apps/               Applications frontend
-│   ├── portal/         Point d'entree (liste des modules)
-│   ├── transfers/      Transfert de fichiers (backend Django)
-│   └── projects/       Gestion de projets kanban (backend Sails.js)
-├── identity/           Keycloak (SSO, realm, theme login)
-├── deploy/             Docker Compose + Kubernetes
-└── cli/                Installateur (lastarter-cli)
-```
-
-## Quick start
+## Mises à jour
 
 ```bash
-# Installer les dependances
-pnpm install
-
-# Developper (toutes les apps en parallele)
-pnpm dev
-
-# Build
-pnpm build
-
-# Tests
-pnpm test
-
-# Lint
-pnpm lint
+python -m lastarter_cli check-updates            # veille amont (API GitHub, pré-releases exclues)
+python -m lastarter_cli check-updates --strict   # gate : exit 1 si au moins un retard
 ```
 
-## Design system
+Le workflow hebdomadaire
+[`upstream-sync`](.github/workflows/upstream-sync.yml) exécute cette veille et
+ouvre une PR listant chaque `pin → nouveau`, à réviser (changelogs, breaking
+changes) avant fusion. Rien n'est jamais déployé en `latest` : le tag
+`latest` des images La Suite est une preprod.
 
-Base sur Compound (Element Web / Element Call) :
-- Tokens : `packages/ui/src/tokens.css` (importe `@vector-im/compound-design-tokens`)
-- Composants : `packages/ui/src/components/` (Button, Input, Sidebar, Modal, Menu, etc.)
-- Police : Inter (400/500/600)
-
-Tous les tokens sont surchargeables :
-```css
-:root {
-    --ls-color-primary: #ff6b35;
-}
-```
-
-## Modules
-
-| Module | Description | Backend |
-|---|---|---|
-| transfers | Transfert de fichiers securise | Django |
-| projects | Gestion de projets kanban | Sails.js |
-| chat | Messagerie chiffree | Synapse (Matrix) |
-| meet | Reunions video | LiveKit |
-
-Chaque module peut etre active/desactive via le CLI.
-
-## Licence
-
-Proprietaire. Voir LICENSE.
-   amont (correctifs de sécurité inclus) continuent d'affluer gratuitement.
-2. **L'intégration vit dans la couche orchestration** : identité unique (Keycloak/OIDC),
-   portail SSO, branding par variables d'environnement, déploiement modulaire.
-   Jamais dans le code des applications.
-3. **Installateur à la carte.** `lastarter-cli` pose un questionnaire (quelles briques
-   pour ce client ? quel domaine ? quel thème ?) et génère un arbre de configuration
-   versionné Git, prêt à déployer en docker-compose (mono-VM) ou Kubernetes.
-4. **Conformité licences outillée.** Chaque déploiement embarque une page de mentions
-   sources (`SOURCES.md`) ; la CI contrôle les licences à chaque bump de version.
-
-## Structure du dépôt
+## Architecture (en 10 lignes)
 
 ```
-lastarter/
-├── catalogue/     Briques épinglées (manifestes TOML : version, deps, branding, env)
-├── cli/           lastarter-cli (Python 3.12+, zéro dépendance) — init / deploy / …
-├── deploy/        compose/ (profils docker-compose mono-VM) et k8s/ (Helm umbrella)
-├── identity/      Realm Keycloak as-code : clients OIDC de chaque brique
-├── branding/      Thèmes clients (logos, couleurs) injectés par variables d'env
-├── portal/        Portail SSO d'entrée unique (launchpad + annuaire des briques)
-├── ci/            Renovate (pins), smoke tests, SBOM, gate licence, releases
-├── docs/          Architecture, registre des licences
-└── deployments/   Arbres de configuration générés par le CLI (un dossier par client)
+catalogue/*.toml (briques épinglées)        themes/*.toml (palettes)
+        │ lastarter init                           │
+        ▼                                          ▼
+deployments/<client>/ ── lastarter deploy ──▶ .runtime/ (secrets rendus, realm,
+(env, secrets, answers, branding)              theme.css, meet/livekit.yaml,
+                                               drive/theme-customization.json)
+                                                   │
+                    docker compose (base + un profil par brique)
+                                                   │
+  nginx TLS :8443 ◀── id. / chat. / drive. / meet. / livekit.<domaine> + portail (apex)
 ```
 
-## Démarrage rapide (maquette phase 1)
+Détails : [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) ·
+opérations : [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-```bash
-cd cli
-python -m lastarter_cli list                 # lister les briques du catalogue
-python -m lastarter_cli init                 # questionnaire interactif
-# variante scriptable :
-python -m lastarter_cli init --client "ACME" --domain acme.example.com \
-    --bricks keycloak,drive --non-interactive --output ../deployments
-# POC local (domaine localhost:8083) :
-python -m lastarter_cli deploy --client demo-coop --pull
-python -m lastarter_cli ps --client demo-coop
-```
+## Licences et mentions
 
-Le résultat est un dossier `deployments/acme/` contenant le manifeste client, les
-brouillons d'environnement, les secrets générés (à chiffrer) et les mentions sources.
-`deploy` orchestre docker-compose : infra (healthchecks) → migrations → pile complète.
+- Le code LaStarter (catalogue, CLI, compose, docs) : **AGPL-3.0-only**
+  ([LICENSE](LICENSE)).
+- Les briques amont conservent leurs licences (Apache-2.0, AGPL-3.0, MIT,
+  BSD, PostgreSQL License) : registre et obligations dans
+  [docs/licences.md](docs/licences.md) — la CI les vérifie à chaque
+  changement de catalogue.
+- LaStarter n'est ni affilié à, ni approuvé par La Suite numérique
+  (DINUM/ANCT), Element ou les éditeurs des composants ; les marques
+  « La Suite », « Element », « Tchap » appartiennent à leurs titulaires
+  respectifs.
 
-## Feuille de route
+## Feuille de route (honnête)
 
-| Phase | Contenu | Statut |
-|---|---|---|
-| 1 | Fondations : scaffold, catalogue (keycloak, drive), maquette CLI `init` | ✅ |
-| 2 | POC vertical : compose keycloak+drive, realm as-code, branding, `deploy` | ✅ validé E2E |
-| 3 | Multi-apps : passerelle sous-domaines, **meet** (livekit/garage), clients OIDC via API admin | ✅ + **transfers** (edge Caddy, digest GHCR) validé E2E — messages restant |
-| 4 | Chat : **synapse** (homeserver as-code) + **element-web** (recoloré par config), SSO complet | ✅ validé E2E |
-| 5a | **Portail** : launchpad statique sur l'apex, tuiles générées par brique | ✅ validé E2E |
-| 5b | Helm umbrella (k8s) | ⏳ |
-| 6 | Industrialisation : Renovate, smoke tests, SBOM, gate licence | |
+| Sujet | État |
+|---|---|
+| compose mono-VM, SSO Keycloak, theming natif, portail | ✅ en service |
+| Kubernetes (charts amont, external-secrets/SOPS) | ⏳ roadmap |
+| Brique documents (lasuite/impress) | ⏳ roadmap |
+| MAS (SSO Matrix dédié), TURN/UDP pour meet | ⏳ roadmap |
+| Bumps différés : keycloak 26.8.1, postgres 18 | ⏳ roadmap (migration volumes) |
 
-## Origine des briques et licences
-
-LaStarter assemble des logiciels libres, principalement l'écosystème
-**La Suite numérique** (DINUM/ANCT, licence MIT) et la stack **Matrix** (Synapse AGPL-3.0,
-Tchap AGPL-3.0/GPL-3.0 au choix, LiveKit Apache-2.0). Voir
-[docs/licences.md](docs/licences.md) — le registre complet et les obligations associées.
-
-LaStarter n'est ni affilié ni endorsement par ces éditeurs ; les marques « La Suite »,
-« Element », etc. appartiennent à leurs titulaires respectifs et ne sont pas utilisées
-dans l'interface livrée aux clients (branding LaStarter ou du client final).
+Détails : [docs/ROADMAP.md](docs/ROADMAP.md) · intentions historiques :
+[docs/history/](docs/history/).

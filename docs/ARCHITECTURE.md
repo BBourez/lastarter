@@ -1,126 +1,133 @@
 # Architecture LaStarter
 
-## Vue d'ensemble
+## Le modèle : briques amont épinglées + couche d'intégration as-code
+
+Une **brique** = un logiciel libre amont, pris **tel quel**, à une **version
+épinglée** (`catalogue/<nom>.toml`), jamais modifié dans son code. Les seules
+modifications autorisées d'une brique sont :
+
+1. l'**intégration Keycloak** (SSO OIDC) — exclusivement par configuration et
+   variables d'environnement natives de l'amont ;
+2. l'**habillage** (couleurs, logos, noms) — exclusivement par les mécanismes
+   de thématisation natifs de l'amont (CSS, JSON de personnalisation, config).
+
+Tout le reste — realm, compose, passerelle, portail, thèmes, secrets, veille —
+vit dans la couche **as-code** de ce dépôt. Conséquences : une montée de
+version = changer un pin (et relire le changelog) ; pas de dette de fork ;
+la CI échoue si une licence sort du registre
+[docs/licences.md](licences.md).
+
+## Pipeline : catalogue → CLI → déploiement
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        PASSERELLE (nginx/TLS)                    │
-│   id.<domaine> → Keycloak    <app>.<domaine> → app frontend     │
-└──────────────────────┬──────────────────────────────────────────┘
-                       │
-           ┌───────────┼───────────┬─────────────┐
-           │           │           │             │
-    ┌──────▼──┐ ┌─────▼────┐ ┌────▼─────┐ ┌────▼──────┐
-    │ Keycloak │ │ Transfers │ │ Projects │ │  Portal   │
-    │  (SSO)   │ │ frontend  │ │ frontend │ │ (static)  │
-    └──────┬──┘ └─────┬────┘ └────┬─────┘ └───────────┘
-           │           │           │
-    ┌──────▼──┐ ┌─────▼────┐ ┌────▼─────┐
-    │ kc_pg   │ │ Django   │ │ Sails.js │
-    │ (PG 16) │ │ backend  │ │ backend  │
-    └─────────┘ └─────┬────┘ └────┬─────┘
-                      │           │
-               ┌──────▼───────────▼──────┐
-               │   Infrastructure         │
-               │  PostgreSQL, Redis, S3   │
-               └─────────────────────────┘
+catalogue/*.toml ──(init)──▶ deployments/<client>/
+  manifestes TOML              ├─ answers.json      réponses rejouables (marque, briques, noms d'app)
+  images + env + secrets       ├─ lastarter.toml    manifeste (pins, licences) — versionnable
+  + OIDC + compose             ├─ env/<brique>.env  brouillons committables ({secret:…} non substitués)
+                               ├─ secrets.env       coffre réel — gitigné, append-only
+                               ├─ branding/logo.*   logo (copié ou monogramme généré)
+                               └─ SOURCES.md        mentions licences (offre de source AGPL)
+
+deployments/<client>/ ──(deploy)──▶ <client>/.runtime/
+                                     env rendus (secrets substitués), realm Keycloak,
+                                     theme.css, branding/, meet/livekit.yaml,
+                                     drive/{backend.env, theme-customization.json},
+                                     portal/, discussions/, certs/
+                                  ▶ docker compose : base.yml + keycloak.yml + <brique>.yml …
+                                     infra (healthchecks) → migrations → up -d --wait
 ```
 
-## Monorepo
+Invariants du CLI :
+
+- secrets générés une seule fois, coffre **append-only**, jamais committé ;
+- `init` rejoué = pré-remplissage intégral, logo existant jamais écrasé ;
+- `deploy` passe des gates avant tout effet réseau (docker présent,
+  déploiement initialisé, coffre présent, cible compose par brique).
+
+## Topologie de service
+
+```
+                      TLS :8443 (EDGE_PORT)
+ ┌── nginx passerelle (deploy/compose/keycloak.yml) ◀── certs (.runtime/certs ; POC = CA locale)
+ │    *.domaine : id. (Keycloak) · apex (portail statique) · chat. / drive. / meet. / livekit.
+ │    /__lastarter/theme.css · /__lastarter/fonts/ · /__lastarter/auto-login.js · /__lastarter/branding/
+ ▼
+ keycloak (realm lastarter) ← clients OIDC : synapse, drive, meet
+ discussions_synapse + discussions_element_web        (API Matrix same-origin : /_matrix, /_synapse)
+ drive_backend + drive_frontend + postgres + redis + rustfs   (API Django same-origin : /api, /admin, /static)
+ meet_backend + meet_frontend + postgres + redis + rustfs + meet_livekit   (SFU : livekit.<domaine>, websocket)
+```
+
+Chaque brique expose son frontend via la passerelle et sert ses API en
+same-origin (un sous-domaine par brique : pas de CORS, cookies dédiés). Les
+clients OIDC du realm déclarent des redirectUris `{origin}/*` : tout callback
+d'une brique est couvert sans chemin exact à déclarer.
+
+## Flux SSO Keycloak
+
+1. `identity/realm-lastarter.json` (realm, utilisateur de démo, clients) est
+   importé au premier démarrage (`--import-realm`) ; ensuite l'API admin fait
+   autorité — provisionnement idempotent : les secrets des clients OIDC sont
+   resynchronisés au `deploy` suivant si le coffre change.
+2. Une app non authentifiée redirige vers `id.<domaine>` (realm
+   `lastarter`) ; la page de login est brandée (thème Keycloak as-code).
+3. Les apps « auto-login » reçoivent `/__lastarter/auto-login.js` injecté par
+   la passerelle (`auth_url=/api/v1.0/authenticate/` côté django-lasuite) ;
+   les discussions (element/synapse) ont leur chemin OIDC natif et sont
+   exclues de cette injection.
+4. Déconnexion : endpoints OIDC natifs de chaque amont (`OIDC_OP_LOGOUT_*`).
+
+## Chaîne d'habillage (theming)
+
+Une seule source : `themes/<nom>.toml` (palette : canvas, polices, échelles
+primary/neutral/statuts, composants), rendue par le CLI contre le gabarit
+`identity/theme.css.tpl` :
+
+| Cible | Mécanisme | Sortie |
+|---|---|---|
+| Passerelle + apps Django/Cunningham | `theme.css` servi sur `/__lastarter/theme.css`, injecté via `sub_filter </head>` | `.runtime/theme.css` |
+| element-web (discussions) | mécanisme NATIF `custom_themes` : clés `--cpd-color-*` **scannées dans le même gabarit** + `default_theme: custom-<nom>` | `config.json` re-dumpé |
+| drive (La Suite) | NATIF : `THEME_CUSTOMIZATION_FILE_PATH` (JSON footer : liens, licence, logo) + `FRONTEND_THEME` (dsfr-light/dsfr-dark) + `FRONTEND_CSS_URL` | `.runtime/drive/theme-customization.json` |
+| meet (La Suite) | NATIF : `FRONTEND_CUSTOM_CSS_URL` → `/__lastarter/theme.css` | env rendu |
+| Logo + noms | branding servi sur `/__lastarter/branding/`, noms d'app dans les tuiles du portail | `.runtime/branding/`, `answers.json` (apps) |
+
+Les 13 `sub_filter` historiques aux couleurs codées en dur ont été
+supprimés : toutes les apps disposent désormais d'un mécanisme CSS natif.
+
+## Veille amont et montées de version
+
+- `check-updates` compare chaque pin (`upstream_repo` + `upstream_pin`) aux
+  tags/releases GitHub, pré-releases exclues (le `latest` lasuite est une
+  preprod). synapse et livekit n'ont pas de champ propre : suivi manuel.
+- Workflow hebdomadaire `upstream-sync` : met à jour les pins en retard et
+  ouvre une PR de revue (changelogs + breaking changes).
+- Montée de version : modifier le pin (et les images `[env]` concernées) du
+  catalogue → `deploy --client X --pull`. Postgres en version majeure =
+  migration de volume (pg_dump/restore) — voir [DEPLOYMENT.md](DEPLOYMENT.md).
+
+## Qualité
+
+- CLI **zéro dépendance** (Python ≥ 3.12, `tomllib`) : tests offline
+  (`python -m unittest discover -s tests` depuis `cli/`), verts en CI sur
+  Python 3.12 et 3.13.
+- Gates `deploy` (docker, déploiement initialisé, coffre, cible compose) et
+  `licenses` (registre [licences.md](licences.md)) avant tout effet.
+- CI : tests CLI, catalogue + licences, rendu `init` non interactif avec
+  asserts — aucun docker requis.
+
+## Arborescence
 
 ```
 lastarter/
-├── packages/
-│   ├── ui/         @lastarter/ui (design system Element/Compound)
-│   ├── i18n/       @lastarter/i18n (multilingue fr/en)
-│   ├── api/        @lastarter/api (client HTTP + schemas Zod)
-│   └── config/     @lastarter/config (env + SSO Keycloak)
-├── apps/
-│   ├── portal/     Point d'entree (liste des modules)
-│   ├── transfers/  Transfert de fichiers (frontend React)
-│   └── projects/   Gestion de projets kanban (frontend React)
-├── identity/       Keycloak (realm, theme login)
+├── catalogue/      manifestes TOML par brique (SCHEMA.md)
+├── cli/            lastarter-cli (Python stdlib) + tests unittest
 ├── deploy/
-│   ├── docker/     Docker Compose (core.yml, transfers.yml...)
-│   └── kubernetes/ Helm charts
-└── cli/            lastarter-cli (installateur Python)
+│   ├── compose/    base.yml + keycloak.yml (passerelle/SSO) + <brique>.yml
+│   └── k8s/        cible Kubernetes (roadmap — README)
+├── identity/       realm Keycloak as-code + gabarits (theme.css.tpl, configs apps)
+├── portal/         portail statique (apex)
+├── themes/         palettes (*.toml)
+├── scripts/e2e/    parcours navigateur (playwright-core, canal Edge)
+├── docs/           documentation (+ history/, licences.md, roadmap)
+└── deployments/    arbres générés par le CLI (un dossier par client)
 ```
-
-## Packages
-
-### @lastarter/ui (design system)
-
-Base sur Compound (Element Web / Element Call).
-
-**17 composants** : Button, Input, Badge, Avatar, Separator, Sidebar (double colonne), Modal (createPortal), Menu (FloatingMenu), Switch, Alert, Tabs, Toast (createPortal), Typography, Slot (asChild), ConfirmDialog (callable), Tooltip.
-
-**5 hooks** : useToggle, useClickOutside, useMediaQuery, useDocumentTitle, useDebouncedValue.
-
-**Store** : useAppStore (Zustand + persist) : user, theme, locale, modules, sidebar.
-
-**Tokens** : `tokens.css` importe `@vector-im/compound-design-tokens` et definit les alias `--ls-*`.
-
-### @lastarter/i18n (multilingue)
-
-i18next + react-i18next. Locales fr/en partagees. Namespace commun (`common`, `sidebar`, `nav`, `auth`).
-
-### @lastarter/api (contrat Zod)
-
-Approche contrat-first (cf. Grafikart "Partager les types") :
-- `schemas.ts` : schemas Zod qui generent les types TypeScript via `z.infer`
-- `client.ts` : client HTTP base sur Ky avec interceptors auth
-- `query-client.ts` : TanStack Query config
-
-### @lastarter/config
-
-Lecture environnement (Vite `import.meta.env` / Node `process.env`), config SSO Keycloak, redirections auth.
-
-## Flux de donnees
-
-```
-┌──────────┐     TanStack Query      ┌──────────┐
-│ React UI │ ────────────────────────► │ @lastarter/api │
-│          │ ◄──────────────────────── │  (Ky + Zod)  │
-└──────────┘    reponses validees      └──────┬───────┘
-                                              │ fetch
-                                       ┌──────▼───────┐
-                                       │ Backend API  │
-                                       │ Django/Sails │
-                                       └──────────────┘
-```
-
-### Pattern DDD
-
-Les schemas Zod dans `packages/api/src/schemas.ts` definissent les entites metier :
-- `TransferSchema`, `ProjectSchema`, `CardSchema`, `CurrentUserSchema`
-- Payloads : `CreateTransferPayloadSchema`, `CreateCardPayloadSchema`
-- Types infères : `Transfer = z.infer<typeof TransferSchema>`
-
-### Pattern TDD
-
-Chaque composant a son fichier de test co-localise :
-```
-Button/
-├── Button.tsx
-├── Button.module.css
-├── Button.test.tsx   ← tests co-localises
-└── index.ts
-```
-
-## Securite
-
-- **SSO Keycloak** : toutes les apps redirigent vers `id.<domaine>` si non connecte
-- **Pas de page d'accueil** : URL racine = redirect auth ou app
-- **TLS** : passerelle nginx sur port 8443 (CA locale en POC, certificats client en prod)
-- **Secrets** : generes par le CLI, stockes dans `.env` (jamais committe)
-
-## Build et deploiement
-
-- **Dev** : `pnpm dev` (Vite dev server par app)
-- **Build** : `pnpm build` (Vite build par app)
-- **Docker** : `deploy/docker/*.yml` (compose par module)
-- **K8s** : `deploy/kubernetes/` (Helm chart)
-
-## CI/CD
-
-GitHub Actions : lint (Biome) + test (Vitest) + typecheck (tsc strict). Tous bloquants.

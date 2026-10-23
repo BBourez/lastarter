@@ -1,4 +1,4 @@
-/* Validation Element Web (chat) : SSO -> connexion -> salon -> message -> widget appel */
+/* Validation Element Web (chat) : SSO -> connexion -> salon -> message visible */
 const { chromium } = require("playwright-core");
 
 const DEMO_PWD = process.env.DEMO_PWD;

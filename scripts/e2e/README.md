@@ -1,45 +1,39 @@
-# Tests E2E LaStarter (navigateur reel, Edge headless via Playwright)
+# Tests E2E LaStarter (navigateur réel, Edge headless via playwright-core)
 
-Volonte produit : **tout tester a chaque fois**. Ces scripts rejouent les
-parcours client complets contre un deploiement actif (POC compris).
+Volonté produit : **tout tester à chaque fois**. Ces scripts rejouent les
+parcours client complets contre un déploiement actif (POC compris).
 
-## Prerequis
+État : **un seul script actif, `element-web.js`** (chat). Les e2e meet de
+l'ancienne brique de visio ont été retirés avec elle ; le parcours meet
+(SSO → salon → invitation → appel) est à réécrire sur la brique
+suitenumerique — voir [docs/ROADMAP.md](../../docs/ROADMAP.md).
 
-```powershell
-npm i playwright-core            # dans un dossier de travail
-# Edge est utilise via channel:msedge (aucun telechargement de navigateur)
-# La CA du deploiement doit etre dans le magasin Windows (fait par le CLI/POC)
+## Prérequis
+
+```bash
+npm i            # dans ce dossier (package.json autoportant : playwright-core)
+# Edge est utilisé via channel:msedge (aucun téléchargement de navigateur)
+# La CA du déploiement doit être dans le magasin Windows (import .runtime/certs/ca.crt)
 ```
 
-## Scripts
+## Script actif
 
-| Script            | Ce qu'il valide                                                       |
-| ----------------- | --------------------------------------------------------------------- |
-| `element-web.js`  | chat : SSO immediat -> connexion -> passage des dialogues 1re session -> ouverture salon -> envoi d'un message visible |
-| `meet.js`         | meet : SSO -> creation de reunion -> lien d'invitation -> contexte VIERGE (navigation privee) -> pseudo -> UI d'appel chiffree pour les DEUX participants |
-| `meet-invitation.js` | meet : un lien d'invitation precis (const URL) en contexte vierge    |
+| Script | Ce qu'il valide |
+|---|---|
+| `element-web.js` | chat : SSO immédiat → connexion → passage des dialogues de 1re session → ouverture salon → envoi d'un message visible |
 
 ## Usage
 
 ```powershell
+npm i
 $env:DEMO_PWD = (Select-String -Path "deployments/<client>/secrets.env" -Pattern '^demo_user_password=').Line.Split('=',2)[1]
-node scripts/e2e/element-web.js
-node scripts/e2e/meet.js
+node element-web.js
 ```
 
 ## Notes
 
-- Les dialogues de 1re session Element Web (verification, notifications) sont
-  passes automatiquement : Skip verification -> I'll verify later -> Later ->
+- Les dialogues de 1re session Element Web (vérification, notifications) sont
+  passés automatiquement : Skip verification → I'll verify later → Later →
   Dismiss. Les classes CSS-modules ne sont pas stables : on cible par texte.
-- 404 benignes filtree : config.<domaine>.json (optionnelle), auth_metadata,
+- 404 bénignes filtrées : config.<domaine>.json (optionnelle), auth_metadata,
   dehydrated_device (MSC3814 optionnel).
-
-## Install de zero (validation du 2026-10-18)
-
-Purge totale (conteneurs, volumes, runtime ET coffre) -> `lastarter init`
--> `lastarter deploy` -> import CA (certutil) -> les DEUX suites E2E
-passent : chat (SSO -> creation salon via UI -> message visible) et meet
-(SSO -> creation reunion -> invitation contexte vierge -> appel chiffre).
-NB : le SSO provisionne `@demo1` (dedup avec le `@demo` pre-cree par le
-CLI) - harmonisation du provisionnement a prevoir.

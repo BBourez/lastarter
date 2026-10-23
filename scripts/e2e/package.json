@@ -1,0 +1,12 @@
+{
+  "name": "lastarter-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Parcours E2E LaStarter (navigateur réel Edge via playwright-core).",
+  "scripts": {
+    "e2e:chat": "node element-web.js"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.64.0"
+  }
+}
