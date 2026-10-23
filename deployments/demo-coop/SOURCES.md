@@ -9,6 +9,7 @@ référencée ici (cf. docs/licences.md du dépôt LaStarter).
 |---|---|---|---|
 | Keycloak — identité et SSO | Apache-2.0 | 26.8.1 | https://github.com/keycloak/keycloak |
 | Discussions — messagerie Matrix | AGPL-3.0-only | v1.12.32 | https://github.com/element-hq/element-web |
+| Docs — documents collaboratifs | MIT | v6.0.3 | https://github.com/suitenumerique/docs |
 | Drive — stockage de fichiers | MIT | v0.25.2 | https://github.com/suitenumerique/drive |
 | Meet — visioconférence | MIT | v1.36.2 | https://github.com/suitenumerique/meet |
 

@@ -2,7 +2,7 @@
 
 - Domaine : localhost:8443
 - Marque : LaStarter
-- Briques : keycloak, discussions, drive, meet
+- Briques : keycloak, discussions, docs, drive, meet
 
 ## Contenu
 
