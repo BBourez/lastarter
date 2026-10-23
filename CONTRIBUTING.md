@@ -1,83 +1,69 @@
-# Contribuer a LaStarter
+# Contribuer à LaStarter
 
-## Prerequis
+## Prérequis
 
-- Node.js >= 22
-- pnpm >= 9 (`corepack enable`)
-- Docker (pour les tests d'integration)
+- Python >= 3.12 — la CLI est **stdlib-only**, rien à installer ;
+- Docker avec plugin compose (optionnel en dev — requis pour `deploy`, `smoke`
+  et les vérifications `docker compose config`) ;
+- bash (Linux, macOS ou WSL2 ; Git Bash sous Windows).
 
 ## Installation
 
 ```bash
 git clone https://github.com/BBourez/lastarter.git
 cd lastarter
-pnpm install
+# Aucune dépendance à installer. Optionnel, pour disposer de la commande `lastarter` :
+cd cli && pip install -e .
 ```
 
-## Developpement
+## Développement
+
+Depuis la racine du dépôt :
 
 ```bash
-# Lancer le serveur de dev (toutes les apps)
-pnpm dev
+# Tests unitaires (offline, zéro dépendance)
+cd cli && python -m unittest discover -s tests
 
-# Tests unitaires
-pnpm test
+# Catalogue + gate licences (le registre docs/licences.md doit rester conforme)
+PYTHONPATH=cli python -m lastarter_cli list
+PYTHONPATH=cli python -m lastarter_cli licenses
 
-# Tests e2e (necessite un serveur de dev actif)
-npx playwright test
+# Veille amont (API GitHub ; --strict = exit 1 si un pin décroche)
+PYTHONPATH=cli python -m lastarter_cli check-updates
 
-# Lint (Biome)
-pnpm lint
+# Rendu d'un client de test (aucun docker requis)
+PYTHONPATH=cli python -m lastarter_cli init --client acme --domain acme.example.com \
+  --bricks drive,discussions,meet --theme element-light --non-interactive
 
-# Format (Biome)
-pnpm format
-
-# Typecheck (TypeScript strict)
-cd packages/ui && npx tsc --noEmit
+# SBOM CycloneDX d'un déploiement
+PYTHONPATH=cli python -m lastarter_cli sbom --client acme
 ```
-
-## Structure du projet
-
-Voir [ARCHITECTURE.md](./docs/ARCHITECTURE.md) pour la documentation complete.
 
 ## Bonnes pratiques
 
-### TDD (Test-Driven Development)
+### Zéro dépendance
 
-1. Ecrire le test qui echoue (rouge)
-2. Ecrire le code minimal qui passe (vert)
-3. Refactorer proprement (refactor)
+La CLI ne dépend que de la bibliothèque standard : pas de `requirements.txt`,
+pas de lockfile Python. Toute nouvelle fonctionnalité reste dans ce cadre
+(`urllib` pour le réseau, `tomllib`/`json`/`re`/`hashlib` pour le reste).
 
-Chaque composant a son fichier de test co-localise :
-```
-Component/
-├── Component.tsx
-├── Component.module.css
-├── Component.test.tsx
-└── index.ts
-```
+### Briques amont intouchées
 
-### DDD (Domain-Driven Design)
+Aucun patch du code amont : une brique s'intègre uniquement par configuration
+ natives (variables d'environnement, realm OIDC, mécanismes de thématisation
+natifs) et reste épinglée (`catalogue/<nom>.toml`). Voir
+[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
-Les entites metier sont definies dans `packages/api/src/schemas.ts` avec des schemas Zod :
-```typescript
-export const TransferSchema = z.object({ ... });
-export type Transfer = z.infer<typeof TransferSchema>;
-```
+### Secrets
 
-### TypeScript strict
+Les brouillons `env/*.env` ne contiennent que des jetons `{secret:…}` ; les
+valeurs réelles vivent dans `deployments/<client>/secrets.env` (gitigné,
+append-only). Ne jamais committer un secret en clair.
 
-- Pas de `any` (regle Biome `noExplicitAny`)
-- `exactOptionalPropertyTypes` actif
-- Tous les fichiers passes par `tsc --noEmit`
+### Encodage
 
-### Convention de nommage
-
-- Fichiers composants : `PascalCase.tsx`
-- Fichiers hooks : `camelCase.ts`
-- Fichiers tests : `*.test.tsx` / `*.test.ts`
-- CSS Modules : `*.module.css`
-- Types : `PascalCase` (interfaces et type aliases)
+Tous les fichiers texte sont en UTF-8 ; les rendus de la CLI écrivent en
+UTF-8 explicite.
 
 ### Commits
 
@@ -85,26 +71,19 @@ Format : `type : description courte`
 
 Types : `feat`, `fix`, `docs`, `test`, `refactor`, `chore`
 
-```
-feat : ajouter composant Tabs avec navigation clavier
-fix : corriger Modal Escape qui ne se propageait pas
-docs : ajouter ARCHITECTURE.md avec diagrammes
-test : tests pour Zustand store (8 cas)
-```
-
 ## CI
 
-La CI GitHub Actions verifie :
-1. **Lint** : Biome (0 erreur toleree)
-2. **Tests** : Vitest (tous doivent passer)
-3. **Typecheck** : tsc strict sur les 4 packages
+La CI GitHub Actions (`.github/workflows/ci.yml`) vérifie, tous bloquants :
 
-Toutes les etapes sont bloquantes.
+1. **cli-tests** : `unittest discover` offline (Python 3.12 et 3.13) ;
+2. **catalogue** : `list` + gate `licenses` (liste blanche + docs/licences.md) ;
+3. **rendu** : `init` non interactif d'un client temporaire avec assertions.
+
+La veille amont (`.github/workflows/upstream-sync.yml`) tourne chaque semaine :
+`check-updates` compare les pins du catalogue aux derniers tags amont et ouvre
+une PR de revue (changelogs / breaking changes) avant toute fusion.
 
 ## Signaler un bug
 
-Ouvrir une issue avec :
-1. Description du probleme
-2. Etapes pour reproduire
-3. Comportement attendu vs actuel
-4. Screenshots si pertinent
+Ouvrir une issue avec : description, étapes de reproduction, comportement
+attendu vs observé, et la sortie de `python -m lastarter_cli detect`.

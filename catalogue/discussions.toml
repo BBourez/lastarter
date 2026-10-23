@@ -32,7 +32,7 @@ BRAND_NAME = "{brand_name}"
 
 [env]
 OIDC_RP_CLIENT_SECRET = "{secret:discussions_oidc_secret}"
-SYNAPSE_SERVER_NAME = "{domain_host}"
+SYNAPSE_SERVER_NAME = "{domain_bare}"
 SYNAPSE_PUBLIC_BASEURL = "{origin}/"
 SYNAPSE_MACAROON_SECRET = "{secret:discussions_macaroon_secret}"
 SYNAPSE_FORM_SECRET = "{secret:discussions_form_secret}"
