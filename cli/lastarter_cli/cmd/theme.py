@@ -1,6 +1,6 @@
-"""Rendu du thÃ¨me LaStarter (palettes Compound â†’ CSS injectÃ© par la passerelle).
+"""Rendu du thème LaStarter (palettes Compound → CSS injecté par la passerelle).
 
-Le thÃ¨me est dÃ©fini dans themes/<nom>.toml (palette, typo, composants).
+Le thème est défini dans themes/<nom>.toml (palette, typo, composants).
 Le CLI le rend dans .runtime/theme.css en substituant les jetons de
 identity/theme.css.tpl. La passerelle sert ce fichier sur /__lastarter/theme.css
 sur tous les sous-domaines et l'injecte dans le HTML via nginx sub_filter.
@@ -12,7 +12,7 @@ import tomllib
 from pathlib import Path
 
 class ThemeError(Exception):
-    """Erreur de chargement ou de rendu de thÃ¨me."""
+    """Erreur de chargement ou de rendu de thème."""
 
 
 def load_theme(repo_root: Path, theme_name: str) -> dict:
@@ -23,14 +23,14 @@ def load_theme(repo_root: Path, theme_name: str) -> dict:
             p.stem for p in (repo_root / "themes").glob("*.toml") if p.stem != "README"
         ]
         raise ThemeError(
-            f"thÃ¨me Â« {theme_name} Â» introuvable (disponibles : {', '.join(sorted(available)) or 'aucun'})"
+            f"thème « {theme_name} » introuvable (disponibles : {', '.join(sorted(available)) or 'aucun'})"
         )
     with theme_path.open("rb") as fh:
         return tomllib.load(fh)
 
 
 def list_themes(repo_root: Path) -> list[dict]:
-    """Liste les thÃ¨mes disponibles (nom, label) pour l'invite interactive."""
+    """Liste les thèmes disponibles (nom, label) pour l'invite interactive."""
     themes = []
     for path in sorted((repo_root / "themes").glob("*.toml")):
         try:
@@ -39,12 +39,12 @@ def list_themes(repo_root: Path) -> list[dict]:
             meta = data.get("theme", {})
             themes.append({"name": meta.get("name", path.stem), "label": meta.get("label", path.stem)})
         except (tomllib.TOMLDecodeError, OSError):
-            continue  # fichier illisible : ignorÃ© silencieusement dans la liste
+            continue  # fichier illisible : ignoré silencieusement dans la liste
     return themes
 
 
 def _flatten_palette(theme: dict, palette_name: str) -> dict[str, str]:
-    """Aplatit [palette.<nom>] en {clÃ©: valeur} (les clÃ©s deviennent des strings)."""
+    """Aplatit [palette.<nom>] en {clé: valeur} (les clés deviennent des strings)."""
     palette = theme.get("palette", {}).get(palette_name, {})
     return {str(k): str(v) for k, v in palette.items()}
 

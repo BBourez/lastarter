@@ -15,10 +15,10 @@ import sys
 import urllib.request
 from pathlib import Path
 
+# La passerelle (8443) est le SEUL port hôte : aucune brique — meet inclus —
+# n'expose de port direct (tout passe par les sous-domaines de la passerelle).
 REQUIRED_PORTS = {
     "8443": "passerelle TLS (entrée unique)",
-    "7880": "livekit signalisation (visio/chat)",
-    "7881": "livekit RTC tcp",
 }
 
 
@@ -107,7 +107,7 @@ def run_detect(opts) -> int:
     if opts.domain:
         resolved = dns_resolves(opts.domain)
         bare = opts.domain.split(":")[0]
-        for label in ("id", "drive", "meet", "chat", "matrix"):
+        for label in ("id", "drive", "meet", "chat", "livekit"):
             sub = dns_resolves(f"{label}.{bare}")
             if sub:
                 print(f"  {label}.{bare:<20} → {sub}")

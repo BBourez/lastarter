@@ -54,22 +54,19 @@ oidc_providers:
         email_template: "{{ user.email }}"
 
 # Whitelist SSO : sans elle, Synapse exige un clic « Continue » avant chaque
-# redirection vers le client (chat ET meet) — friction inutile pour nos apps.
+# redirection vers le client (chat) — friction inutile pour nos apps.
 sso:
   client_whitelist:
     - "{{CHAT_ORIGIN}}"
-    - "{{MEET_ORIGIN}}"
 
-# Pas d'inscription locale : tout passe par le SSO. Le password reste actif
-# pour Element Call standalone (meet.<domaine> — cette version du SPA n'a pas
-# de SSO natif) : le CLI provisionne le compte demo avec le MEME mot de passe
-# que le coffre SSO. Le chat, lui, reste 100% SSO.
+# SSO uniquement : pas d'inscription locale ni de login password local (la
+# visio meet a son propre SSO OIDC — plus de compte Matrix en password).
 enable_registration: false
 password_config:
-  enabled: true
-  localdb_enabled: true
+  enabled: false
+  localdb_enabled: false
 
-# POC : rate limit de login desactive (tests repetes / outillage CLI).
+# POC : rate limit de login désactivé (tests répétés en recette).
 rc_login:
   address:
     per_second: 10000

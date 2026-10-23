@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import socket
 import ssl
+import subprocess
 import sys
 import urllib.request
 from pathlib import Path
@@ -58,6 +59,21 @@ def _check(results: list, label: str, url: str, expect: int, contains: str | Non
         detail += f" — contenu attendu manquant: {contains!r}"
     if ok is False and location_prefix is not None and status == expect:
         detail += f" — Location: {location[:100]!r}"
+    results.append((ok, f"{mark} {label:<34} {detail}"))
+
+
+def _container_healthy(results: list, label: str, container: str) -> None:
+    """Vérifie le healthcheck docker d'un conteneur (meet backend : manage.py check amont)."""
+    result = subprocess.run(
+        ["docker", "inspect", "--format", "{{.State.Health.Status}}", container],
+        capture_output=True, text=True, check=False,
+    )
+    status = result.stdout.strip()
+    ok = result.returncode == 0 and status == "healthy"
+    mark = "✓" if ok else "✗"
+    detail = f"health={status or 'inconnu'}"
+    if not ok:
+        detail += f" — {container} introuvable ou pas (encore) healthy"
     results.append((ok, f"{mark} {label:<34} {detail}"))
 
 
@@ -110,10 +126,6 @@ def run_smoke(opts) -> int:
         label = brick.compose.get("route_label", name)
         origin = app_origin(domain, label)
         if brick.compose.get("portal_visible", "true") == "false":
-            if name == "element-call":
-                # SPA widget (pas un backend Matrix) : juste vérifier qu'il répond.
-                _check(results, f"{name} (SPA /)", origin, 200, None, ca_file)
-                continue
             # Backend (ex. synapse) : API + chaîne SSO (redirect vers l'IdP).
             _check(results, f"{name} (API)", f"{origin}/_matrix/client/versions", 200, '"versions"', ca_file)
             _check(
@@ -122,6 +134,17 @@ def run_smoke(opts) -> int:
                 302, None, ca_file, follow=False,
                 location_prefix=_id_origin(domain),
             )
+            continue
+        if name == "meet":
+            # meet (suitenumerique) : frontend + découverte OIDC du SSO + backend
+            # sain (healthcheck amont, conteneur <client>-meet-backend).
+            _check(results, f"{name} (frontend /)", origin, 200, None, ca_file)
+            _check(
+                results, f"{name} (découverte OIDC)",
+                f"{_id_origin(domain)}/realms/lastarter/.well-known/openid-configuration",
+                200, '"issuer"', ca_file,
+            )
+            _container_healthy(results, f"{name} (backend healthy)", f"{opts.client}-meet-backend")
             continue
         _check(results, f"{name} (frontend /)", origin, 200, None, ca_file)
         if brick.compose.get("api_target"):

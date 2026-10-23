@@ -1,5 +1,7 @@
 """Tests offline du catalogue — stdlib unittest uniquement.
-Catalogue : keycloak (fondation) + discussions (Element Web + Synapse)."""
+
+L'ensemble des briques attendu est DÉRIVÉ du contenu de catalogue/*.toml
+(actuellement : keycloak fondation + discussions, drive, meet)."""
 
 from __future__ import annotations
 
@@ -31,10 +33,16 @@ class CatalogueTests(unittest.TestCase):
 
     def test_catalogue_loads_without_errors(self):
         self.assertEqual(self.errors, [])
-        self.assertEqual(
-            set(self.bricks),
-            {"keycloak", "discussions"},
-        )
+        # Ensemble DÉRIVÉ du contenu du catalogue (pas figé) : ajouter un
+        # manifeste catalogue/*.toml ne casse pas ce test.
+        expected = {p.stem for p in (REPO_ROOT / "catalogue").glob("*.toml")}
+        self.assertEqual(set(self.bricks), expected)
+        # Invariants de la reprise : fondation + briques de la suite.
+        self.assertIn("keycloak", expected)
+        for name in ("discussions", "drive", "meet"):
+            self.assertIn(name, expected)
+        # L'ancienne brique de visio (element-call) a été remplacée par meet.
+        self.assertNotIn("element-call", expected)
 
     def test_keycloak_is_core_foundation(self):
         self.assertTrue(self.bricks["keycloak"].core)
@@ -74,6 +82,29 @@ class CatalogueTests(unittest.TestCase):
         ordered, added = resolve_selection(["discussions"], self.bricks)
         self.assertEqual(ordered, ["keycloak", "discussions"])
         self.assertEqual(added, ["keycloak"])
+
+
+class EncodingTests(unittest.TestCase):
+    """Aucun motif de double-encodage (UTF-8 lu comme cp1252) dans les sources."""
+
+    def test_pas_de_mojibake_dans_les_sources_du_paquet(self):
+        pkg = REPO_ROOT / "cli" / "lastarter_cli"
+        offenders = []
+        for path in sorted(pkg.rglob("*.py")):
+            for lineno, line in enumerate(
+                path.read_text(encoding="utf-8").splitlines(), start=1
+            ):
+                try:
+                    fixed = line.encode("cp1252", errors="strict").decode(
+                        "utf-8", errors="strict"
+                    )
+                except (UnicodeEncodeError, UnicodeDecodeError):
+                    continue  # non représentable en cp1252 : pas du mojibake
+                if fixed != line:
+                    offenders.append(f"{path.name}:{lineno}")
+        self.assertEqual(
+            offenders, [], "lignes double-encodées (UTF-8 relu en cp1252)"
+        )
 
 
 class InitWriterTests(unittest.TestCase):
