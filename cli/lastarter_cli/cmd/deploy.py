@@ -1419,13 +1419,24 @@ def run_deploy(opts) -> int:
             marker_path.write_text(marker_hash + "\n", encoding="utf-8")
 
     # 1. Infrastructure (DB, cache, S3, keycloak) — healthchecks verts.
+    #    Les tâches one-shot (ex. création de buckets S3) sont exclues du
+    #    --wait : `docker compose up --wait` échoue sur un conteneur qui se
+    #    termine, MÊME en exit 0. Elles sont exécutées via `run --rm` ensuite.
     infra: list[str] = []
+    oneshots: list[str] = []
     for name in selected:
         infra.extend(bricks[name].compose.get("infra_services", []))
-    if infra:
-        result = run(base + ["up", "-d", "--wait", *dict.fromkeys(infra)])
+        oneshots.extend(bricks[name].compose.get("oneshot_services", []))
+    oneshots = list(dict.fromkeys(oneshots))
+    infra_wait = [s for s in dict.fromkeys(infra) if s not in oneshots]
+    if infra_wait:
+        result = run(base + ["up", "-d", "--wait", *infra_wait])
         if result.returncode != 0:
             raise DeployError("échec du démarrage de l'infrastructure (voir logs ci-dessus)")
+    for service in oneshots:
+        result = run(base + ["run", "--rm", service])
+        if result.returncode != 0:
+            raise DeployError(f"échec de la tâche one-shot {service}")
 
     # 2. Préparation one-off (ex. chown de volumes pour des images non-root).
     for name in selected:
@@ -1457,7 +1468,15 @@ def run_deploy(opts) -> int:
             raise DeployError(f"migration échouée pour {name}")
 
     # 3. Ensemble de la pile (les services retirés du manifeste sont nettoyés).
-    result = run(base + ["up", "-d", "--wait", "--remove-orphans"])
+    #    Liste explicite : exclure les one-shots (déjà exécutés) sans quoi le
+    #    --wait échouerait sur leur exit ; `config --services` fait autorité.
+    listed = subprocess.run(
+        base + ["config", "--services"], capture_output=True, text=True, check=False
+    )
+    if listed.returncode != 0:
+        raise DeployError("échec de docker compose config --services")
+    wait_services = [s for s in listed.stdout.split() if s not in oneshots]
+    result = run(base + ["up", "-d", "--wait", "--remove-orphans", *wait_services])
     if result.returncode != 0:
         raise DeployError("échec du démarrage (voir logs ci-dessus)")
 

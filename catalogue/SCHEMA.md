@@ -37,7 +37,9 @@ KEY = "valeur | {domain} | {secret}"  # .env généré à l'init ; {domain} subs
 
 [compose]                             # orchestration + exposition passerelle
 profile = "drive"                     # profil logique de la brique
-infra_services = ["drive_postgresql", …]   # services (préfixés <brique>_) AVANT migration
+# oneshot_services : taches one-shot (ex. creation de buckets S3) executees
+# via `compose run --rm` APRES l'infra — jamais dans un `up --wait` (compose
+# echoue sur un conteneur termine, meme en exit 0).
 migrate_service = "drive_app"         # service exécutant la migration (optionnel)
 migrate_command = "python manage.py…" # commande de migration (optionnel)
 route_label = "drive"                 # sous-domaine : <label>.<domaine>
