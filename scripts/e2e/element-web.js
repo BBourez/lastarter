@@ -17,7 +17,12 @@ async function clickIfVisible(page, selector, timeout = 3000) {
 }
 
 (async () => {
-  const browser = await chromium.launch({ channel: "msedge", headless: true, args: ["--ignore-certificate-errors"] });
+  // Canal surchargeable (msedge absent sur certains postes) : E2E_CHANNEL=chrome node element-web.js
+  const browser = await chromium.launch({
+    channel: process.env.E2E_CHANNEL || "msedge",
+    headless: true,
+    args: ["--ignore-certificate-errors"],
+  });
   const ctx = await browser.newContext({ ignoreHTTPSErrors: true, permissions: ["microphone", "camera"] });
   const page = await ctx.newPage();
   watch(page, "web");
