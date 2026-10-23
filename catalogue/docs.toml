@@ -74,6 +74,14 @@ YHUB_API_BASE_URL = "http://docs_yhub:3002"
 Y_PROVIDER_API_BASE_URL = "http://docs_yprovider:4444/api/"
 Y_PROVIDER_API_KEY = "{secret:docs_yprovider_api_key}"
 
+# --- yhub (collaboration) : noms EXACTS de env.d/development/yhub amont ; le
+# --- service partage docs.env avec le backend (noms disjoints, zéro collision).
+PORT = "3002"
+REDIS = "redis://docs_yhub_valkey:6379"
+REDIS_PREFIX = "yhub"
+POSTGRES = "postgres://docs:{secret:docs_db_password}@docs_postgresql:5432/yhub"
+YHUB_JWT_PRIVATE_KEY_FILE = "/keys/yhub-private.pem"
+
 # S3 rustfs (pièces jointes + historique de versions) — alias SANS tiret bas
 # (aws-cli/botocore rejette les hostnames avec underscore).
 AWS_S3_ENDPOINT_URL = "http://docs-rustfs:9000"
