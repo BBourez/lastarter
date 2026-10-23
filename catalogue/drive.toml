@@ -51,6 +51,7 @@ services = [
   "drive_rustfs",
   "drive_createbuckets",
   "drive_backend",
+  "drive_celery",
   "drive_frontend",
 ]
 extras = []

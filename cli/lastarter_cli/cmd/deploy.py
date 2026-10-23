@@ -701,6 +701,9 @@ AWS_S3_DOMAIN_REPLACE={drive_origin}
 MEDIA_BASE_URL={drive_origin}
 
 REDIS_URL=redis://drive_redis:6379/0
+# Celery : requis par l'amont (helm : CELERY_BROKER_URL) en plus de REDIS_URL —
+# sinon les tâches async pointent redis://redis:6379 (hôte inexistant ici).
+CELERY_BROKER_URL=redis://drive_redis:6379/0
 
 OIDC_OP_JWKS_ENDPOINT={id_origin}/realms/lastarter/protocol/openid-connect/certs
 OIDC_OP_AUTHORIZATION_ENDPOINT={id_origin}/realms/lastarter/protocol/openid-connect/auth

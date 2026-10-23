@@ -96,6 +96,28 @@ services:
       drive_rustfs:
         condition: service_healthy
 
+  # Worker Celery : requis par l'amont (CELERY_BROKER_URL) — tâches async de
+  # fond. Même image/env que le backend, aucun port exposé.
+  drive_celery:
+    image: ${DRIVE_BACKEND_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-drive-celery
+    env_file: ["${RUNTIME_DIR}/drive/backend.env"]
+    environment:
+      REQUESTS_CA_BUNDLE: /certs/ca.crt
+    command: ["celery", "-A", "drive.celery_app", "worker", "-l", "INFO"]
+    volumes:
+      - ${CERTS_DIR}:/certs:ro
+      - ${RUNTIME_DIR}/drive:/config:ro
+    networks: [lastarter]
+    restart: unless-stopped
+    depends_on:
+      drive_postgresql:
+        condition: service_healthy
+      drive_redis:
+        condition: service_started
+      drive_rustfs:
+        condition: service_healthy
+
   drive_frontend:
     image: ${DRIVE_FRONTEND_IMAGE}
     container_name: ${LASTARTER_CLIENT}-drive-frontend
