@@ -82,3 +82,12 @@ rejouable.
 - **Redis 5 → Valkey 8.1-alpine** (drive, meet) : BSD-3, compatible RESP, déployé et healthy.
 - **Brique Docs (lasuite/impress v6.0.3)** : ajoutée (catalogue, compose 11 services, licences) ; collaboration Yjs via yhub sans fork ; export PDF absent des images amont `PUBLISH_AS_MIT` (choix MIT assumé) ; recherche dédiée (brique Find) = roadmap.
 - **Brique Find (lasuite/find) : NON-VIABLE le 2026-10-24** — l'amont n'a ni tag git ni tag Docker Hub versionné (seul `main` écrasé, projet pré-première-release ; procédure de release documentée mais jamais exécutée). Règle « toujours pinner » appliquée : brique non créée. Ré-évaluer dès le premier tag `v*` amont (`git ls-remote --tags` / tags Docker Hub) ; prérequis alors : postgres 15 + OpenSearch + redis + worker celery, doc d'indexation drive/docs dans le clone `examples/find`.
+
+## Kubernetes : première tranche VALIDÉE (2026-10-24)
+
+- **Cluster kind** (deploy/k8s/kind/kind-config.yaml : ingress sur 8080/8444 — 8443 = compose) + ingress-nginx : livrés.
+- **Keycloak 26.8.1 + postgres 18-alpine** en manifests raw, realm rendu par le moteur as-code du CLI (script `deploy/k8s/kind/render-realm.py`, origins `http://*.localhost:8080`, secrets à neuf dans `.runtime/` gitigné — zéro secret committé).
+- **Brique Drive via le chart amont** (`values-drive.yaml`, images pinnées v0.25.2), ingress média avec pattern auth-request amont, bucket S3 par Job aws-cli. Smoke curl : OIDC discovery 200, chaîne SSO bout-en-bout avec échange de code in-cluster, `/api/v1.0/items/` 200.
+- Reproduction : `bash deploy/k8s/deploy.sh` (idempotent, garde-fou contexte kind). Détails : docs/DEPLOYMENT-K8S.md.
+- Limitations : login navigateur bloqué en HTTP pur (Keycloak 26 émet des cookies `Secure` — TLS cert-manager = roadmap) ; secrets en clair dans `.runtime/` (SOPS = roadmap) ; 1 brique validée, les 4 clients OIDC des autres déjà dans le realm.
+- **Découverte produit (fix compose)** : l'amont Drive exige `CELERY_BROKER_URL` + un worker celery — absents du compose (tâches async mortes en silence). Corrigé : `drive_celery` + `CELERY_BROKER_URL`, validé live (worker connecté au broker).
