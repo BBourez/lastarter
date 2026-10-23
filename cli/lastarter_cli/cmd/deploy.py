@@ -220,6 +220,21 @@ def render_realm(template: str, answers: dict, vault: dict[str, str], clients_js
     return REALM_SECRET_TOKEN.sub(secret, rendered)
 
 
+def cert_san_names_for(selected_bricks: list[Brick], domain: str) -> list[str]:
+    """SANs du certificat POC : domaine apex NU (le portail est servi sur
+    https://<domaine>) + id.<domaine> (SSO) + chaque app + serveurs
+    additionnels (media/livekit). ensure_dev_certs ajoute « localhost »."""
+    cert_bare = domain.split(":")[0]
+    names = [cert_bare, f"id.{cert_bare}"]
+    for brick in selected_bricks:
+        if brick.core:
+            continue
+        names.append(f"{brick.compose.get('route_label', brick.name)}.{cert_bare}")
+        for extra in brick.compose.get("extra_servers", []):
+            names.append(f"{extra['label']}.{cert_bare}")
+    return names
+
+
 def ensure_dev_certs(runtime_dir: Path, san_names: list[str]) -> tuple[Path, Path, Path, bool]:
     """CA locale + certificat pour la passerelle TLS (POC).
 
@@ -676,7 +691,7 @@ DB_PASSWORD=pass
 DB_PORT=5432
 
 AWS_S3_ACCESS_KEY_ID=drive
-AWS_S3_SECRET_ACCESS_KEY=password
+AWS_S3_SECRET_ACCESS_KEY={secret("drive_s3_secret")}
 AWS_S3_REGION_NAME=eu-east-1
 AWS_S3_SIGNATURE_VERSION=s3v4
 AWS_S3_ENDPOINT_URL=http://drive_rustfs:9000
@@ -936,7 +951,7 @@ def provision_realm(base_url: str, admin_user: str, admin_password: str,
     token = json.loads(auth[1])["access_token"]
     admin = f"{base_url}/admin/realms/lastarter"
 
-    # Réglages du realm : inscription libre, thème custom, sécurité brute-force.
+    # Réglages du realm : SSO uniquement (inscription fermée), thème custom, sécurité brute-force.
     status, text = _http_json(f"{admin}", method="GET", token=token, ca_file=ca_file)
     if status != 200:
         raise DeployError(f"lecture realm impossible (HTTP {status})")
@@ -1329,16 +1344,9 @@ def run_deploy(opts) -> int:
     compose_env["BRANDING_DIR"] = _portable(branding_runtime)
     print(f"Branding : {branding_runtime} (servi sur /__lastarter/branding/)")
 
-    # Certificats TLS POC — SANs explicites pour chaque hôte déployé (id + apps
-    # + serveurs additionnels type media/livekit) ; CPython exige du non-wildcard.
-    cert_bare = answers["domain"].split(":")[0]
-    cert_san_names = [f"id.{cert_bare}"]
-    for brick in selected_bricks:
-        if brick.core:
-            continue
-        cert_san_names.append(f"{brick.compose.get('route_label', brick.name)}.{cert_bare}")
-        for extra in brick.compose.get("extra_servers", []):
-            cert_san_names.append(f"{extra['label']}.{cert_bare}")
+    # Certificats TLS POC — SANs explicites pour chaque hôte déployé (apex nu +
+    # id + apps + serveurs additionnels type livekit) ; non-wildcard requis.
+    cert_san_names = cert_san_names_for(selected_bricks, answers["domain"])
     ca_path, crt_path, key_path, certs_changed = ensure_dev_certs(runtime_dir, cert_san_names)
     compose_env["CERTS_DIR"] = _portable(ca_path.parent)
     # Certificats changés → nginx recharge ses certs au boot : recreation gateway.
@@ -1487,7 +1495,7 @@ def run_deploy(opts) -> int:
     print(f"\nDéploiement « {slug} » opérationnel (TLS, port 8443).")
     id_url = _id_origin(answers["domain"])
     print(f"  Portail       : {compute_origin(answers['domain'])} — entrée unique de la suite")
-    print(f"  Identité (SSO) : {id_url} — inscription activée, console {id_url}/admin")
+    print(f"  Identité (SSO) : {id_url} — SSO uniquement (inscription fermée), console {id_url}/admin")
     for brick in selected_bricks:
         if brick.core:
             continue

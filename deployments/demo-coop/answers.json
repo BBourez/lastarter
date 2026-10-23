@@ -2,14 +2,29 @@
   "client_name": "Demo Coop",
   "client_slug": "demo-coop",
   "domain": "localhost:8443",
+  "brand": {
+    "name": "LaStarter",
+    "logo_path": "branding/logo.svg"
+  },
   "brand_name": "LaStarter",
   "theme": "element-light",
   "brand_color": "#0bc491",
-  "logo_url": "",
+  "logo_url": "/__lastarter/branding/logo.svg",
+  "apps": {
+    "discussions": {
+      "label": "Discussions"
+    },
+    "drive": {
+      "label": "Drive"
+    },
+    "meet": {
+      "label": "Meet"
+    }
+  },
   "bricks": [
     "discussions",
     "drive",
     "meet"
   ],
-  "generated_at": "2026-10-23T13:45:40+00:00"
+  "generated_at": "2026-10-23T15:47:41+00:00"
 }

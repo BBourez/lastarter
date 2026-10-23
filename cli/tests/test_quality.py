@@ -27,6 +27,12 @@ class LicenseGateTests(unittest.TestCase):
         self.assertTrue(license_allowed("AGPL-3.0 OR GPL-3.0 OR Element-Commercial"))
         self.assertFalse(license_allowed("Proprietary"))
         self.assertFalse(license_allowed(""))
+        # Comparaison EXACTE : ni préfixe, ni sous-chaîne, ni multilicence partielle.
+        self.assertFalse(license_allowed("GPL-3.0-or-later"))
+        self.assertFalse(license_allowed("AGPL-3.0-only-or-later"))
+        self.assertFalse(license_allowed("AGPL-3.0 OR GPL-3.0"))
+        self.assertFalse(license_allowed("AGPL-3.0 OR n'importe quoi"))
+        self.assertFalse(license_allowed("MIT-or-later"))
 
     def test_catalogue_complet_conforme(self):
         ok, rejected = gate(self.bricks)

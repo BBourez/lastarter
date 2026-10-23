@@ -13,6 +13,5 @@ déclinaisons `/en`, blog (4 articles), pricing B2B (Open Source 0 € ·
 Sur vos serveurs · Clé en main), sélecteur de langue (20 locales via
 Framer Localization).
 
-Récap complet (pages, code components, reste à faire Framer) : voir
-`SITE-VITRINE-RECAP.md` dans l'archive du workspace
-(`LaStarterProject-archive-20261023/`).
+Le récap complet (pages, code components, reste à faire Framer) est suivi
+hors dépôt, dans l'espace projet privé du site vitrine.

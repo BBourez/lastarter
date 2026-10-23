@@ -41,8 +41,14 @@ historiques sont archivées dans [history/](history/).
 | Postgres (base Keycloak) | 14.3 | 18 | **migration de volume** obligatoire (pg_dump/restore) |
 | synapse | v1.163.1 | — | suivi manuel (pas de champ `upstream_repo` propre) |
 | livekit | v1.13.6 | — | suivi manuel |
+| Redis (drive, meet) | 5 | 8 (ou valkey) | redis 5 = EOL ; choix actuel = versions des compose amonts (BSD, pré-7.4) — bump à rejouer sur un client démo (cache/broker, pas de volume de données critique) |
 
 ## Meet — chantiers restants
+
+État honnête : meet est **déployée** (images amont suitenumerique, SSO,
+theming CSS natif) et couverte par le smoke HTTP — mais son parcours client
+complet (SSO → salon → invitation → appel) n'est pas encore validé par un e2e
+rejouable.
 
 - **Titre de l'app** : `VITE_APP_TITLE` est un build-arg amont (défaut
   « La Suite Meet ») — contournement à arbitrer : rebuild overlay
@@ -64,3 +70,7 @@ historiques sont archivées dans [history/](history/).
 ## Divers
 
 - Automatisation des certificats de production (DNS-01 dans la passerelle).
+- Veille amont = `check-updates` + workflow [`upstream-sync`](../.github/workflows/upstream-sync.yml)
+  (hebdomadaire). `renovate.json5` a été retiré : son customManager regex
+  n'appariait jamais les TOML drive/meet (pas d'`upstream_image` adjacent à
+  `upstream_pin`) et doublonnait la veille CI.

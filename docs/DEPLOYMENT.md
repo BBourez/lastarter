@@ -79,6 +79,15 @@ Le coffre `deployments/<client>/secrets.env` se sauvegarde **avec** les
 volumes (sans lui, SSO et données ne sont plus relisibles) ; le chiffrer
 (SOPS — roadmap) avant tout stockage externe.
 
+### Limitations POC — Synapse (discussions)
+
+Synapse tourne en **sqlite mono-worker** (POC) : suffisant pour un pilote
+mono-VM, pas pour une charge de production. L'inscription locale est fermée
+(SSO uniquement — les comptes sont provisionnés à la première connexion).
+Le passage à **postgres** et la sauvegarde dédiée de la base Matrix sont en
+[ROADMAP.md](ROADMAP.md) ; en attendant, sauvegarder le volume
+`discussions_data` (homeserver.db + media_store) avec les autres volumes.
+
 ### TLS / certificats
 
 - **POC** : le CLI génère une CA locale + un certificat serveur

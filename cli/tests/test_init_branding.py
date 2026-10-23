@@ -127,16 +127,64 @@ class EdgeBrandingTests(unittest.TestCase):
 class DriveRenderTests(unittest.TestCase):
     """Rendus drive : FRONTEND_THEME suit la palette, customization écrite."""
 
+    def _vault(self):
+        return {
+            "drive_oidc_secret": "s3cret",
+            "drive_django_key": "k",
+            "drive_s3_secret": "v4ult-s3cret",
+        }
+
     def test_backend_env_frontend_theme_parametrable(self):
         from lastarter_cli.cmd.deploy import render_drive_backend_env
 
-        vault = {"drive_oidc_secret": "s3cret", "drive_django_key": "k"}
-        light = render_drive_backend_env({"domain": "localhost:8443"}, vault)
+        light = render_drive_backend_env({"domain": "localhost:8443"}, self._vault())
         self.assertIn("FRONTEND_THEME=dsfr-light", light)  # défaut inchangé
         dark = render_drive_backend_env(
-            {"domain": "localhost:8443"}, vault, frontend_theme="dsfr-dark"
+            {"domain": "localhost:8443"}, self._vault(), frontend_theme="dsfr-dark"
         )
         self.assertIn("FRONTEND_THEME=dsfr-dark", dark)
+
+    def test_backend_env_secret_s3_depuis_coffre(self):
+        """Invariant : AWS_S3_SECRET_ACCESS_KEY == vault["drive_s3_secret"].
+
+        drive_rustfs et drive_createbuckets consomment ${DRIVE_S3_SECRET_KEY}
+        (même secret du coffre) — une valeur en dur ferait signer les requêtes
+        S3 du backend avec une autre clé (403 SignatureDoesNotMatch : uploads,
+        listes et /media inutilisables).
+        """
+        from lastarter_cli.cmd.deploy import DeployError, render_drive_backend_env
+
+        vault = self._vault()
+        env = render_drive_backend_env({"domain": "localhost:8443"}, vault)
+        self.assertIn(f"AWS_S3_SECRET_ACCESS_KEY={vault['drive_s3_secret']}", env)
+        self.assertNotIn("AWS_S3_SECRET_ACCESS_KEY=password", env)
+        # rustfs/createbuckets consomment bien le MÊME secret du coffre.
+        compose = (REPO_ROOT / "deploy" / "compose" / "drive.yml").read_text(encoding="utf-8")
+        self.assertIn("RUSTFS_SECRET_KEY: ${DRIVE_S3_SECRET_KEY}", compose)
+        # Secret absent du coffre → erreur explicite (aucune valeur par défaut).
+        with self.assertRaises(DeployError):
+            render_drive_backend_env(
+                {"domain": "localhost:8443"},
+                {"drive_oidc_secret": "s3cret", "drive_django_key": "k"},
+            )
+
+
+class CertSanTests(unittest.TestCase):
+    """Le certificat POC couvre le domaine apex (portail servi sur https://<domaine>)."""
+
+    def test_san_inclut_apex_id_apps_extras(self):
+        from lastarter_cli.catalogue import load_catalogue
+        from lastarter_cli.cmd.deploy import cert_san_names_for
+
+        bricks, errors = load_catalogue(REPO_ROOT / "catalogue")
+        self.assertEqual(errors, [])
+        sans = cert_san_names_for(list(bricks.values()), "localhost:8443")
+        self.assertIn("localhost", sans)          # apex nu (portail) — défaut corrigé
+        self.assertIn("id.localhost", sans)       # SSO
+        self.assertIn("chat.localhost", sans)     # discussions
+        self.assertIn("drive.localhost", sans)    # drive
+        self.assertIn("meet.localhost", sans)     # meet
+        self.assertIn("livekit.localhost", sans)  # serveur additionnel (SFU)
 
 
 if __name__ == "__main__":

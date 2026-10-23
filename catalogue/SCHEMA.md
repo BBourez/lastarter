@@ -12,7 +12,7 @@ category = "collaboration"            # collaboration | communication | storage 
 description = "…"
 license = "MIT"                       # licence amont (clé du registre docs/licences.md)
 upstream_repo = "https://github.com/suitenumerique/drive"
-upstream_pin = "…"                    # version / ref épinglée (bump via Renovate)
+upstream_pin = "…"                    # version / ref épinglée (bump via upstream-sync)
 core = false                          # true = toujours installée (fondation, ex. keycloak)
 requires = ["keycloak"]               # dépendances vers d'autres BRIQUES (pas services internes)
 maturity = "stable"                   # stable | planned — "planned" = à venir (phase future),
@@ -22,8 +22,8 @@ maturity = "stable"                   # stable | planned — "planned" = à veni
 client_id = "drive"
 scopes = "openid email"
 
-[branding.env]                        # variables de marque blanche (surchargeables
-BRAND_NAME = "…"                      # par branding/<client>.toml)
+[branding.env]                        # variables de marque blanche
+BRAND_NAME = "…"                      # (fusionnées dans le brouillon env/<brique>.env)
 
 [branding.custom_theme]               # palette / personnalisation (optionnel) :
 colors = { primary = "#0bc491" }      # consommé par le CLI pour générer, depuis la
@@ -41,7 +41,7 @@ infra_services = ["drive_postgresql", …]   # services (préfixés <brique>_) A
 migrate_service = "drive_app"         # service exécutant la migration (optionnel)
 migrate_command = "python manage.py…" # commande de migration (optionnel)
 route_label = "drive"                 # sous-domaine : <label>.<domaine>
-frontend_target = "drive_frontend:3000"  # cible de la passerelle pour /
+frontend_target = "drive_frontend:8080"  # cible de la passerelle pour /
 api_target = "drive_app:8000"            # cible de la passerelle pour /api/
 access = "public"                     # public (défaut) | vpn (LAN + WireGuard/CGNAT
                                       # + loopback uniquement — derrière un VPN)
@@ -61,9 +61,9 @@ extras = ["collabora", "onlyoffice"]  # services optionnels activables
 #   {sso_origin} — schéma + apex (ex. https://acme.example.com)
 #   {origin}     — schéma + <label>.<domaine> (origine de CETTE app)
 #   {app_host}   — <label>.<domaine> (sans schéma, pour ALLOWED_HOSTS)
-#   {ws}         — "ws" en local, "wss" en production
-#   {django_configuration} — "Development" en local (http), "Feature" en prod
-#                  (les classes Production/Feature forcent SECURE_SSL_REDIRECT)
+#   {ws}         — toujours "wss" (TLS partout, POC compris)
+#   {django_configuration} — toujours "Feature" (les classes Production/Feature
+#                  forcent SECURE_SSL_REDIRECT ; la passerelle sert TLS partout)
 #   {domain_s3}  — host:port du S3 média public (POC)
 #   {brand_name} — marque affichée
 #   {secret:KEY} — secret du coffre (jeton conservé dans les drafts committables,

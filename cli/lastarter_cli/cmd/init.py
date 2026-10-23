@@ -378,10 +378,11 @@ def render_readme(ordered: list[Brick], answers: dict) -> str:
         "- `secrets.env` — secrets réels : **ne jamais commiter** (chiffrer : SOPS/ansible-vault, phase 3).",
         "- `SOURCES.md` — mentions licences (obligation copyleft).",
         "",
-        "## Étapes suivantes (phase 2)",
+        "## Étapes suivantes",
         "",
         "1. Ajuster `env/*.env` si besoin (valeurs par défaut issues du catalogue).",
-        "2. `lastarter deploy` (à venir) : compose + realm Keycloak provisionné.",
+        "2. `lastarter deploy --client <slug> --pull` : gates → rendu `.runtime/` (secrets, realm Keycloak, thème, branding) → infra → migrations → `up -d --wait`.",
+        "3. `lastarter smoke --client <slug>` : surfaces HTTP (portail, SSO, apps).",
         "",
     ]
     return "\n".join(lines)
@@ -501,7 +502,7 @@ def run_init(opts) -> int:
     from .deploy import _id_origin, app_origin
 
     print("\nPlan d'installation (après `lastarter deploy`) :")
-    print(f"  Identité (SSO) : {_id_origin(answers['domain'])} — inscription activée")
+    print(f"  Identité (SSO) : {_id_origin(answers['domain'])} — SSO uniquement (inscription fermée)")
     for brick in ordered:
         if brick.core:
             continue

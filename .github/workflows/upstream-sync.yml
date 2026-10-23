@@ -35,7 +35,7 @@ jobs:
         id: bumps
         run: |
           python - <<'PYEOF'
-          import json, os, pathlib
+          import json, os, pathlib, re
 
           root = pathlib.Path.cwd()
           rows = json.loads(
@@ -43,6 +43,12 @@ jobs:
               .read_text(encoding="utf-8")
           )
           changed, skipped = [], []
+          # Remplacement BORNÉ : seules les lignes d'affectation upstream_pin /
+          # upstream_image / *IMAGE sont touchées (jamais les commentaires), et
+          # le pin n'est remplacé que comme valeur ENTIÈRE (précédé de « " » ou
+          # « : », suivi de « " ») — un pin « 26.3.2 » ne peut pas corrompre un
+          # « 26.3.20 » voisin, contrairement à un str.replace aveugle.
+          ASSIGN = re.compile(r'^\s*(?:upstream_pin|upstream_image|[A-Z0-9_]*IMAGE[A-Z0-9_]*)\s*=')
           for row in rows:
               name, pin, latest = row["brique"], row["pin"], row["latest"]
               if row["a_jour"] or not latest:
@@ -52,9 +58,19 @@ jobs:
               if pin not in text:
                   skipped.append(f"{name} : pin {pin} introuvable tel quel — bump manuel requis")
                   continue
-              # Le pin (ex. v0.25.2) apparaît aussi dans les tags d'images [env] :
-              # remplacer partout garde upstream_pin et images synchronisés.
-              f.write_text(text.replace(pin, latest), encoding="utf-8")
+              pattern = re.compile(r'(?<=[":])' + re.escape(pin) + r'(?=")')
+              out_lines, hits = [], 0
+              for line in text.splitlines():
+                  if ASSIGN.match(line):
+                      line, n = pattern.subn(f'"{latest}"', line)
+                      hits += n
+                  out_lines.append(line)
+              if not hits:
+                  skipped.append(
+                      f"{name} : pin {pin} présent mais hors clés upstream_pin/upstream_image/*IMAGE — bump manuel requis"
+                  )
+                  continue
+              f.write_text("\n".join(out_lines) + "\n", encoding="utf-8")
               changed.append(f"- `{name}` : {pin} → {latest}")
           lines = changed + ([""] + [f"- ⚠ {s}" for s in skipped] if skipped else [])
           (pathlib.Path(os.environ["RUNNER_TEMP"]) / "summary.md").write_text(

@@ -1,6 +1,6 @@
-// LaStarter â€” auto-redirect SSO.
+// LaStarter — auto-redirect SSO.
 // L'URL d'auth vient de l'attribut data-auth du <script> qui charge ce fichier
-// (rendu par le CLI : /api/v1.0/authenticate/ pour Django, /login pour Projects).
+// (rendu par le CLI : /api/v1.0/authenticate/ pour les backends Django).
 // Anti-boucle : sessionStorage flag (une seule tentative par onglet).
 (() => {
     if (sessionStorage.getItem("ls_auth_redirect")) return;

@@ -1,5 +1,5 @@
-# Brique keycloak â€” identitÃ© et SSO (quay.io/keycloak/keycloak:26.3.2).
-# Realm importÃ© au premier dÃ©marrage (identity/realm-lastarter.json rendu par le CLI).
+# Brique keycloak — identité et SSO (quay.io/keycloak/keycloak:26.3.2).
+# Realm importé au premier démarrage (identity/realm-lastarter.json rendu par le CLI).
 
 services:
   kc_postgresql:
@@ -19,9 +19,9 @@ services:
     command: ["start-dev", "--import-realm"]
     env_file: ["${RUNTIME_DIR}/keycloak.env"]
     volumes:
-      # Rendu par le CLI (secrets substituÃ©s) â€” jamais commitÃ©.
+      # Rendu par le CLI (secrets substitués) — jamais commité.
       - ${REALM_JSON_PATH}:/opt/keycloak/data/import/realm.json:ro
-      # ThÃ¨me de login LaStarter (drop-in, committÃ© dans identity/).
+      # Thème de login LaStarter (drop-in, committé dans identity/).
       - ${THEME_DIR}/lastarter:/opt/keycloak/themes/lastarter:ro
     depends_on:
       kc_postgresql:
@@ -36,8 +36,8 @@ services:
       retries: 100
     networks: [lastarter]
 
-  # Portail d'entrÃ©e (statique, zÃ©ro dÃ©pendance) : launchpad des briques actives.
-  # Dossier complet matÃ©rialisÃ© par le CLI dans .runtime/portal/ (pages + config).
+  # Portail d'entrée (statique, zéro dépendance) : launchpad des briques actives.
+  # Dossier complet matérialisé par le CLI dans .runtime/portal/ (pages + config).
   portal:
     image: nginx:1.25-alpine
     volumes:
@@ -49,9 +49,9 @@ services:
       retries: 60
     networks: [lastarter]
 
-  # Passerelle d'entrÃ©e unique (TLS) : apex â†’ Keycloak, <app>.<domaine> â†’ app.
-  # Conf gÃ©nÃ©rÃ©e par le CLI (.runtime/edge.conf) ; certificats POC (CA locale)
-  # gÃ©nÃ©rÃ©s par le CLI dans .runtime/certs/ â€” en prod : certificats du client.
+  # Passerelle d'entrée unique (TLS) : apex → Keycloak, <app>.<domaine> → app.
+  # Conf générée par le CLI (.runtime/edge.conf) ; certificats POC (CA locale)
+  # générés par le CLI dans .runtime/certs/ — en prod : certificats du client.
   gateway:
     image: nginx:1.25-alpine
     ports:
@@ -64,12 +64,12 @@ services:
       - ./files/fonts:/var/www/lastarter-theme/fonts:ro
       # Branding client (logo) : rempli par le CLI dans .runtime/branding/.
       - ${BRANDING_DIR}:/var/www/lastarter-theme/branding:ro
-    # Alias rÃ©seau : les conteneurs rÃ©solvent id.<domaine> â†’ passerelle.
-    # NÃ©cessaire pour les apps qui utilisent la dÃ©couverte OIDC (issuer public).
+    # Alias réseau : les conteneurs résolvent id.<domaine> → passerelle.
+    # Nécessaire pour les apps qui utilisent la découverte OIDC (issuer public).
     networks:
       lastarter:
         aliases:
-          - id.localhost
+          - id.${LASTARTER_HOST}
           - livekit.${LASTARTER_HOST}
     depends_on:
       keycloak:

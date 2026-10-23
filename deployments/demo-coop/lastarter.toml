@@ -8,30 +8,34 @@ domain = "localhost:8443"
 brand_name = "LaStarter"
 theme = "element-light"
 brand_color = "#0bc491"
-logo_url = ""
-created = "2026-10-23T13:45:40+00:00"
+logo_url = "/__lastarter/branding/logo.svg"
+created = "2026-10-23T15:47:41+00:00"
 cli_version = "0.1.0"
 
 [bricks.keycloak]
 title = "Keycloak — identité et SSO"
+label = "Keycloak"
 pin = "26.3.2"
 license = "Apache-2.0"
 upstream = "https://github.com/keycloak/keycloak"
 
 [bricks.discussions]
 title = "Discussions — messagerie Matrix"
+label = "Discussions"
 pin = "v1.12.32"
 license = "AGPL-3.0-only"
 upstream = "https://github.com/element-hq/element-web"
 
 [bricks.drive]
 title = "Drive — stockage de fichiers"
+label = "Drive"
 pin = "v0.25.2"
 license = "MIT"
 upstream = "https://github.com/suitenumerique/drive"
 
 [bricks.meet]
 title = "Meet — visioconférence"
+label = "Meet"
 pin = "v1.36.2"
 license = "MIT"
 upstream = "https://github.com/suitenumerique/meet"

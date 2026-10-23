@@ -12,9 +12,11 @@ from pathlib import Path
 
 from ..catalogue import Brick, find_catalogue, load_catalogue
 
-# Licences acceptées (normalisées par comparaison exacte, préfixe ou expression
-# multilicence complète). Toute valeur non couverte ici doit d'abord passer par
-# une mise à jour motivée de docs/licences.md.
+# Licences acceptées, par comparaison EXACTE (valeur complète uniquement — la
+# multilicence Element est acceptée comme valeur exacte, pas par préfixe :
+# « GPL-3.0-or-later » ou « AGPL-3.0 OR <autre> » ne passent pas). Toute valeur
+# non couverte ici doit d'abord passer par une mise à jour motivée de
+# docs/licences.md.
 ALLOWED_LICENSES = {
     "MIT",
     "Apache-2.0",
@@ -24,13 +26,10 @@ ALLOWED_LICENSES = {
     "AGPL-3.0 OR GPL-3.0 OR Element-Commercial",
 }
 
-KNOWN_MULTI_PREFIXES = ("AGPL-3.0 OR", "AGPL-3.0-only", "GPL-3.0")
-
 
 def license_allowed(value: str) -> bool:
-    if value in ALLOWED_LICENSES:
-        return True
-    return any(value.startswith(prefix) for prefix in KNOWN_MULTI_PREFIXES)
+    """Comparaison exacte contre la liste blanche (ni préfixe, ni sous-chaîne)."""
+    return value in ALLOWED_LICENSES
 
 
 def gate(bricks: dict[str, Brick]) -> tuple[list[str], list[str]]:

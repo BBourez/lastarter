@@ -13,6 +13,8 @@
 #   LASTARTER_LOGO      fichier logo (.svg/.png) à copier
 #   LASTARTER_OUTPUT    racine des déploiements (défaut : <home>/deployments)
 #   LASTARTER_DEPLOY=1  déploie (docker compose) juste après init
+#   LASTARTER_OVERWRITE=1  (sans git) confirme la mise à jour du produit quand
+#                       deployments/ existe déjà (les déploiements restent préservés)
 #
 # Idempotent : ré-exécuter = mise à jour du dépôt + rejeu init (pré-rempli,
 # logo conservé) + redéploiement si LASTARTER_DEPLOY=1.
@@ -65,7 +67,7 @@ fetch_with_git() {
 fetch_with_tarball() {
   command -v curl >/dev/null 2>&1 || command -v wget >/dev/null 2>&1 \
     || die "ni git ni curl/wget : impossible de récupérer le dépôt."
-  local tmp
+  local tmp src entry name
   tmp="$(mktemp -d)"
   log "git absent — téléchargement du tarball (branche main)"
   if command -v curl >/dev/null 2>&1; then
@@ -73,9 +75,24 @@ fetch_with_tarball() {
   else
     wget -qO "$tmp/lastarter.tar.gz" "https://codeload.github.com/BBourez/lastarter/tar.gz/refs/heads/main"
   fi
-  rm -rf "$LASTARTER_HOME"
+  # Extraction dans un dossier temporaire : seuls les fichiers du PRODUIT sont
+  # remplacés. deployments/ (coffre secrets.env append-only, branding/, dossiers
+  # clients) n'est JAMAIS touché — l'installateur reste réellement idempotent.
+  src="$tmp/src"
+  mkdir -p "$src"
+  tar -xzf "$tmp/lastarter.tar.gz" -C "$src" --strip-components=1
+  if [ -d "$LASTARTER_HOME/deployments" ] && [ "${LASTARTER_OVERWRITE:-}" != "1" ]; then
+    rm -rf "$tmp"
+    die "deployments/ existe déjà dans $LASTARTER_HOME (coffre secrets.env, branding, dossiers clients). Sans git, la mise à jour ne remplace que les fichiers du produit : relancer avec LASTARTER_OVERWRITE=1 pour confirmer (les déploiements restent préservés)."
+  fi
   mkdir -p "$LASTARTER_HOME"
-  tar -xzf "$tmp/lastarter.tar.gz" -C "$LASTARTER_HOME" --strip-components=1
+  for entry in "$src"/* "$src"/.[!.]* "$src"/..?*; do
+    [ -e "$entry" ] || continue
+    name="$(basename "$entry")"
+    [ "$name" = "deployments" ] && continue
+    rm -rf "$LASTARTER_HOME/$name"
+    cp -R "$entry" "$LASTARTER_HOME/$name"
+  done
   rm -rf "$tmp"
 }
 

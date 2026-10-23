@@ -127,6 +127,7 @@ opérations : [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 | Sujet | État |
 |---|---|
 | compose mono-VM, SSO Keycloak, theming natif, portail | ✅ en service |
+| Meet : déployée (images amont, SSO, theming CSS) ; smoke HTTP ; parcours e2e complet (SSO → salon → invitation → appel) à rejouer | ⏳ roadmap |
 | Kubernetes (charts amont, external-secrets/SOPS) | ⏳ roadmap |
 | Brique documents (lasuite/impress) | ⏳ roadmap |
 | MAS (SSO Matrix dédié), TURN/UDP pour meet | ⏳ roadmap |
