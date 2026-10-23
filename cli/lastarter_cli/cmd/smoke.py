@@ -62,6 +62,21 @@ def _check(results: list, label: str, url: str, expect: int, contains: str | Non
     results.append((ok, f"{mark} {label:<34} {detail}"))
 
 
+def _check_status_in(results: list, label: str, url: str, accepted: set[int],
+                     ca_file: Path | None = None) -> None:
+    """Statut dans un ensemble accepté (ex. API authentifiée : 200/401/403 —
+    un 400/500 à travers la passerelle est un bug, même backend « healthy »)."""
+    status, body, _location = _fetch(url, ca_file)
+    ok = status in accepted
+    mark = "✓" if ok else "✗"
+    detail = f"HTTP {status}"
+    if not ok:
+        detail += f" (attendu {'/'.join(map(str, sorted(accepted)))})"
+    if status == 0:
+        detail += f" — {body[:120]}"
+    results.append((ok, f"{mark} {label:<34} {detail}"))
+
+
 def _container_healthy(results: list, label: str, container: str) -> None:
     """Vérifie le healthcheck docker d'un conteneur (meet backend : manage.py check amont)."""
     result = subprocess.run(
@@ -145,6 +160,13 @@ def run_smoke(opts) -> int:
                 200, '"issuer"', ca_file,
             )
             _container_healthy(results, f"{name} (backend healthy)", f"{opts.client}-meet-backend")
+            # Contrôle HTTP RÉEL du backend à travers la passerelle : le
+            # healthcheck amont (« manage.py check ») peut être vert pendant
+            # que l'API répond 400 derrière le proxy (ex. DisallowedHost).
+            _check_status_in(
+                results, f"{name} (backend API)", f"{origin}/api/v1.0/config/",
+                {200, 401, 403}, ca_file,
+            )
             continue
         _check(results, f"{name} (frontend /)", origin, 200, None, ca_file)
         if brick.compose.get("api_target"):
