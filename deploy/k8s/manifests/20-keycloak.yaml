@@ -1,0 +1,130 @@
+# LaStarter kind — Keycloak 26.8.1 (start-dev --import-realm, realm importé
+# au premier boot depuis le Secret keycloak-realm ; thème de login monté).
+# POC HTTP : KC_HOSTNAME=http://id.localhost:8080 (le produit compose sert
+# https://id.localhost:8443 via la passerelle TLS).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: lastarter
+  labels:
+    app.kubernetes.io/part-of: lastarter
+    app.kubernetes.io/component: identity
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.8.1
+          args: ["start-dev", "--import-realm"]
+          envFrom:
+            - secretRef:
+                name: keycloak-secrets
+          env:
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL_HOST
+              value: postgres
+            - name: KC_DB_URL_DATABASE
+              value: keycloak
+            - name: KC_DB_SCHEMA
+              value: public
+            - name: KC_HOSTNAME
+              value: http://id.localhost:8080
+            - name: KC_PROXY_HEADERS
+              value: xforwarded
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+            - name: KC_METRICS_ENABLED
+              value: "true"
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: health
+              containerPort: 9000
+          startupProbe:
+            httpGet:
+              path: /health/ready
+              port: health
+            periodSeconds: 5
+            failureThreshold: 72
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: health
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: health
+            periodSeconds: 15
+            failureThreshold: 3
+          volumeMounts:
+            - name: realm
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
+            - name: theme
+              mountPath: /opt/keycloak/themes/lastarter
+              readOnly: true
+      volumes:
+        - name: realm
+          secret:
+            secretName: keycloak-realm
+            items:
+              - key: lastarter-realm.json
+                path: lastarter-realm.json
+        # Thème de login : clés aplaties ('/' -> '.') remises en arborescence
+        # via items[].path (mapping miroir de kind/render-realm.py).
+        - name: theme
+          secret:
+            secretName: keycloak-theme
+            items:
+              - key: login.login.ftl
+                path: login/login.ftl
+              - key: login.template.ftl
+                path: login/template.ftl
+              - key: login.theme.properties
+                path: login/theme.properties
+              - key: login.resources.css.cpd-common-base.css
+                path: login/resources/css/cpd-common-base.css
+              - key: login.resources.css.cpd-common-semantic.css
+                path: login/resources/css/cpd-common-semantic.css
+              - key: login.resources.css.cpd-font-fallbacks.css
+                path: login/resources/css/cpd-font-fallbacks.css
+              - key: login.resources.css.cpd-theme-light-base-mq.css
+                path: login/resources/css/cpd-theme-light-base-mq.css
+              - key: login.resources.css.lastarter.css
+                path: login/resources/css/lastarter.css
+              - key: login.resources.fonts.inter-latin-400-normal.woff2
+                path: login/resources/fonts/inter-latin-400-normal.woff2
+              - key: login.resources.fonts.inter-latin-500-normal.woff2
+                path: login/resources/fonts/inter-latin-500-normal.woff2
+              - key: login.resources.fonts.inter-latin-600-normal.woff2
+                path: login/resources/fonts/inter-latin-600-normal.woff2
+              - key: login.resources.fonts.inter-latin-700-normal.woff2
+                path: login/resources/fonts/inter-latin-700-normal.woff2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: lastarter
+  labels:
+    app: keycloak
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

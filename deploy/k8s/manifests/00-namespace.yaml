@@ -1,0 +1,7 @@
+# LaStarter kind — namespace unique de la tranche (POC Kubernetes).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lastarter
+  labels:
+    app.kubernetes.io/part-of: lastarter

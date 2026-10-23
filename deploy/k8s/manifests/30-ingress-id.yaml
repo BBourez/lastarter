@@ -1,0 +1,23 @@
+# LaStarter kind — ingress du service d'identité (id.localhost -> keycloak:8080).
+# POC HTTP : pas de section tls (le produit compose sert TLS sur :8443 ;
+# cert-manager = roadmap, cf. docs/DEPLOYMENT-K8S.md).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keycloak
+  namespace: lastarter
+  labels:
+    app.kubernetes.io/part-of: lastarter
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: id.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak
+                port:
+                  number: 8080

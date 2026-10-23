@@ -1,0 +1,127 @@
+# LaStarter kind — brique Drive sur le CHART AMONT (lecture seule :
+# examples/drive/src/helm/drive). Valeurs NON secrètes uniquement :
+# les secrets vivent dans deploy/k8s/.runtime/values-drive-secrets.yaml
+# (rendu par deploy/k8s/kind/render-realm.py — gitignoré).
+#
+# Infra RAW (pas les deps du chart — il n'en a pas) : postgres 18-alpine,
+# valkey 8.1-alpine, rustfs 1.0.3 déployés en manifests dans ce dossier,
+# servis par DNS k8s (postgres/valkey/rustfs — alias sans underscore).
+# Images pinnées (jamais latest) — cf. catalogue/drive.toml.
+
+image:
+  repository: lasuite/drive-backend
+  tag: "v0.25.2"
+  pullPolicy: IfNotPresent
+
+frontend:
+  image:
+    repository: lasuite/drive-frontend
+    tag: "v0.25.2"
+  replicas: 1
+
+backend:
+  replicas: 1
+  pdb:
+    enabled: false
+  envVars:
+    # Django — le web passe par le module PocHTTP (settings_k8s, HTTP POC) ;
+    # les jobs/celery/cronjobs restent sur drive.settings/Production.
+    DJANGO_SETTINGS_MODULE: drive.settings
+    DJANGO_CONFIGURATION: Production
+    DJANGO_ALLOWED_HOSTS: "drive.localhost,localhost"
+    # PostgreSQL (instance raw du dossier manifests, base drive).
+    DB_HOST: postgres
+    DB_NAME: drive
+    DB_USER: lastarter
+    DB_PORT: "5432"
+    # S3 rustfs (DNS k8s sans underscore) ; URLs publiques en http :8080.
+    AWS_S3_ACCESS_KEY_ID: drive
+    AWS_S3_REGION_NAME: eu-east-1
+    AWS_S3_SIGNATURE_VERSION: s3v4
+    AWS_S3_ENDPOINT_URL: http://rustfs:9000
+    AWS_S3_DOMAIN_REPLACE: http://drive.localhost:8080
+    MEDIA_BASE_URL: http://drive.localhost:8080
+    # Cache/celery — REDIS_URL nourrit les CACHES Django, CELERY_BROKER_URL le
+    # broker (défaut amont redis://redis:6379/0 : les deux sont requis).
+    REDIS_URL: redis://valkey:6379/0
+    CELERY_BROKER_URL: redis://valkey:6379/0
+    # OIDC : l'AUTHORIZATION est browser-facing (ingress id.localhost:8080),
+    # les backchannels (jwks/token/userinfo/logout) passent par le Service
+    # interne keycloak:8080 — les pods ne résolvent pas *.localhost.
+    OIDC_OP_JWKS_ENDPOINT: http://keycloak:8080/realms/lastarter/protocol/openid-connect/certs
+    OIDC_OP_AUTHORIZATION_ENDPOINT: http://id.localhost:8080/realms/lastarter/protocol/openid-connect/auth
+    OIDC_OP_TOKEN_ENDPOINT: http://keycloak:8080/realms/lastarter/protocol/openid-connect/token
+    OIDC_OP_USER_ENDPOINT: http://keycloak:8080/realms/lastarter/protocol/openid-connect/userinfo
+    OIDC_OP_LOGOUT_ENDPOINT: http://id.localhost:8080/realms/lastarter/protocol/openid-connect/logout
+    OIDC_RP_CLIENT_ID: drive
+    OIDC_RP_SIGN_ALGO: RS256
+    OIDC_RP_SCOPES: openid email profile
+    LOGIN_REDIRECT_URL: http://drive.localhost:8080
+    LOGIN_REDIRECT_URL_FAILURE: http://drive.localhost:8080
+    LOGOUT_REDIRECT_URL: http://drive.localhost:8080
+    OIDC_REDIRECT_ALLOWED_HOSTS: "drive.localhost:8080,id.localhost:8080"
+    CSRF_TRUSTED_ORIGINS: "http://drive.localhost:8080,http://id.localhost:8080"
+    # Parité compose (cf. .runtime/drive/backend.env du déploiement démo).
+    FRONTEND_THEME: dsfr-light
+    FRONTEND_FEEDBACK_BUTTON_SHOW: "False"
+    FRONTEND_FEEDBACK_MESSAGES_WIDGET_ENABLED: "False"
+    USER_RECONCILIATION_FORM_URL: http://drive.localhost:8080
+    MALWARE_DETECTION_BACKEND: core.malware_detection.SleepyDummyBackend
+    FEATURES_INDEXED_SEARCH: "False"
+    SEARCH_INDEXER_CLASS: ""
+    WOPI_CLIENTS: ""
+  django:
+    envVars:
+      # UNIQUEMENT le déploiement web (backend.django.envVars surcharge
+      # backend.envVars) : module monté par le ConfigMap drive-settings-k8s.
+      DJANGO_SETTINGS_MODULE: settings_k8s
+      DJANGO_CONFIGURATION: PocHTTP
+  extraVolumes:
+    - name: settings-k8s
+      configMap:
+        name: drive-settings-k8s
+  extraVolumeMounts:
+    - name: settings-k8s
+      mountPath: /app/settings_k8s.py
+      subPath: settings_k8s.py
+      readOnly: true
+
+# Ingress HTTP (POC :8080) — pas de TLS (cert-manager = roadmap).
+ingress:
+  enabled: true
+  className: nginx
+  host: drive.localhost
+  path: /
+  tls:
+    enabled: false
+
+# Console Django admin (parité compose : /admin -> backend).
+ingressAdmin:
+  enabled: true
+  className: nginx
+  host: drive.localhost
+  path: /admin
+  tls:
+    enabled: false
+
+# Médias : pattern amont conservé (auth par le backend, puis S3 rustfs
+# derrière un Service ExternalName). Pas de configuration-snippet (snippets
+# nginx désactivés par défaut côté contrôleur ; CSP media = roadmap).
+ingressMedia:
+  enabled: true
+  className: nginx
+  host: drive.localhost
+  path: /media/(.*)
+  tls:
+    enabled: false
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/auth-url: http://drive-backend.lastarter.svc.cluster.local/api/v1.0/items/media-auth/
+    nginx.ingress.kubernetes.io/auth-response-headers: "Authorization, X-Amz-Date, X-Amz-Content-SHA256"
+    nginx.ingress.kubernetes.io/upstream-vhost: rustfs.lastarter.svc.cluster.local:9000
+    nginx.ingress.kubernetes.io/configuration-snippet: null
+
+# Le Service « drive-media » (ExternalName) pointe le rustfs raw.
+serviceMedia:
+  host: rustfs.lastarter.svc.cluster.local
+  port: 9000

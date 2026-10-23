@@ -1,0 +1,97 @@
+# LaStarter kind — PostgreSQL 18-alpine (infra brute, comme le produit compose).
+# Une instance, deux bases (keycloak + drive) créées à l'initdb : la cible
+# compose préfère deux instances dédiées ; pour le POC kind une instance
+# suffit (identités de services k8s, pas de ports hôtes exposés).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-initdb
+  namespace: lastarter
+data:
+  init-databases.sql: |
+    -- Bases consommées par Keycloak et Drive (POC kind, instance unique).
+    CREATE DATABASE keycloak;
+    CREATE DATABASE drive;
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: lastarter
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: lastarter
+  labels:
+    app.kubernetes.io/part-of: lastarter
+    app.kubernetes.io/component: infra-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:18-alpine
+          envFrom:
+            - secretRef:
+                name: postgres-secrets
+          ports:
+            - name: pg
+              containerPort: 5432
+          volumeMounts:
+            # postgres 18+ : layout versionné /var/lib/postgresql (cf. compose).
+            - name: data
+              mountPath: /var/lib/postgresql
+            - name: initdb
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+          startupProbe:
+            exec:
+              command: ["/bin/sh", "-c", "pg_isready -U $POSTGRES_USER"]
+            periodSeconds: 5
+            failureThreshold: 48
+          readinessProbe:
+            exec:
+              command: ["/bin/sh", "-c", "pg_isready -U $POSTGRES_USER"]
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command: ["/bin/sh", "-c", "pg_isready -U $POSTGRES_USER"]
+            periodSeconds: 15
+            failureThreshold: 3
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-data
+        - name: initdb
+          configMap:
+            name: postgres-initdb
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: lastarter
+  labels:
+    app: postgres
+spec:
+  selector:
+    app: postgres
+  ports:
+    - name: pg
+      port: 5432
+      targetPort: pg

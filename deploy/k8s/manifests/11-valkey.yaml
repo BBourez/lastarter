@@ -1,0 +1,51 @@
+# LaStarter kind — Valkey 8.1-alpine (cache/celery drive ; BSD-3, sans état
+# comme le compose — pas de PVC).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: valkey
+  namespace: lastarter
+  labels:
+    app.kubernetes.io/part-of: lastarter
+    app.kubernetes.io/component: infra-valkey
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: valkey
+  template:
+    metadata:
+      labels:
+        app: valkey
+    spec:
+      containers:
+        - name: valkey
+          image: valkey/valkey:8.1-alpine
+          ports:
+            - name: valkey
+              containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["valkey-cli", "ping"]
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command: ["valkey-cli", "ping"]
+            periodSeconds: 15
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: valkey
+  namespace: lastarter
+  labels:
+    app: valkey
+spec:
+  selector:
+    app: valkey
+  ports:
+    - name: valkey
+      port: 6379
+      targetPort: valkey

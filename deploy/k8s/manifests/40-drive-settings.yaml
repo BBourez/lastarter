@@ -1,0 +1,37 @@
+# LaStarter kind — module de settings Django POC pour le backend drive.
+#
+# Le chart amont ne connaît que Production (SECURE_SSL_REDIRECT=True forcé,
+# cookies Secure, HSTS) : incompatible avec un ingress HTTP (:8080). Plutôt
+# que la classe Development (debug toolbar + endpoints e2e), on hérite de
+# Production en ne retirant QUE l'obligation TLS — zéro fork : ce module est
+# un fichier de déploiement monté via ConfigMap (DJANGO_SETTINGS_MODULE),
+# l'image amont est inchangée.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: drive-settings-k8s
+  namespace: lastarter
+  labels:
+    app.kubernetes.io/part-of: lastarter
+data:
+  settings_k8s.py: |
+    """POC kind LaStarter : Production adouci pour l'HTTP local (:8080).
+
+    Hérite de Production (ALLOWED_HOSTS imposés, sécurité conservée) et ne
+    retire que ce qu'un ingress HTTP ne peut pas fournir : la redirection
+    TLS, les cookies Secure et le HSTS. En prod k8s (TLS via cert-manager),
+    supprimer ce module et revenir à DJANGO_SETTINGS_MODULE=drive.settings.
+    """
+
+    from drive.settings import Production
+
+
+    class PocHTTP(Production):
+        SECURE_SSL_REDIRECT = False
+        SECURE_HSTS_SECONDS = 0
+        SECURE_HSTS_PRELOAD = False
+        SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+        CSRF_COOKIE_SECURE = False
+        SESSION_COOKIE_SECURE = False
+        # Derrière ingress-nginx en HTTP pur : ne pas déduire https du header.
+        SECURE_PROXY_SSL_HEADER = None

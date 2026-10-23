@@ -1,0 +1,40 @@
+# LaStarter kind — création du bucket S3 drive-media-storage (Job one-shot,
+# miroir du service compose drive_createbuckets : bucket + versioning).
+# Endpoint rustfs direct (DNS service, sans underscore). Idempotent :
+# `aws s3 mb` sur bucket existant est toléré, le versioning est re-déclaré.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: s3-init
+  namespace: lastarter
+spec:
+  backoffLimit: 8
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: lastarter
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: aws-cli
+          image: amazon/aws-cli:2.27.48
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              value: drive
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: drive-secrets
+                  key: RUSTFS_SECRET_KEY
+            - name: AWS_DEFAULT_REGION
+              value: eu-east-1
+            - name: AWS_ENDPOINT_URL
+              value: http://rustfs:9000
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              aws s3 mb s3://drive-media-storage || true
+              aws s3api put-bucket-versioning \
+                --bucket drive-media-storage \
+                --versioning-configuration Status=Enabled

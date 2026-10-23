@@ -1,0 +1,20 @@
+# Cluster kind de validation LaStarter (POC Kubernetes).
+# Ports hôtes : 8080 -> ingress HTTP, 8444 -> ingress HTTPS.
+# 8443 est DÉJÀ pris par la passerelle compose (demo-coop) : ne pas y toucher.
+# Label ingress-ready : requis par le provider ingress-nginx « kind ».
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeLabels:
+          ingress-ready: "true"
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 8080
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 8444
+        protocol: TCP
