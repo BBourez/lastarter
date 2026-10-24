@@ -8,10 +8,12 @@ référencée ici (cf. docs/licences.md du dépôt LaStarter).
 | Brique | Licence | Version épinglée | Source |
 |---|---|---|---|
 | Keycloak — identité et SSO | Apache-2.0 | 26.8.1 | https://github.com/keycloak/keycloak |
+| Agenda — calendriers partagés | MIT | v0.1.0 | https://github.com/suitenumerique/calendars |
 | Discussions — messagerie Matrix | AGPL-3.0-only | v1.12.32 | https://github.com/element-hq/element-web |
 | Docs — documents collaboratifs | MIT | v6.0.3 | https://github.com/suitenumerique/docs |
 | Drive — stockage de fichiers | MIT | v0.25.2 | https://github.com/suitenumerique/drive |
 | Meet — visioconférence | MIT | v1.36.2 | https://github.com/suitenumerique/meet |
+| Projets — suivi de projet | AGPL-3.0-only | v1.27.12 | https://github.com/suitenumerique/projects |
 
 Marques : « La Suite », « Element », « Tchap » et logos associés appartiennent à
 leurs titulaires et n'apparaissent pas dans les interfaces livrées (branding

@@ -1,0 +1,85 @@
+# Brique collaboration : Projets — suivi de projet suitenumerique/projects
+# (La Suite Projets). Image AMONT vanilla unique (lasuite/projects, AGPL-3.0) :
+# monolithe Sails.js + SPA React dans un SEUL conteneur (port 1337, websocket
+# socket.io pour le temps réel). Zéro fork ; SSO OIDC natif (openid-client).
+
+[brick]
+name = "projects"
+title = "Projets — suivi de projet"
+category = "collaboration"
+description = "Tableaux de suivi de projet collaboratifs, authentifiés par le SSO."
+license = "AGPL-3.0-only"
+upstream_repo = "https://github.com/suitenumerique/projects"
+upstream_pin = "v1.27.12"
+upstream_image = "lasuite/projects:1.27.12"   # tag Hub SANS « v » ; releases = branche main-dinum
+core = false
+requires = ["keycloak"]
+extra_secrets = [
+  "projects_oidc_secret",   # secret du client OIDC `projects`
+  "projects_db_password",   # postgres projects
+  "projects_secret_key",    # signature des cookies de session (Sails)
+]
+
+[oidc]
+realm = "lastarter"
+client_id = "projects"
+scopes = "openid email profile"
+userinfo_plain = true   # openid-client v5 attend du JSON, pas un JWT signé
+# Callback CODÉ EN DUR amont : ${BASE_URL}/oidc-callback (route SPA) —
+# couvert par les redirectUris {origin}/* du client realm.
+
+[env]
+# Image amont pinnée (JAMAIS latest ; piège : le tag typo « 1.17.12 » existe
+# sur le Hub — ne pas l'utiliser).
+PROJECTS_IMAGE = "lasuite/projects:1.27.12"
+
+# --- jeton consommé par deploy/compose/projects.yml (compose.env) ---
+PROJECTS_DB_PASSWORD = "{secret:projects_db_password}"
+
+# --- app (rendus en .runtime/projects/projects.env, monté via env_file ;
+# --- noms EXACTS de server/config/env/production amont à v1.27.12) ---
+BASE_URL = "{origin}"                       # construit le redirect URI OIDC
+DATABASE_URL = "postgresql://projects:{secret:projects_db_password}@projects_postgresql:5432/projects"
+SECRET_KEY = "{secret:projects_secret_key}"
+OIDC_ISSUER = "{sso_origin}/realms/lastarter"   # identique vu du navigateur ET du conteneur (alias passerelle)
+OIDC_CLIENT_ID = "projects"
+OIDC_CLIENT_SECRET = "{secret:projects_oidc_secret}"
+# Jeton au nom mozilla-django-oidc consommé par build_realm_clients (source
+# unique du secret client realm) — même valeur que OIDC_CLIENT_SECRET.
+OIDC_RP_CLIENT_SECRET = "{secret:projects_oidc_secret}"
+OIDC_ENFORCED = "true"                      # SSO uniquement : login local désactivé
+OIDC_SCOPES = "openid email profile"
+OIDC_USE_DEFAULT_RESPONSE_MODE = "true"     # recommandé avec Keycloak
+OIDC_FULLNAME_ATTRIBUTES = "name"
+OIDC_IGNORE_USERNAME = "true"
+OIDC_IGNORE_ROLES = "true"
+ALLOW_ALL_TO_CREATE_PROJECTS = "true"       # tout utilisateur authentifié peut créer
+TRUST_PROXY = "1"                           # derrière la passerelle
+
+[compose]
+profile = "projects"
+native_sso = true                       # OIDC openid-client natif : pas d'auto-login passerelle
+route_label = "projects"                # projects.<domaine>
+frontend_target = "projects:1337"       # monolithe : SPA + /api + /socket.io (location / déjà équipée Upgrade)
+infra_services = ["projects_postgresql"]
+oneshot_services = []                   # migrations knex + seed DANS l'entrypoint amont (node db/init.js)
+services = [
+  "projects_postgresql",
+  "projects",
+]
+extras = []
+
+[notes]
+poc = """
+Single-instance IMPOSÉE à v1.27.12 : sessions mémoire, aucun adapter socket.io,
+pas de REDIS_URL (features de main/1.3.x — ne PAS ajouter de service redis).
+Images Docker Hub linux/amd64 UNIQUEMENT (pas d'arm64). Uploads sur le disque
+(volumes nommés avatars/backgrounds/attachments) — S3 possible mais non câblé.
+Pas d'email si SMTP_HOST unset (notifications silencieusement désactivées).
+TLS amont : NODE_EXTRA_CA_CERTS (compose) fait confiance à la CA locale pour
+la découverte/l'échange OIDC (issuer public via l'alias passerelle id.).
+"""
+theming = """
+Aucun habillage possible à v1.27.12 (SERVICE_NAME/THEME sont des features de
+main) : l'app porte son propre brand. SSO + route suffisent à v1.
+"""

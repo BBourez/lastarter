@@ -193,7 +193,14 @@ def build_realm_clients(bricks: list[Brick], rendered_envs: dict[str, str], answ
                 "protocol": "openid-connect",
                 "fullScopeAllowed": True,
                 "attributes": {
-                    "user.info.response.signature.alg": "RS256",
+                    # userinfo signé (JWT) : requis par la pile lasuite-Django ;
+                    # les apps en SSO natif hors-Django (openid-client v5)
+                    # attendent du JSON — flag [oidc] userinfo_plain. Valeur
+                    # POSÉE À "" (pas omise) : le PUT Keycloak FUSIONNE les
+                    # attributs, une clé absente ne serait jamais retirée.
+                    "user.info.response.signature.alg": (
+                        "" if brick.oidc.get("userinfo_plain") else "RS256"
+                    ),
                     "post.logout.redirect.uris": f"{origin}/*",
                     "backchannel.logout.session.required": "true",
                 },
@@ -446,10 +453,11 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
             "    client_max_body_size 150m;",
             "",
         ]
-        # Discussions (Element Web) : DÉJÀ en Compound natif — NE PAS injecter le
-        # thème (il entrerait en conflit avec ses styles propres), ni l'auto-login
-        # (son SSO est natif : Synapse OIDC).
-        if brick.name != "discussions":
+        # Apps en SSO NATIF (Synapse pour discussions, openid-client pour
+        # projects) : ni injection thème (styles propres), ni auto-login (la
+        # route lasuite /api/v1.0/authenticate/ n'existe pas chez elles) —
+        # flag native_sso du catalogue.
+        if not brick.compose.get("native_sso"):
             lines += _theme_nginx_block(auth_url="/api/v1.0/authenticate/")
 
         if api_target:
@@ -489,6 +497,23 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
                 "    }",
                 "",
             ]
+        # Locations API supplémentaires (ex. /caldav de calendars) : même
+        # traitement que /api/ — backend direct, Host/Proto préservés.
+        if api_target:
+            for extra_route in brick.compose.get("extra_api_locations", []):
+                lines += [
+                    f"    location {extra_route} {{",
+                    "        resolver 127.0.0.11 valid=10s ipv6=off;",
+                    f"        set $backend_extra {api_target};",
+                    "        proxy_pass http://$backend_extra;",
+                    '        proxy_set_header Accept-Encoding "";',  # sub_filter : HTML non gzip
+                    "        proxy_set_header Host $http_host;",
+                    "        proxy_set_header X-Real-IP $remote_addr;",
+                    "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;",
+                    "        proxy_set_header X-Forwarded-Proto https;",
+                    "    }",
+                    "",
+                ]
         if brick.compose.get("access") == "vpn":
             lines += [
                 f"    # Accès restreint : VPN/LAN uniquement ({brick.name}).",
@@ -821,7 +846,9 @@ def _brand_logo_url(answers: dict) -> str:
 
 
 APP_EMOJI = {
+    "calendars": "📅",
     "docs": "📝",
+    "projects": "📋",
     "drive": "📁",
     "meet": "🎥",
     "discussions": "💬",

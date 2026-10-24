@@ -91,3 +91,23 @@ rejouable.
 - Reproduction : `bash deploy/k8s/deploy.sh` (idempotent, garde-fou contexte kind). Détails : docs/DEPLOYMENT-K8S.md.
 - Limitations : login navigateur bloqué en HTTP pur (Keycloak 26 émet des cookies `Secure` — TLS cert-manager = roadmap) ; secrets en clair dans `.runtime/` (SOPS = roadmap) ; 1 brique validée, les 4 clients OIDC des autres déjà dans le realm.
 - **Découverte produit (fix compose)** : l'amont Drive exige `CELERY_BROKER_URL` + un worker celery — absents du compose (tâches async mortes en silence). Corrigé : `drive_celery` + `CELERY_BROKER_URL`, validé live (worker connecté au broker).
+
+## Briques Projets et Agenda LIVRÉES (2026-10-24)
+
+- **projects** (suitenumerique/projects v1.27.12, AGPL-3.0) : monolithe Sails+React
+  (port 1337, socket.io — la location / de la passerelle est déjà équipée Upgrade).
+  Migrations knex DANS l'entrypoint amont (aucun oneshot). SSO openid-client natif
+  (`native_sso = true` : pas d'auto-login passerelle) + `userinfo_plain = true`
+  (openid-client v5 veut du JSON ; le PUT Keycloak FUSIONNANT les attributs, la
+  désactivation du userinfo signé se fait en posant la valeur à "" et pas en
+  omittant la clé). Image amd64 UNIQUEMENT, single-instance imposée (pas de
+  REDIS_URL à cette version), tag Hub SANS « v » (piège du typo-tag 1.17.12).
+- **calendars** (suitenumerique/calendars v0.1.0, MIT, GHCR) : Django + worker
+  dramatiq + SabreDAV (jamais exposé : /.well-known/caldav routé vers le backend
+  via le nouveau mécanisme générique `extra_api_locations`) + SPA Caddy. Deux
+  schémas en base (Django + `sabre`) : oneshot calendars_caldav_init + migrations
+  via le mécanisme générique migrate_service. `DJANGO_SETTINGS_MODULE` requis
+  (django-configurations) ; préfixes DJANGO_ALLOWED_HOSTS/DJANGO_CSRF_TRUSTED_ORIGINS.
+- 2 clients OIDC provisionnés live dans le realm (flag userinfo conditionnel),
+  certificat régénéré avec les nouveaux SAN, smoke 15/15, logins SSO Projects et
+  Agenda validés en navigateur (compte demo).

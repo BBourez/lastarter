@@ -1,0 +1,128 @@
+# Brique collaboration : Agenda — calendriers et invitations
+# suitenumerique/calendars (La Suite Agenda). Images AMONT vanilla
+# ghcr.io/suitenumerique/calendars-{backend,frontend,caldav} (MIT) : Django +
+# worker dramatiq + SabreDAV (PHP) + SPA Caddy. Zéro fork ; SSO OIDC natif
+# (mozilla-django-oidc + django-lasuite, même famille que drive).
+
+[brick]
+name = "calendars"
+title = "Agenda — calendriers partagés"
+category = "collaboration"
+description = "Agenda partagé avec invitations (ICS/CalDAV), authentifié par le SSO."
+license = "MIT"
+upstream_repo = "https://github.com/suitenumerique/calendars"
+upstream_pin = "v0.1.0"
+upstream_image = "ghcr.io/suitenumerique/calendars-backend:0.1.0"  # + -frontend / -caldav :0.1.0 (tag SANS « v »)
+core = false
+requires = ["keycloak"]
+extra_secrets = [
+  "calendars_oidc_secret",         # secret du client OIDC `calendars`
+  "calendars_django_secret",       # DJANGO_SECRET_KEY du backend
+  "calendars_db_password",         # postgres calendars (Django + schéma sabre)
+  "calendars_caldav_key_in",       # clé API : sabre -> backend (callback scheduling)
+  "calendars_caldav_key_out",      # clé API : backend -> sabre (X-LS-Api-Key)
+  "calendars_caldav_key_internal", # clé API : endpoints internes
+]
+
+[oidc]
+realm = "lastarter"
+client_id = "calendars"
+scopes = "openid email"
+# Callback amont (lasuite.oidc_login) : https://calendars.<domaine>/api/v1.0/
+# oidc/callback/ — couvert par les redirectUris {origin}/* du client realm.
+
+[env]
+# --- images pinnées (JAMAIS latest : GHCR expose aussi latest/main qui
+# --- suivent la branche main non-release) ---
+CALENDARS_BACKEND_IMAGE = "ghcr.io/suitenumerique/calendars-backend:0.1.0"
+CALENDARS_FRONTEND_IMAGE = "ghcr.io/suitenumerique/calendars-frontend:0.1.0"
+CALENDARS_CALDAV_IMAGE = "ghcr.io/suitenumerique/calendars-caldav:0.1.0"
+
+# --- jeton consommé par deploy/compose/calendars.yml (compose.env) ---
+CALENDARS_DB_PASSWORD = "{secret:calendars_db_password}"
+
+# --- backend + worker + caldav (rendus en .runtime/calendars/calendars.env ;
+# --- noms EXACTS de la classe Production amont, préfixe django-configurations) ---
+DJANGO_CONFIGURATION = "Production"     # OBLIGATOIRE aussi sur worker.py (setdefault Development)
+DJANGO_SETTINGS_MODULE = "calendars.settings"
+DJANGO_SECRET_KEY = "{secret:calendars_django_secret}"
+DJANGO_ALLOWED_HOSTS = "{app_bare}"
+DJANGO_CSRF_TRUSTED_ORIGINS = "https://{app_host}"
+DB_HOST = "calendars_postgresql"
+DB_NAME = "calendars"
+DB_USER = "dinum"
+DB_PASSWORD = "{secret:calendars_db_password}"
+DB_PORT = "5432"
+REDIS_URL = "redis://calendars_redis:6379/0"      # cache + sessions
+DRAMATIQ_BROKER_URL = "redis://calendars_redis:6379/0"
+DRAMATIQ_RESULT_BACKEND_URL = "redis://calendars_redis:6379/1"
+
+# OIDC (mozilla-django-oidc + django-lasuite)
+OIDC_RP_CLIENT_ID = "calendars"
+OIDC_RP_CLIENT_SECRET = "{secret:calendars_oidc_secret}"
+OIDC_RP_SIGN_ALGO = "RS256"
+OIDC_RP_SCOPES = "openid email"
+OIDC_OP_JWKS_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/certs"
+OIDC_OP_AUTHORIZATION_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/auth"
+OIDC_OP_TOKEN_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/token"
+OIDC_OP_USER_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/userinfo"
+OIDC_OP_LOGOUT_ENDPOINT = "{sso_origin}/realms/lastarter/protocol/openid-connect/logout"
+LOGIN_REDIRECT_URL = "{origin}"
+LOGIN_REDIRECT_URL_FAILURE = "{origin}"
+LOGOUT_REDIRECT_URL = "{origin}"
+OIDC_REDIRECT_ALLOWED_HOSTS = '["https://{app_host}"]'
+
+# CalDAV (sens croisé des clés : Django -> sabre = OUTBOUND ; sabre -> Django
+# = INBOUND ; INTERNAL = endpoints internes)
+CALDAV_URL = "http://calendars_caldav"
+CALDAV_OUTBOUND_API_KEY = "{secret:calendars_caldav_key_out}"
+CALDAV_INBOUND_API_KEY = "{secret:calendars_caldav_key_in}"
+CALDAV_INTERNAL_API_KEY = "{secret:calendars_caldav_key_internal}"
+CALDAV_CALLBACK_BASE_URL = "http://calendars_backend:8000"
+# Côté caldav + one-shot init (mêmes creds que DB_*)
+PGHOST = "calendars_postgresql"
+PGPORT = "5432"
+PGDATABASE = "calendars"
+PGUSER = "dinum"
+PGPASSWORD = "{secret:calendars_db_password}"
+CALDAV_DB_SCHEMA = "sabre"
+
+# Email (POC : console — les invitations partent en erreur sans SMTP réel,
+# cœur produit à brancher sur un relais SMTP en déploiement client)
+DJANGO_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+[compose]
+profile = "calendars"
+route_label = "calendars"                    # calendars.<domaine>
+frontend_target = "calendars_frontend:8080"  # Caddy SPA (assets seuls)
+api_target = "calendars_backend:8000"        # /api + /admin + /static → Django
+extra_api_locations = ["/caldav/", "/.well-known/caldav", "/rsvp/", "/ical/"]
+infra_services = ["calendars_postgresql", "calendars_redis"]
+oneshot_services = ["calendars_caldav_init"]
+migrate_service = "calendars_backend"
+migrate_command = "python manage.py migrate --no-input"
+services = [
+  "calendars_postgresql",
+  "calendars_redis",
+  "calendars_caldav_init",
+  "calendars_backend",
+  "calendars_worker",
+  "calendars_caldav",
+  "calendars_frontend",
+]
+extras = []
+
+[notes]
+warnings = """
+Le one-shot calendars_caldav_init crée le schéma `sabre` (le serveur CalDAV ne
+fait JAMAIS de DDL) — idempotent, rejoué à chaque deploy. Projet PRE-1.0 : une
+seule release (v0.1.0) — pinner strict, re-vérifier à chaque bump. HTTPS
+obligatoire (Production code en dur SECURE_SSL_REDIRECT + HSTS + cookies
+secure) : la passerelle y répond déjà (X-Forwarded-Proto https).
+"""
+poc = """
+Invitations par email : backend en console (POC) — brancher un relais SMTP
+(DJANGO_EMAIL_*) chez le client. CalDAV externe (Thunderbird/Apple) passe par
+l'origine publique /.well-known/caldav (Basic auth email + token) : routée par
+extra_api_locations vers le backend qui proxifie SabreDAV (jamais exposé).
+"""

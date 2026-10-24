@@ -42,6 +42,7 @@ SYNAPSE_IMAGE = "matrixdotorg/synapse:v1.163.1"
 
 [compose]
 profile = "discussions"
+native_sso = true                       # Synapse OIDC natif : pas d'auto-login passerelle
 route_label = "chat"                  # chat.<domaine>
 frontend_target = "discussions_element_web:80"
 # L'API Matrix est servie same-origin via la passerelle (/_matrix, /_synapse).

@@ -147,7 +147,7 @@ class RunCheckUpdatesTests(unittest.TestCase):
         rows = json.loads(out)
         self.assertEqual(
             {row["brique"] for row in rows},
-            {"keycloak", "discussions", "drive", "meet", "docs"},
+            {"keycloak", "discussions", "drive", "meet", "docs", "projects", "calendars"},
         )
         for row in rows:
             self.assertEqual(set(row), {"brique", "pin", "latest", "a_jour"})

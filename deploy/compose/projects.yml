@@ -1,0 +1,51 @@
+# LaStarter — Projets (suivi de projet, suitenumerique/projects).
+# Image AMONT vanilla unique : lasuite/projects:1.27.12 (AGPL-3.0) — monolithe
+# Sails.js + SPA React dans un seul conteneur (port 1337, websocket socket.io).
+# Migrations knex + seed DANS l'entrypoint amont (node db/init.js) : aucun
+# oneshot. Infra aux versions du compose amont (postgres 16-alpine).
+# Single-instance imposée à cette version (sessions mémoire, pas de REDIS_URL).
+
+services:
+  projects_postgresql:
+    image: postgres:16-alpine
+    container_name: ${LASTARTER_CLIENT}-projects-postgresql
+    environment:
+      POSTGRES_DB: projects
+      POSTGRES_USER: projects
+      POSTGRES_PASSWORD: ${PROJECTS_DB_PASSWORD}
+    volumes:
+      - projects_pgdata:/var/lib/postgresql/data
+    networks: [lastarter]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d projects -U projects"]
+      interval: 5s
+      timeout: 3s
+      retries: 120
+
+  # App complète (SPA + /api + /socket.io). L'image embarque son propre
+  # HEALTHCHECK (node healthcheck.js, GET / sur 1337) — ne pas l'écraser.
+  projects:
+    image: ${PROJECTS_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-projects
+    env_file: ["${RUNTIME_DIR}/projects.env"]
+    environment:
+      # OIDC issuer public (https://id.<domaine>) résolu via l'alias passerelle :
+      # discovery + échange de code en TLS → la CA locale doit être connue de Node.
+      NODE_EXTRA_CA_CERTS: /certs/ca.crt
+    volumes:
+      - ${CERTS_DIR}:/certs:ro
+      - projects_avatars:/app/public/user-avatars
+      - projects_backgrounds:/app/public/project-background-images
+      - projects_attachments:/app/private/attachments
+    networks: [lastarter]
+    restart: unless-stopped
+    depends_on:
+      projects_postgresql:
+        condition: service_healthy
+
+volumes:
+  projects_pgdata:
+  projects_avatars:
+  projects_backgrounds:
+  projects_attachments:

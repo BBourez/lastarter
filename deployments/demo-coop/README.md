@@ -1,8 +1,8 @@
-# Déploiement « Demo Coop »
+# Déploiement « demo-coop »
 
 - Domaine : localhost:8443
 - Marque : LaStarter
-- Briques : keycloak, discussions, docs, drive, meet
+- Briques : keycloak, calendars, discussions, docs, drive, meet, projects
 
 ## Contenu
 

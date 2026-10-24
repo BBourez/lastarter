@@ -1,0 +1,105 @@
+# LaStarter — Agenda (suitenumerique/calendars).
+# Images AMONT vanilla ghcr.io/suitenumerique/calendars-{backend,frontend,caldav}
+# :0.1.0 (MIT), pinnées dans catalogue/calendars.toml. Infra aux conventions
+# des briques (postgres 16-alpine, valkey 8.1). DEUX schémas en base : Django
+# (public) + sabre (CalDAV, créé par le one-shot calendars_caldav_init).
+# Migrations Django : mécanisme générique migrate_service (CLI, avant l'up).
+
+services:
+  calendars_postgresql:
+    image: postgres:16-alpine
+    container_name: ${LASTARTER_CLIENT}-calendars-postgresql
+    environment:
+      POSTGRES_DB: calendars
+      POSTGRES_USER: dinum
+      POSTGRES_PASSWORD: ${CALENDARS_DB_PASSWORD}
+    volumes:
+      - calendars_pgdata:/var/lib/postgresql/data
+    networks: [lastarter]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d calendars -U dinum"]
+      interval: 5s
+      timeout: 3s
+      retries: 120
+
+  # valkey 8.1-alpine (BSD-3, maintenu) : cache + sessions + broker dramatiq.
+  calendars_redis:
+    image: valkey/valkey:8.1-alpine
+    container_name: ${LASTARTER_CLIENT}-calendars-redis
+    networks: [lastarter]
+    restart: unless-stopped
+
+  # One-shot : schéma sabre/dav (le serveur CalDAV ne fait JAMAIS de DDL).
+  # Idempotent — rejoué à chaque deploy (run --rm + dépendance backend).
+  calendars_caldav_init:
+    image: ${CALENDARS_CALDAV_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-calendars-caldav-init
+    env_file: ["${RUNTIME_DIR}/calendars.env"]
+    command: ["bash", "/usr/local/bin/init-database.sh"]
+    networks: [lastarter]
+    restart: "no"
+    depends_on:
+      calendars_postgresql:
+        condition: service_healthy
+
+  calendars_backend:
+    image: ${CALENDARS_BACKEND_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-calendars-backend
+    env_file: ["${RUNTIME_DIR}/calendars.env"]
+    environment:
+      REQUESTS_CA_BUNDLE: /certs/ca.crt
+    volumes:
+      - ${CERTS_DIR}:/certs:ro
+    networks: [lastarter]
+    restart: unless-stopped
+    depends_on:
+      calendars_postgresql:
+        condition: service_healthy
+      calendars_redis:
+        condition: service_started
+
+  # Worker dramatiq (PAS celery) — invitations / scheduling asynchrones.
+  # worker.py fait setdefault('DJANGO_CONFIGURATION','Development') : la
+  # variable vient de calendars.env (Production) — ne pas la retirer.
+  calendars_worker:
+    image: ${CALENDARS_BACKEND_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-calendars-worker
+    env_file: ["${RUNTIME_DIR}/calendars.env"]
+    environment:
+      REQUESTS_CA_BUNDLE: /certs/ca.crt
+    command: ["python", "worker.py"]
+    volumes:
+      - ${CERTS_DIR}:/certs:ro
+    networks: [lastarter]
+    restart: unless-stopped
+    depends_on:
+      calendars_postgresql:
+        condition: service_healthy
+      calendars_redis:
+        condition: service_started
+
+  # SabreDAV (PHP/Apache) : JAMAIS exposé — les clients externes passent par
+  # /.well-known/caldav (routé vers le backend qui proxifie).
+  calendars_caldav:
+    image: ${CALENDARS_CALDAV_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-calendars-caldav
+    env_file: ["${RUNTIME_DIR}/calendars.env"]
+    networks: [lastarter]
+    restart: unless-stopped
+    depends_on:
+      calendars_postgresql:
+        condition: service_healthy
+
+  # SPA Vite/React servie par Caddy (assets seuls, pas de proxy /api).
+  calendars_frontend:
+    image: ${CALENDARS_FRONTEND_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-calendars-frontend
+    networks: [lastarter]
+    restart: unless-stopped
+    depends_on:
+      calendars_backend:
+        condition: service_started
+
+volumes:
+  calendars_pgdata:

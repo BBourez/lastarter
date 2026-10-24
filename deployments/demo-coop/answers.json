@@ -1,5 +1,5 @@
 {
-  "client_name": "Demo Coop",
+  "client_name": "demo-coop",
   "client_slug": "demo-coop",
   "domain": "localhost:8443",
   "brand": {
@@ -9,7 +9,7 @@
   "brand_name": "LaStarter",
   "theme": "element-light",
   "brand_color": "#0bc491",
-  "logo_url": "/__lastarter/branding/logo.svg",
+  "logo_url": "C:/Program Files/Git/__lastarter/branding/logo.svg",
   "apps": {
     "discussions": {
       "label": "Discussions"
@@ -22,13 +22,21 @@
     },
     "docs": {
       "label": "Docs"
+    },
+    "projects": {
+      "label": "Projets"
+    },
+    "calendars": {
+      "label": "Agenda"
     }
   },
   "bricks": [
     "discussions",
     "drive",
     "meet",
-    "docs"
+    "docs",
+    "projects",
+    "calendars"
   ],
-  "generated_at": "2026-10-23T19:35:16+00:00"
+  "generated_at": "2026-10-24T11:58:02+00:00"
 }

@@ -22,6 +22,8 @@ ci-dessous ; toute divergence casse la CI volontairement.
 | `meet` (backend + frontend) | [suitenumerique/meet](https://github.com/suitenumerique/meet) — images `lasuite/meet-backend` + `lasuite/meet-frontend` | v1.36.2 | MIT |
 | `meet` (SFU audio/vidéo) | [livekit/livekit](https://github.com/livekit/livekit) — image `livekit/livekit-server` | v1.13.6 | Apache-2.0 |
 | `docs` (backend + frontend) | [suitenumerique/docs](https://github.com/suitenumerique/docs) — images `lasuite/impress-backend` + `lasuite/impress-frontend` | v6.0.3 | MIT |
+| `projects` (monolithe app) | [suitenumerique/projects](https://github.com/suitenumerique/projects) — image `lasuite/projects` | v1.27.12 | AGPL-3.0-only |
+| `calendars` (backend + frontend + caldav) | [suitenumerique/calendars](https://github.com/suitenumerique/calendars) — images `ghcr.io/suitenumerique/calendars-*` | v0.1.0 | MIT |
 | `docs` (collaboration yhub) | [suitenumerique/docs](https://github.com/suitenumerique/docs) — image `lasuite/impress-yhub` | v6.0.3 | MIT |
 | `docs` (conversion y-provider) | [suitenumerique/docs](https://github.com/suitenumerique/docs) — image `lasuite/impress-y-provider` | v6.0.3 | MIT |
 
