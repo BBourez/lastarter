@@ -40,9 +40,26 @@ class ThemeRenderTests(unittest.TestCase):
         self.assertIn("--c--globals--colors--logo-1-light: #0bc491;", css)
         # Typographie Inter.
         self.assertIn("Inter", css)
-        # Composants : boutons pilule Compound.
+        # Composants : boutons pilule Compound — via les JETONS Cunningham que
+        # les apps consomment nativement. Aucune règle structurelle : elles
+        # cumulaient avec les composants amont (boutons « doublés », borders +
+        # shadows en couches). Le CSS rendu est 100 % jetons.
         self.assertIn("--cpd-radius-pill-effect: 9999px;", css)
-        self.assertIn("border-radius: var(--cpd-radius-pill-effect) !important", css)
+        self.assertIn("--c--components--button--border-radius:", css)
+        # Jetons + remap atomique meet UNIQUEMENT : aucune règle structurelle
+        # d'élément (button/body/h1…) — c'est elles qui cumulaient avec les
+        # composants amont (« boutons doublés »). !important toléré seulement
+        # sur les sélecteurs de classes atomiques du bloc MEET (substitution
+        # 1:1 qui doit battre les styles runtime injectés après le nôtre).
+        head, meet = css.split("MEET", 1)
+        self.assertNotIn("!important", head)
+        self.assertNotIn("button,", head)
+        self.assertNotIn("button {", head)
+        self.assertNotIn("body,", head)
+        self.assertNotIn("h1 {", head)
+        for line in meet.splitlines():
+            if "!important" in line:
+                self.assertTrue(line.strip().startswith("."), f"règle non atomique : {line!r}")
         # Marque blanche.
         self.assertIn('--lastarter-brand-name: "Acme Corp";', css)
 
