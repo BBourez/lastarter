@@ -71,6 +71,25 @@ services:
       drive_rustfs:
         condition: service_healthy
 
+  # Migrations Django : voie amont sanctionnée (entrypoint = simple wrapper,
+  # cf. en-tête de l'image : `python manage.py migrate` explicite). One-shot
+  # exécuté par le CLI entre l'infra et les backends — sans lui, le premier
+  # login OIDC tombe en 500 (relation "drive_user" does not exist).
+  drive_migrate:
+    image: ${DRIVE_BACKEND_IMAGE}
+    container_name: ${LASTARTER_CLIENT}-drive-migrate
+    env_file: ["${RUNTIME_DIR}/drive/backend.env"]
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    environment:
+      REQUESTS_CA_BUNDLE: /certs/ca.crt
+    volumes:
+      - ${CERTS_DIR}:/certs:ro
+    networks: [lastarter]
+    restart: "no"
+    depends_on:
+      drive_postgresql:
+        condition: service_healthy
+
   drive_backend:
     image: ${DRIVE_BACKEND_IMAGE}
     container_name: ${LASTARTER_CLIENT}-drive-backend

@@ -44,12 +44,13 @@ route_label = "drive"                  # drive.<domaine>
 frontend_target = "drive_frontend:8080"
 api_target = "drive_backend:8000"      # /api + /admin + /static → Django
 infra_services = ["drive_postgresql", "drive_redis", "drive_rustfs"]
-oneshot_services = ["drive_createbuckets"]
+oneshot_services = ["drive_createbuckets", "drive_migrate"]
 services = [
   "drive_postgresql",
   "drive_redis",
   "drive_rustfs",
   "drive_createbuckets",
+  "drive_migrate",
   "drive_backend",
   "drive_celery",
   "drive_frontend",
