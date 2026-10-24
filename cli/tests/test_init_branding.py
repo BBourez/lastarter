@@ -124,6 +124,32 @@ class EdgeBrandingTests(unittest.TestCase):
         self.assertIn("${BRANDING_DIR}:/var/www/lastarter-theme/branding", compose_text)
 
 
+class EdgePortalCacheTests(unittest.TestCase):
+    """Anti-cache du portail : portal-config.json change à chaque ajout de
+    brique — sans revalidation forcée, le navigateur garde l'ancienne liste
+    d'apps (heuristique ~10 % de l'âge du fichier) pendant des heures."""
+
+    def test_render_edge_no_cache_sur_le_portail(self):
+        from lastarter_cli.catalogue import load_catalogue
+        from lastarter_cli.cmd.deploy import render_edge
+
+        bricks, errors = load_catalogue(REPO_ROOT / "catalogue")
+        self.assertEqual(errors, [])
+        edge = render_edge(
+            list(bricks.values()), {"domain": "localhost:8443", "brand_name": "Test"}
+        )
+        # Le portail (apex, location / → portal:80) doit forcer la revalidation.
+        self.assertIn('add_header Cache-Control "no-cache" always;', edge)
+
+    def test_template_portail_contrat_fetch_config(self):
+        """Contrat template ↔ CLI : l'anti-cache par empreinte patche le
+        littéral fetch("/portal-config.json" de portal/index.html. S'il
+        disparaît du template, le deploy doit échouer franchement
+        (DeployError) plutôt que servir une config sans version."""
+        index = (REPO_ROOT / "portal" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('fetch("/portal-config.json"', index)
+
+
 class DriveRenderTests(unittest.TestCase):
     """Rendus drive : FRONTEND_THEME suit la palette, customization écrite."""
 

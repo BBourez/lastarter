@@ -41,7 +41,7 @@
   </div>
 
   <script>
-    fetch("/portal-config.json")
+    fetch("/portal-config.json", { cache: "no-cache" })
       .then((r) => r.json())
       .then((cfg) => {
         document.title = cfg.brand;

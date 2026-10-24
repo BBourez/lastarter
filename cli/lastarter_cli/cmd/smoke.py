@@ -77,6 +77,26 @@ def _check_status_in(results: list, label: str, url: str, accepted: set[int],
     results.append((ok, f"{mark} {label:<34} {detail}"))
 
 
+def _check_cache_control(results: list, label: str, url: str, ca_file: Path | None = None) -> None:
+    """Cache-Control doit interdire un cache navigateur périmé : portal-config.json
+    change à chaque ajout/retrait de brique — sans no-cache, l'ancienne config
+    (donc l'ancienne liste d'apps) reste affichée des heures."""
+    context = None
+    if url.startswith("https") and ca_file is not None:
+        context = ssl.create_default_context(cafile=str(ca_file))
+    request = urllib.request.Request(url, headers={"User-Agent": "lastarter-smoke/1"})
+    try:
+        with urllib.request.urlopen(request, timeout=15, context=context) as response:
+            cache = response.headers.get("Cache-Control", "")
+    except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
+        results.append((False, f"✗ {label:<34} — {str(exc)[:120]}"))
+        return
+    ok = "no-cache" in cache
+    mark = "✓" if ok else "✗"
+    detail = f"Cache-Control: {cache or 'absent'}"
+    results.append((ok, f"{mark} {label:<34} {detail}"))
+
+
 def _container_healthy(results: list, label: str, container: str) -> None:
     """Vérifie le healthcheck docker d'un conteneur (meet backend : manage.py check amont)."""
     result = subprocess.run(
@@ -129,6 +149,10 @@ def run_smoke(opts) -> int:
     results: list[tuple[bool, str]] = []
 
     _check(results, "portail (apex /)", compute_origin(domain), 200, "portal-config", ca_file)
+    _check_cache_control(
+        results, "portail config no-cache",
+        f"{compute_origin(domain)}/portal-config.json", ca_file,
+    )
     _check(
         results, "SSO découverte OIDC (id.)",
         f"{_id_origin(domain)}/realms/lastarter/.well-known/openid-configuration",

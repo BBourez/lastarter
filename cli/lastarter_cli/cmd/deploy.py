@@ -392,6 +392,9 @@ def render_edge(bricks: list[Brick], answers: dict) -> str:
         "        proxy_set_header Accept-Encoding \"\";",  # sub_filter : HTML non gzip
         "        proxy_set_header Host $http_host;",
         "        proxy_set_header X-Forwarded-Proto https;",
+        "        # Portail : revalidation systématique (ETag/304) — jamais de cache",
+        "        # périmé après l'ajout d'une brique (portal-config.json surtout).",
+        '        add_header Cache-Control "no-cache" always;',
         "    }",
         "}",
         "",
@@ -818,6 +821,7 @@ def _brand_logo_url(answers: dict) -> str:
 
 
 APP_EMOJI = {
+    "docs": "📝",
     "drive": "📁",
     "meet": "🎥",
     "discussions": "💬",
@@ -1300,9 +1304,24 @@ def run_deploy(opts) -> int:
     if portal_dir.is_dir():
         runtime_portal = runtime_dir / "portal"
         shutil.copytree(portal_dir, runtime_portal, dirs_exist_ok=True)
-        (runtime_portal / "portal-config.json").write_text(
-            render_portal_config(selected_bricks, answers), encoding="utf-8"
+        config_text = render_portal_config(selected_bricks, answers)
+        (runtime_portal / "portal-config.json").write_text(config_text, encoding="utf-8")
+        # Cache navigateur : l'URL de la config porte l'empreinte de son contenu.
+        # Un HTML identique doit pointer vers une URL JAMAIS mise en cache, sinon
+        # une copie périmée (ancienne liste d'apps) reste affichée des heures.
+        digest = hashlib.sha256(config_text.encode("utf-8")).hexdigest()[:10]
+        index_path = runtime_portal / "index.html"
+        index_text = index_path.read_text(encoding="utf-8")
+        patched = index_text.replace(
+            'fetch("/portal-config.json"',
+            f'fetch("/portal-config.json?v={digest}"',
         )
+        if patched == index_text:
+            raise DeployError(
+                "portal/index.html : appel fetch de portal-config.json introuvable "
+                "(template changé ?) — l'anti-cache par empreinte ne peut pas s'appliquer"
+            )
+        index_path.write_text(patched, encoding="utf-8")
         compose_env["PORTAL_DIR"] = _portable(runtime_portal)
 
     # Thème LaStarter : rendu CSS (palette Compound + marque blanche) servi par
